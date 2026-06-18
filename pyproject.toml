@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "owa-tui"
+version = "0.1.0"
+description = "Textual TUI front-end for the owa-tools Microsoft 365 CLI suite"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "Carl Joakim Damsleth" }]
+dependencies = [
+    "textual>=0.60",
+    "owa-tools>=1.0.0",
+]
+
+[project.optional-dependencies]
+platformdirs = ["platformdirs>=4"]
+dev = [
+    "build>=1",
+    "pytest>=7",
+    "pytest-cov>=4",
+    "pytest-textual-snapshot>=0.4",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+owa-tui = "owa_tui:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages = ["owa_tui"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B"]
+ignore = ["E501", "E702", "E741", "B904", "B905"]
+
+[tool.pytest.ini_options]
+testpaths = ["src/tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+branch = true
+source = ["owa_tui"]
+omit = ["*/__main__.py"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_covered = true
