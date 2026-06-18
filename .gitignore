@@ -18,3 +18,6 @@ htmlcov/
 .claude/
 .serena/
 CLAUDE.md
+# .plans/ is intentionally gitignored (operator context, not for version control)
+.plans/*
+!.plans/.gitkeep
