@@ -105,6 +105,12 @@ def _bootstrap_screens() -> None:
     if "ado" not in SCREEN_REGISTRY:
         register_screen("ado", "Azure DevOps", AdoScreen)
 
+    # --- OneDrive ---
+    from owa_tui.screens.drive import DriveScreen  # noqa: PLC0415
+
+    if "drive" not in SCREEN_REGISTRY:
+        register_screen("drive", "OneDrive", DriveScreen)
+
     # --- Graph Explorer (self-registers on import) ---
     import owa_tui.screens.graph  # noqa: F401, PLC0415
 
