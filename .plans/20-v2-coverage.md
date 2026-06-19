@@ -34,7 +34,7 @@ This plan covers **Textual** TUIs for the eight tools not yet in owa-tui v1:
 | owa-sched   | Free/busy availability grid (attendees × time slots)             | planned |
 | owa-ado     | AdoScreen(OwaListScreen): my work-items list + detail, "/" search (read-only) | ✅ shipped (T6) |
 | owa-teams   | Chats list → scrollable message thread (read-only v1)            | planned |
-| owa-sites   | Tree SharePoint browser: sites → lists+libraries → docs/items    | planned |
+| owa-sites   | SitesScreen(OwaTreeScreen): SharePoint lists -> items, detail, "/" search (read-only) | ✅ shipped (T3) |
 | owa-doctor  | Live health DataTable: profiles × audiences, pass/fail, refresh  | planned |
 
 **owa-vids** remains deferred (URL-based, no natural list view).
@@ -200,6 +200,14 @@ current node, `q` quit.
 ---
 
 ### Card-set T3 — owa-sites
+
+> ✅ **Shipped.** `src/owa_tui/screens/sites.py` = `SitesScreen(OwaTreeScreen)` — second tree consumer.
+> Two-level nav: site **lists** at root (`lists_endpoint` + `normalize_lists`) → drill a list to its
+> **items** (`list_items_endpoint` + `normalize_items`) via SharePoint REST `paginate_sp` (Graph
+> `/sites` 403s; SP token minted through `owa_sites.auth.setup_auth`), `h` pops up, item detail, `/`
+> search, path-keyed `OWA_TUI_FIXTURES` seam. **Read-only.** Tests: `src/tests/sites/` (Pilot + unit,
+> sites.py 96%, incl. mocked live lists→items) + `e2e/sites.test.ts` (6/6, drill+up verified). **Live
+> SharePoint path mocked-tested, not e2e-verifiable without a real site** (like ado).
 
 **Canonical view:** `OwaTreeScreen` three-level browser: sites → lists+libraries → items/docs.
 

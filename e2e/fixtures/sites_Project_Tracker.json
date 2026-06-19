@@ -1,0 +1,28 @@
+{
+  "value": [
+    {
+      "Id": 101,
+      "Title": "Crayon Norway — Q3 delivery roadmap",
+      "FileLeafRef": "Q3Roadmap.docx",
+      "Modified": "2026-06-18T14:22:00Z",
+      "Created": "2026-04-01T08:00:00Z",
+      "AuthorId": 7
+    },
+    {
+      "Id": 102,
+      "Title": "Cloud governance framework review",
+      "FileLeafRef": "CloudGov.docx",
+      "Modified": "2026-06-05T09:00:00Z",
+      "Created": "2026-05-12T10:30:00Z",
+      "AuthorId": 3
+    },
+    {
+      "Id": 103,
+      "Title": "Customer onboarding automation",
+      "FileLeafRef": "Onboarding.docx",
+      "Modified": "2026-06-01T16:00:00Z",
+      "Created": "2026-03-20T07:45:00Z",
+      "AuthorId": 9
+    }
+  ]
+}
