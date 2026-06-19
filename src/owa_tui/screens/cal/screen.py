@@ -263,7 +263,7 @@ class CalScreen(Screen):
         self,
         config: dict[str, Any] | None = None,
         access_token: str = "",
-        api_base: str = "https://graph.microsoft.com/v1.0",
+        api_base: str = "https://outlook.office.com/api/v2.0",
         *,
         debug: bool = False,
         day_range: str = "",
