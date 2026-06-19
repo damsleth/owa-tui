@@ -87,6 +87,13 @@ class OwaTuiApp(App[None]):
 
 
 def build_parser() -> argparse.ArgumentParser:
+    # Derive --tool choices from the screen registry so a newly registered tool
+    # is launchable without touching this list.
+    from owa_tui.screens import SCREEN_REGISTRY, _bootstrap_screens
+
+    _bootstrap_screens()
+    tool_choices = list(SCREEN_REGISTRY)
+
     parser = argparse.ArgumentParser(
         prog="owa-tui",
         description="Textual TUI front-end for the owa-tools Microsoft 365 CLI suite.",
@@ -95,7 +102,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--debug", action="store_true", default=False, help="Enable debug logging.")
     parser.add_argument(
         "--tool",
-        choices=["cal", "mail", "graph"],
+        choices=tool_choices,
         default=None,
         help="Launch directly into a specific tool screen.",
     )
