@@ -36,3 +36,17 @@ are made during startup.
 .venv/bin/python -m pytest -q --cov --cov-fail-under=80
 uv build
 ```
+
+### End-to-end terminal tests (tui-test)
+
+In-process pytest covers widget logic; [`@microsoft/tui-test`](https://github.com/microsoft/tui-test)
+covers the real binary by spawning `owa-tui` in a pty and asserting on what it
+actually renders. Tests live in `e2e/`.
+
+```bash
+npm install          # one-time
+npm run test:e2e     # or: npx tui-test
+```
+
+`owa-tui` must be importable on `PATH` (e.g. `pip install -e .`). Traces land in
+`tui-traces/`; replay with `npx tui-test show-trace`.

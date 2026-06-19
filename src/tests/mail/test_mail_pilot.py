@@ -1031,20 +1031,25 @@ def test_persist_settings_calls_save_config() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_get_token_sync_returns_cached() -> None:
-    """_get_token_sync returns cached _token without calling auth."""
+def test_get_token_sync_mints_fresh_every_call() -> None:
+    """owa-piggy owns the token lifecycle — owa-tui mints fresh on every call,
+    never caches. So two calls hit the broker twice."""
 
-    async def _run() -> str:
+    async def _run() -> int:
         app = _make_app(messages=_msgs(1), reading_pane="off")
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause(0.1)
             from owa_tui.screens.mail import MailScreen
 
             screen: MailScreen = app.screen  # type: ignore[assignment]
-            screen._token = "cached-token-xyz"
-            return screen._get_token_sync()
+            mock_auth_module = MagicMock()
+            mock_auth_module.get_token_for_config.return_value = {"access_token": "tok"}
+            with patch.dict("sys.modules", {"owa_core.auth": mock_auth_module}):
+                screen._get_token_sync()
+                screen._get_token_sync()
+            return mock_auth_module.get_token_for_config.call_count
 
-    assert asyncio.run(_run()) == "cached-token-xyz"
+    assert asyncio.run(_run()) == 2
 
 
 def test_get_token_sync_calls_auth() -> None:
@@ -2059,9 +2064,11 @@ def test_fetch_list_auth_failed_simulated() -> None:
             from owa_tui.screens.mail import MailScreen
 
             screen: MailScreen = pilot.app.screen  # type: ignore[assignment]
-            # _get_token_sync returns "" → worker would setattr status "auth failed"
-            screen._token = ""
-            token = screen._get_token_sync()
+            # Broker returns no token → _get_token_sync "" → "auth failed" path.
+            mock_auth_module = MagicMock()
+            mock_auth_module.get_token_for_config.return_value = None
+            with patch.dict("sys.modules", {"owa_core.auth": mock_auth_module}):
+                token = screen._get_token_sync()
             if not token:
                 screen.status = "auth failed"
             await pilot.pause(0.05)

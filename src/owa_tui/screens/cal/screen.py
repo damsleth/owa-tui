@@ -271,6 +271,7 @@ class CalScreen(Screen):
     ) -> None:
         super().__init__(**kwargs)
         self._config: dict[str, Any] = config or {}
+        # Optional override (mainly for tests); when empty we mint fresh per fetch.
         self._access_token = access_token
         self._api_base = api_base
         self._debug = debug
@@ -364,11 +365,20 @@ class CalScreen(Screen):
     # Workers
     # ------------------------------------------------------------------
 
+    def _token(self) -> str:
+        """Override token (tests) or a fresh one minted via owa-piggy per call."""
+        if self._access_token:
+            return self._access_token
+        from owa_tui.adapter import access_token_for  # noqa: PLC0415
+
+        return access_token_for(self._config, tool_name="owa-cal", audience="outlook")
+
     @work(exclusive=True)
     async def load_events(self) -> None:
         """Async worker: fetch events and update the UI."""
+        token = await asyncio.to_thread(self._token)
         events, err = await fetch_events(
-            self._access_token,
+            token,
             self._api_base,
             self._settings.day_range,
             self._settings.show_declined,
@@ -479,12 +489,14 @@ class CalScreen(Screen):
         try:
             from owa_cal.api import OwaError, api_request  # type: ignore[import]
 
+            token = await asyncio.to_thread(self._token)
+
             def _call() -> Any:
                 return api_request(
                     "POST",
                     self._api_base,
                     endpoint,
-                    self._access_token,
+                    token,
                     body=body,
                     debug=self._debug,
                 )
