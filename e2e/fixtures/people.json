@@ -1,0 +1,43 @@
+{
+  "value": [
+    {
+      "id": "person-001",
+      "displayName": "Alice Andersen",
+      "jobTitle": "Engineering Lead",
+      "department": "Technology",
+      "officeLocation": "Oslo",
+      "companyName": "Example Corp",
+      "mobilePhone": "+47 555 0001",
+      "businessPhones": ["+47 555 0002"],
+      "scoredEmailAddresses": [
+        { "address": "alice.andersen@example.com", "relevanceScore": 20.0 }
+      ]
+    },
+    {
+      "id": "person-002",
+      "displayName": "Bob Bakken",
+      "jobTitle": "Product Manager",
+      "department": "Product",
+      "officeLocation": "Bergen",
+      "companyName": "Example Corp",
+      "mobilePhone": "+47 555 0003",
+      "businessPhones": [],
+      "scoredEmailAddresses": [
+        { "address": "bob.bakken@example.com", "relevanceScore": 15.0 }
+      ]
+    },
+    {
+      "id": "person-003",
+      "displayName": "Carol Christensen",
+      "jobTitle": "Designer",
+      "department": "Design",
+      "officeLocation": "Trondheim",
+      "companyName": "Example Corp",
+      "mobilePhone": "+47 555 0004",
+      "businessPhones": [],
+      "scoredEmailAddresses": [
+        { "address": "carol.christensen@example.com", "relevanceScore": 10.0 }
+      ]
+    }
+  ]
+}
