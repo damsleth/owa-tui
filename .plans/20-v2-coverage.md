@@ -49,6 +49,18 @@ boundary: `owa_tui` imports `owa_<tool>.api` / `owa_<tool>.<data_module>` only
 
 ### Shared `owa_tui.base` widgets (Step 0 for v2)
 
+> **Step 0 status (commit pending):** ✅ **OwaListScreen shipped** — but at
+> `src/owa_tui/screens/base/` (`screen.py`, `keys.py`, `auth.py`), not `src/owa_tui/base/`.
+> Import: `from owa_tui.screens.base import OwaListScreen`. It's the generic flat-list +
+> detail + "/" search + Esc-menu scaffold, parameterized by `fetch_items` / `render_row` /
+> `render_detail` / `menu_config` hooks, composing `SettingsOverlay` + `StatusBar` and proven
+> by `src/tests/base/` (Pilot, fake fetch, ~86%). The shipped cal/mail/graph/people screens
+> were **not** refactored onto it (they work; migration is optional later debt).
+> **Deferred:** `OwaTreeScreen` / `OwaGridScreen` / `OwaThreadScreen` are NOT built — they have
+> no consumer yet; build each alongside its first real card (T2 drive / T4 sched / T7 teams),
+> not speculatively. Known debt: OwaListScreen still has a local `_OwaList`/`_DetailPane`
+> instead of reusing `widgets.ListBrowser`/`DetailPane` — tracked as a follow-up.
+
 Extract common Textual structure into `src/owa_tui/base/`:
 
 - **`base/list_screen.py`** — `OwaListScreen(Screen)`: a `ListView`+`DetailPane`
