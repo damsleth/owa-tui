@@ -1,0 +1,12 @@
+{
+  "name": "owa-tui-e2e",
+  "private": true,
+  "type": "module",
+  "description": "tui-test end-to-end terminal tests for the owa-tui Textual app",
+  "scripts": {
+    "test:e2e": "tui-test"
+  },
+  "devDependencies": {
+    "@microsoft/tui-test": "^0.0.4"
+  }
+}

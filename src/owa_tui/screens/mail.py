@@ -357,7 +357,6 @@ class MailScreen(Screen[None]):
         self._config: dict[str, Any] = config or {}
         self._debug = debug
         self._body_cache: dict[str, dict] = {}
-        self._token: str = ""
         self._api_base: str = self._config.get("api_base", "https://outlook.office.com/api/v2.0")
         self._selected_msg: dict | None = None
 
@@ -474,20 +473,10 @@ class MailScreen(Screen[None]):
             self.app.call_from_thread(lambda: setattr(self, "status", f"error: {err}"))
 
     def _get_token_sync(self) -> str:
-        """Synchronously obtain an auth token (runs in worker thread)."""
-        if self._token:
-            return self._token
-        try:
-            from owa_core.auth import get_token_for_config  # type: ignore[import]
+        """Mint a fresh auth token via owa-piggy (runs in worker thread)."""
+        from owa_tui.adapter import access_token_for  # noqa: PLC0415
 
-            info = get_token_for_config(self._config, tool_name="owa-mail", audience="outlook")
-            if info is None:
-                return ""
-            token = info.get("access_token") or (info if isinstance(info, str) else "")
-            self._token = token
-            return token
-        except Exception:
-            return ""
+        return access_token_for(self._config, tool_name="owa-mail", audience="outlook")
 
     def _apply_messages(self, msgs: list[dict], search: str) -> None:
         """Called on main thread after successful list fetch."""
