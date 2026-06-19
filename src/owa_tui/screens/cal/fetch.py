@@ -126,7 +126,11 @@ async def fetch_events(
         def _call() -> Any:
             return api_get(api_base, endpoint, access_token, debug=debug)
 
-        raw = await asyncio.to_thread(_call)
+        from owa_tui import fixtures  # noqa: PLC0415
+
+        raw = fixtures.load("cal")
+        if raw is None:
+            raw = await asyncio.to_thread(_call)
 
         if raw is None:
             return [], "fetch failed"

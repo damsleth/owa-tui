@@ -386,7 +386,9 @@ class CalScreen(Screen):
             self._debug,
         )
         self._events = events
-        self._status = err or ""
+        # Keep any prior confirmation (e.g. "accepted: …") on success; a reload
+        # triggered right after a respond would otherwise wipe it instantly.
+        self._status = err or self._status
         agenda = self._agenda()
         agenda.update_rows(events, show_date=self._settings.day_range != "today")
         if self._current_event() is not None:
@@ -429,7 +431,7 @@ class CalScreen(Screen):
             self._search = query or ""
             self.load_events()
 
-        self.push_screen(_SearchInput(), _handle_result)
+        self.app.push_screen(_SearchInput(), _handle_result)
 
     def action_respond_arm(self) -> None:
         """y — arm the respond mode chord."""
@@ -501,13 +503,20 @@ class CalScreen(Screen):
                     debug=self._debug,
                 )
 
-            result = await asyncio.to_thread(_call)
+            from owa_tui import fixtures  # noqa: PLC0415
+
+            result = {"ok": True} if fixtures.enabled() else await asyncio.to_thread(_call)
 
             if result is None:
                 self._status = "respond failed"
                 return
 
-            self._status = f"{action}ed: {subject[:30]}"
+            verb = {
+                "accept": "accepted",
+                "tentative": "tentatively accepted",
+                "decline": "declined",
+            }[action]
+            self._status = f"{verb}: {subject[:30]}"
             self.load_events()
 
         except Exception as exc:
@@ -561,7 +570,7 @@ class CalScreen(Screen):
                 else:
                     self._refresh_detail()
 
-        self.push_screen(overlay, _handle)
+        self.app.push_screen(overlay, _handle)
 
     def action_back_to_list(self) -> None:
         """h / ← — return focus to the agenda list from the detail pane."""

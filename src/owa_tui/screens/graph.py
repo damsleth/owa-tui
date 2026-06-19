@@ -500,10 +500,9 @@ class GraphScreen(Screen[None]):
     # ------------------------------------------------------------------
 
     def action_toggle_menu(self) -> None:
-        from owa_tui.widgets.menu_state import MenuState
         from owa_tui.widgets.settings_overlay import SettingsOverlay
 
-        menu = MenuState(
+        overlay = SettingsOverlay(
             title_lines=["Graph Explorer — menu"],
             top_items=[
                 ("Resume", "resume"),
@@ -516,8 +515,8 @@ class GraphScreen(Screen[None]):
                 ("pretty_json", "Pretty JSON (graph only)"),
                 ("scope_warnings", "Scope warnings"),
             ],
+            settings=self._settings,
         )
-        overlay = SettingsOverlay(menu, settings=self._settings)
 
         def _on_dismiss(result: str) -> None:
             if result == "quit":

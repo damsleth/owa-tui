@@ -456,7 +456,11 @@ class MailScreen(Screen[None]):
                 limit=PAGE_SIZE,
             )
             path = _build_messages_path(params)
-            raw = api_get(self._api_base, path, token, debug=self._debug)
+            from owa_tui import fixtures  # noqa: PLC0415
+
+            raw = fixtures.load("mail")
+            if raw is None:
+                raw = api_get(self._api_base, path, token, debug=self._debug)
             if raw is None:
                 if search:
                     self.app.call_from_thread(self._on_search_failed)
@@ -507,7 +511,11 @@ class MailScreen(Screen[None]):
                 return
 
             path = f"me/messages/{msg_id}?$select={SHOW_SELECT}"
-            raw = api_get(self._api_base, path, token, debug=self._debug)
+            from owa_tui import fixtures  # noqa: PLC0415
+
+            raw = fixtures.load("mail_body")
+            if raw is None:
+                raw = api_get(self._api_base, path, token, debug=self._debug)
             if raw is None:
                 self.app.call_from_thread(self._on_body_failed)
                 return
@@ -546,6 +554,10 @@ class MailScreen(Screen[None]):
     @work(thread=True)
     def _patch_read(self, msg_id: str, new_read: bool) -> None:
         """PATCH IsRead on the Graph API in a background thread."""
+        from owa_tui import fixtures  # noqa: PLC0415
+
+        if fixtures.enabled():
+            return
         try:
             from owa_mail.api import api_request  # type: ignore[import]
 
