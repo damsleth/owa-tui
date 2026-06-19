@@ -1,0 +1,43 @@
+{
+  "value": [
+    {
+      "Id": "task-001",
+      "Subject": "Review quarterly report",
+      "Status": "NotStarted",
+      "Importance": "High",
+      "DueDateTime": {"DateTime": "2026-06-20T00:00:00", "TimeZone": "UTC"},
+      "StartDateTime": null,
+      "CompletedDateTime": null,
+      "IsReminderOn": false,
+      "ReminderDateTime": null,
+      "Categories": [],
+      "ParentFolderId": "folder-001"
+    },
+    {
+      "Id": "task-002",
+      "Subject": "Send onboarding docs to new hire",
+      "Status": "InProgress",
+      "Importance": "Normal",
+      "DueDateTime": {"DateTime": "2026-06-21T00:00:00", "TimeZone": "UTC"},
+      "StartDateTime": null,
+      "CompletedDateTime": null,
+      "IsReminderOn": false,
+      "ReminderDateTime": null,
+      "Categories": ["HR"],
+      "ParentFolderId": "folder-001"
+    },
+    {
+      "Id": "task-003",
+      "Subject": "Book team offsite venue",
+      "Status": "NotStarted",
+      "Importance": "Low",
+      "DueDateTime": null,
+      "StartDateTime": null,
+      "CompletedDateTime": null,
+      "IsReminderOn": false,
+      "ReminderDateTime": null,
+      "Categories": [],
+      "ParentFolderId": "folder-001"
+    }
+  ]
+}

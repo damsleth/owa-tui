@@ -87,6 +87,12 @@ def _bootstrap_screens() -> None:
     if "people" not in SCREEN_REGISTRY:
         register_screen("people", "People", PeopleScreen)
 
+    # --- Tasks (Microsoft To Do) ---
+    from owa_tui.screens.todo import TodoScreen  # noqa: PLC0415
+
+    if "todo" not in SCREEN_REGISTRY:
+        register_screen("todo", "Tasks", TodoScreen)
+
     # --- Graph Explorer (self-registers on import) ---
     import owa_tui.screens.graph  # noqa: F401, PLC0415
 

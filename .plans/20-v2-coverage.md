@@ -28,7 +28,7 @@ This plan covers **Textual** TUIs for the eight tools not yet in owa-tui v1:
 
 | Tool        | Canonical view / interaction                                    | Status  |
 |-------------|------------------------------------------------------------------|---------|
-| owa-todo    | Two-pane: lists sidebar + task list; toggle done, create task    | planned |
+| owa-todo    | TodoScreen(OwaListScreen): task list + detail, "/" search, complete-toggle | ✅ shipped (T1) |
 | owa-drive   | Tree file browser (`Tree`/`DirectoryTree`-style), open/download  | planned |
 | owa-planner | Plan → bucket → task drill, toggle task complete                 | planned |
 | owa-sched   | Free/busy availability grid (attendees × time slots)             | planned |
@@ -49,13 +49,15 @@ boundary: `owa_tui` imports `owa_<tool>.api` / `owa_<tool>.<data_module>` only
 
 ### Shared `owa_tui.base` widgets (Step 0 for v2)
 
-> **Step 0 status (commit pending):** ✅ **OwaListScreen shipped** — but at
-> `src/owa_tui/screens/base/` (`screen.py`, `keys.py`, `auth.py`), not `src/owa_tui/base/`.
+> **Step 0 status:** ✅ **OwaListScreen shipped & proven by a real consumer (T1 owa-todo).** Lives at
+> `src/owa_tui/screens/base/` (`screen.py`, `keys.py`), not `src/owa_tui/base/`.
 > Import: `from owa_tui.screens.base import OwaListScreen`. It's the generic flat-list +
 > detail + "/" search + Esc-menu scaffold, parameterized by `fetch_items` / `render_row` /
-> `render_detail` / `menu_config` hooks, composing `SettingsOverlay` + `StatusBar` and proven
-> by `src/tests/base/` (Pilot, fake fetch, ~86%). The shipped cal/mail/graph/people screens
-> were **not** refactored onto it (they work; migration is optional later debt).
+> `render_detail` / `menu_config` hooks, composing `SettingsOverlay` + `StatusBar`, proven
+> by `src/tests/base/` (Pilot, fake fetch, ~86%) **and by `TodoScreen(OwaListScreen)`** (T1).
+> The shipped cal/mail/graph/people screens were **not** refactored onto it (they work;
+> migration is optional later debt). The speculative `base/auth.py` helper was removed (no
+> consumer); tools mint tokens via `adapter.access_token_for` directly.
 > **Deferred:** `OwaTreeScreen` / `OwaGridScreen` / `OwaThreadScreen` are NOT built — they have
 > no consumer yet; build each alongside its first real card (T2 drive / T4 sched / T7 teams),
 > not speculatively. `OwaListScreen` owns its list/detail via local `_OwaList`/`_DetailPane`;
@@ -114,6 +116,12 @@ owa-tools rollout rationale: quick wins first, complex views later.
 ---
 
 ### Card-set T1 — owa-todo
+
+> ✅ **Shipped.** `src/owa_tui/screens/todo.py` = `TodoScreen(OwaListScreen)` — the base's first
+> real consumer. Tasks via `owa_todo.api` + `normalize_tasks` (outlook REST base), `/` search,
+> complete-toggle (no-op in fixture mode), `OWA_TUI_FIXTURES` seam. Tests: `src/tests/todo/`
+> (Pilot, todo.py ~97%) + `e2e/todo.test.ts` (7/7). The two-pane "lists sidebar" + create-task
+> from the original spec are deferred (read + toggle is the v1 CRUD scope).
 
 **Canonical view:** Two-pane `OwaListScreen` variant: left pane lists task-lists,
 right pane lists tasks for the selected list.
