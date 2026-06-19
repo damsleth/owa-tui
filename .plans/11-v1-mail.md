@@ -1,5 +1,10 @@
 # Plan 11 — owa-tui v1 Mail Screen
 
+**Status:** ✅ shipped (commit b12d1cd). Implemented as a single `src/owa_tui/screens/mail.py`
+(plus `src/owa_tui/mail/` helpers), not the multi-file `mail/` tree this plan sketched.
+Covered by `src/tests/mail/` (Pilot) and `e2e/actions.test.ts` (tui-test, fixture-mode).
+Kept as the behavioural reference.
+
 ## Objective
 
 Port the `owa-mail` interactive TUI from its curses implementation in

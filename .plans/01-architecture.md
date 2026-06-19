@@ -6,6 +6,29 @@
 
 ---
 
+## Status & drift (as of commit 76c2675)
+
+This remains the design reference, but shipped v1 diverged in a few places — noted here so the
+doc isn't read as gospel:
+
+- **Layout:** tool screens live under `src/owa_tui/screens/` (`screens/cal/`, `screens/mail.py`,
+  `screens/graph.py`, `screens/home.py`), not `src/owa_tui/cal/` etc. `OwaTuiApp` lives in
+  `__init__.py`, not `app.py`. The shared kit is `src/owa_tui/widgets/` (`list_browser`,
+  `detail_pane`, `settings_overlay`, `menu_state`, `status_bar`) — close to §5 but flatter.
+- **Token model (supersedes §4c):** v1 does **per-call token minting** (commit fcfa2bc), not the
+  "mint once before `app.run()`" model in §4c. Each fetch/respond worker mints via
+  `adapter.access_token_for(...)` / `get_token_for_config(...)`. Simpler, avoids stale tokens.
+- **REST base:** cal/mail hit the Outlook REST base (`outlook.office.com/api/v2.0`), not Graph
+  (commit 9341db7 fixed a 401 from the wrong base).
+- **Testing infra (new, not in original plan):** two layers — (1) in-process **Pilot** tests in
+  `src/tests/` that monkeypatch fetch; (2) black-box **tui-test** e2e in `e2e/` that drives the
+  real binary in a pty, powered by a **fixture-mode seam** (`src/owa_tui/fixtures.py`):
+  `OWA_TUI_FIXTURES=<dir>` short-circuits fetch to canned JSON and token minting to a dummy token,
+  so every user action runs deterministically with no live auth. `pytest-textual-snapshot` is a
+  declared dep but **no snapshot tests were written** — Pilot + e2e replaced that approach.
+
+---
+
 ## 0. Context
 
 `owa-tui` is the Textual terminal-UI front-end for the `owa-tools` Microsoft 365 CLI suite.
