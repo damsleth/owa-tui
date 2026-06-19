@@ -93,6 +93,12 @@ def _bootstrap_screens() -> None:
     if "todo" not in SCREEN_REGISTRY:
         register_screen("todo", "Tasks", TodoScreen)
 
+    # --- Planner (Microsoft Planner) ---
+    from owa_tui.screens.planner import PlannerScreen  # noqa: PLC0415
+
+    if "planner" not in SCREEN_REGISTRY:
+        register_screen("planner", "Planner", PlannerScreen)
+
     # --- Graph Explorer (self-registers on import) ---
     import owa_tui.screens.graph  # noqa: F401, PLC0415
 

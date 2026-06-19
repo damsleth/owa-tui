@@ -30,7 +30,7 @@ This plan covers **Textual** TUIs for the eight tools not yet in owa-tui v1:
 |-------------|------------------------------------------------------------------|---------|
 | owa-todo    | TodoScreen(OwaListScreen): task list + detail, "/" search, complete-toggle | ✅ shipped (T1) |
 | owa-drive   | Tree file browser (`Tree`/`DirectoryTree`-style), open/download  | planned |
-| owa-planner | Plan → bucket → task drill, toggle task complete                 | planned |
+| owa-planner | PlannerScreen(OwaListScreen): my-tasks list + detail, "/" search (read-only) | ✅ shipped (T5) |
 | owa-sched   | Free/busy availability grid (attendees × time slots)             | planned |
 | owa-ado     | Work-items list (assigned-to-me / sprint), drill to detail       | planned |
 | owa-teams   | Chats list → scrollable message thread (read-only v1)            | planned |
@@ -262,6 +262,12 @@ applicable (no search in a matrix view — omit or no-op).
 ---
 
 ### Card-set T5 — owa-planner
+
+> ✅ **Shipped.** `src/owa_tui/screens/planner.py` = `PlannerScreen(OwaListScreen)`. Lists
+> `me/planner/tasks` via `owa_planner.api` + `normalize_tasks` (Graph base), detail pane, `/`
+> search, `OWA_TUI_FIXTURES` seam. **Read-only** (v1 scope) — the plan→bucket→task drill and
+> complete-toggle from the original spec are deferred. Tests: `src/tests/planner/` (Pilot,
+> planner.py 100%) + `e2e/planner.test.ts` (6/6). Second `OwaListScreen` consumer after todo.
 
 **Canonical view:** `OwaListScreen` drill: plans list → buckets+tasks (grouped), toggle complete.
 

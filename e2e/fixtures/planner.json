@@ -1,0 +1,55 @@
+{
+  "value": [
+    {
+      "id": "plan-task-001",
+      "planId": "plan-aaa",
+      "bucketId": "bucket-x1",
+      "title": "Define Q3 OKRs",
+      "percentComplete": 0,
+      "priority": 1,
+      "dueDateTime": "2026-06-25T00:00:00Z",
+      "startDateTime": null,
+      "completedDateTime": null,
+      "createdDateTime": "2026-06-01T09:00:00Z",
+      "assignments": {},
+      "checklistItemCount": 3,
+      "activeChecklistItemCount": 3,
+      "referenceCount": 0,
+      "hasDescription": true
+    },
+    {
+      "id": "plan-task-002",
+      "planId": "plan-aaa",
+      "bucketId": "bucket-x1",
+      "title": "Review architecture proposal",
+      "percentComplete": 50,
+      "priority": 3,
+      "dueDateTime": "2026-06-30T00:00:00Z",
+      "startDateTime": "2026-06-15T00:00:00Z",
+      "completedDateTime": null,
+      "createdDateTime": "2026-06-05T10:00:00Z",
+      "assignments": {"user-abc": {}, "user-def": {}},
+      "checklistItemCount": 2,
+      "activeChecklistItemCount": 1,
+      "referenceCount": 1,
+      "hasDescription": true
+    },
+    {
+      "id": "plan-task-003",
+      "planId": "plan-aaa",
+      "bucketId": "bucket-x2",
+      "title": "Update onboarding runbook",
+      "percentComplete": 0,
+      "priority": 7,
+      "dueDateTime": null,
+      "startDateTime": null,
+      "completedDateTime": null,
+      "createdDateTime": "2026-06-10T08:30:00Z",
+      "assignments": {},
+      "checklistItemCount": 0,
+      "activeChecklistItemCount": 0,
+      "referenceCount": 0,
+      "hasDescription": false
+    }
+  ]
+}
