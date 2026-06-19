@@ -81,6 +81,12 @@ def _bootstrap_screens() -> None:
     if "mail" not in SCREEN_REGISTRY:
         register_screen("mail", "Mail", MailScreen)
 
+    # --- People ---
+    from owa_tui.screens.people import PeopleScreen  # noqa: PLC0415
+
+    if "people" not in SCREEN_REGISTRY:
+        register_screen("people", "People", PeopleScreen)
+
     # --- Graph Explorer (self-registers on import) ---
     import owa_tui.screens.graph  # noqa: F401, PLC0415
 
