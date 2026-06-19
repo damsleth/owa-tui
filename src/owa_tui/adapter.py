@@ -28,6 +28,32 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 
+def access_token_for(config: dict[str, Any], *, tool_name: str, audience: str) -> str:
+    """Mint a fresh bearer token via owa-piggy and return the access_token string.
+
+    owa-piggy owns the token lifecycle, so this shells out (via
+    ``get_token_for_config``) on every call rather than caching. Returns ``""``
+    on failure. Blocking — call from a worker thread.
+
+    Handles the broker return shape: a frozen ``BrokerToken`` dataclass (current
+    contract), a dict, or a bare string. The dataclass case is why ``.get()``
+    silently failed for mail/cal before — ``getattr`` is the correct accessor.
+    """
+    try:
+        from owa_core.auth import get_token_for_config  # type: ignore[import]
+
+        info = get_token_for_config(config, tool_name=tool_name, audience=audience)
+    except Exception:
+        return ""
+    if info is None:
+        return ""
+    if isinstance(info, str):
+        return info
+    if isinstance(info, dict):
+        return info.get("access_token") or ""
+    return getattr(info, "access_token", "") or ""
+
+
 async def fetch_token(config: dict[str, Any], tool_name: str, audience: str) -> tuple[Any, str | None]:
     """Mint or refresh an owa-tools token off the event loop thread.
 
