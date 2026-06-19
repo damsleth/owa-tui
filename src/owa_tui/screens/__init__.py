@@ -111,6 +111,12 @@ def _bootstrap_screens() -> None:
     if "drive" not in SCREEN_REGISTRY:
         register_screen("drive", "OneDrive", DriveScreen)
 
+    # --- SharePoint Sites ---
+    from owa_tui.screens.sites import SitesScreen  # noqa: PLC0415
+
+    if "sites" not in SCREEN_REGISTRY:
+        register_screen("sites", "SharePoint", SitesScreen)
+
     # --- Graph Explorer (self-registers on import) ---
     import owa_tui.screens.graph  # noqa: F401, PLC0415
 
