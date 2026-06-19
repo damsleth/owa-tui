@@ -1,0 +1,34 @@
+{
+  "value": [
+    {
+      "Id": "evt-001",
+      "Subject": "Morning standup",
+      "Start": {"DateTime": "2026-06-18T09:00:00", "TimeZone": "UTC"},
+      "End": {"DateTime": "2026-06-18T09:30:00", "TimeZone": "UTC"},
+      "IsAllDay": false,
+      "ShowAs": "busy",
+      "Categories": [],
+      "Location": {"DisplayName": "Teams"},
+      "Organizer": {"EmailAddress": {"Name": "Alice", "Address": "alice@x.com"}},
+      "Attendees": [],
+      "BodyPreview": "Daily sync.",
+      "ResponseStatus": {"Response": "None", "Time": "2026-06-18T08:00:00Z"},
+      "IsOrganizer": false
+    },
+    {
+      "Id": "evt-002",
+      "Subject": "Lunch review",
+      "Start": {"DateTime": "2026-06-18T12:00:00", "TimeZone": "UTC"},
+      "End": {"DateTime": "2026-06-18T13:00:00", "TimeZone": "UTC"},
+      "IsAllDay": false,
+      "ShowAs": "busy",
+      "Categories": [],
+      "Location": {"DisplayName": ""},
+      "Organizer": {"EmailAddress": {"Name": "Bob", "Address": "bob@x.com"}},
+      "Attendees": [{"EmailAddress": {"Name": "Carol", "Address": "carol@x.com"}}],
+      "BodyPreview": "Lunch.",
+      "ResponseStatus": {"Response": "Accepted", "Time": "2026-06-18T08:00:00Z"},
+      "IsOrganizer": false
+    }
+  ]
+}

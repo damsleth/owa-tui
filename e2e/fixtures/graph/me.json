@@ -1,0 +1,12 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users/$entity",
+  "messages@odata.navigationLink": "me/messages",
+  "id": "user-001",
+  "displayName": "Test User",
+  "givenName": "Test",
+  "surname": "User",
+  "mail": "you@x.com",
+  "userPrincipalName": "you@x.com",
+  "jobTitle": "Engineer",
+  "officeLocation": "Remote"
+}

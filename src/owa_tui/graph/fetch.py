@@ -90,15 +90,19 @@ def fetch_items(state: GraphState) -> None:
 
     # 4. API call
     try:
-        from owa_graph.api import api_request  # type: ignore[import]
+        from owa_tui import fixtures  # noqa: PLC0415
 
-        result = api_request(
-            "GET",
-            api_base,
-            url.replace(api_base, "").lstrip("/") if url.startswith(api_base) else url,
-            access_token,
-            debug=state.debug,
-        )
+        result = fixtures.graph(state.path) if fixtures.enabled() else None
+        if result is None:
+            from owa_graph.api import api_request  # type: ignore[import]
+
+            result = api_request(
+                "GET",
+                api_base,
+                url.replace(api_base, "").lstrip("/") if url.startswith(api_base) else url,
+                access_token,
+                debug=state.debug,
+            )
         # api_request may return the parsed dict/list or raise on HTTP error
         state.response = result
 
