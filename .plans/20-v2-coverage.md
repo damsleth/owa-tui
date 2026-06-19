@@ -32,7 +32,7 @@ This plan covers **Textual** TUIs for the eight tools not yet in owa-tui v1:
 | owa-drive   | Tree file browser (`Tree`/`DirectoryTree`-style), open/download  | planned |
 | owa-planner | PlannerScreen(OwaListScreen): my-tasks list + detail, "/" search (read-only) | ✅ shipped (T5) |
 | owa-sched   | Free/busy availability grid (attendees × time slots)             | planned |
-| owa-ado     | Work-items list (assigned-to-me / sprint), drill to detail       | planned |
+| owa-ado     | AdoScreen(OwaListScreen): my work-items list + detail, "/" search (read-only) | ✅ shipped (T6) |
 | owa-teams   | Chats list → scrollable message thread (read-only v1)            | planned |
 | owa-sites   | Tree SharePoint browser: sites → lists+libraries → docs/items    | planned |
 | owa-doctor  | Live health DataTable: profiles × audiences, pass/fail, refresh  | planned |
@@ -302,6 +302,15 @@ applicable (no search in a matrix view — omit or no-op).
 ---
 
 ### Card-set T6 — owa-ado
+
+> ✅ **Shipped.** `src/owa_tui/screens/ado.py` = `AdoScreen(OwaListScreen)`. Lists my work items
+> via the ADO two-step (WIQL `POST` → batch `GET` through `ado_request`, org/project from
+> `owa_ado.config`, audience `"devops"`) + `normalize_work_item`, detail pane, `/` search,
+> `OWA_TUI_FIXTURES` seam (returns before any `ado_request`). **Read-only** — create/edit/
+> state-change and the `v` view-switch deferred. Tests: `src/tests/ado/` (Pilot + unit, ado.py
+> 100%, incl. a mocked two-step live-path test) + `e2e/ado.test.ts` (6/6). **Live ADO path is
+> unit-tested with mocks but not e2e-verifiable without a real org/PAT** (by design for v1).
+> Third `OwaListScreen` consumer — flat-list trio (todo/planner/ado) complete.
 
 **Canonical view:** `OwaListScreen` work-items list (assigned-to-me by default),
 drill to detail.

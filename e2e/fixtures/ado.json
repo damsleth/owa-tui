@@ -1,0 +1,58 @@
+{
+  "value": [
+    {
+      "id": 1001,
+      "url": "https://dev.azure.com/contoso/myproject/_apis/wit/workItems/1001",
+      "fields": {
+        "System.Id": 1001,
+        "System.WorkItemType": "User Story",
+        "System.Title": "Migrate auth flow to MSAL v3",
+        "System.State": "Active",
+        "System.AssignedTo": {
+          "displayName": "Carl Joakim Damsleth",
+          "uniqueName": "Carl.Joakim.Damsleth@crayon.no"
+        },
+        "System.IterationPath": "myproject\\Sprint 42",
+        "System.AreaPath": "myproject\\Platform",
+        "System.Tags": "auth; msal",
+        "System.ChangedDate": "2026-06-17T14:22:00Z"
+      }
+    },
+    {
+      "id": 1002,
+      "url": "https://dev.azure.com/contoso/myproject/_apis/wit/workItems/1002",
+      "fields": {
+        "System.Id": 1002,
+        "System.WorkItemType": "Task",
+        "System.Title": "Add integration tests for ADO fetch layer",
+        "System.State": "New",
+        "System.AssignedTo": {
+          "displayName": "Carl Joakim Damsleth",
+          "uniqueName": "Carl.Joakim.Damsleth@crayon.no"
+        },
+        "System.IterationPath": "myproject\\Sprint 42",
+        "System.AreaPath": "myproject\\Platform",
+        "System.Tags": "testing",
+        "System.ChangedDate": "2026-06-18T09:05:00Z"
+      }
+    },
+    {
+      "id": 1003,
+      "url": "https://dev.azure.com/contoso/myproject/_apis/wit/workItems/1003",
+      "fields": {
+        "System.Id": 1003,
+        "System.WorkItemType": "Task",
+        "System.Title": "Document owa-tui ADO screen keybindings",
+        "System.State": "Resolved",
+        "System.AssignedTo": {
+          "displayName": "Alex Nguyen",
+          "uniqueName": "alex.nguyen@crayon.no"
+        },
+        "System.IterationPath": "myproject\\Sprint 41",
+        "System.AreaPath": "myproject\\Docs",
+        "System.Tags": "docs",
+        "System.ChangedDate": "2026-06-10T16:45:00Z"
+      }
+    }
+  ]
+}
