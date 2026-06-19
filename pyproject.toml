@@ -21,7 +21,6 @@ dev = [
     "build>=1",
     "pytest>=7",
     "pytest-cov>=4",
-    "pytest-textual-snapshot>=0.4",
     "ruff>=0.4",
 ]
 
