@@ -358,7 +358,7 @@ class MailScreen(Screen[None]):
         self._debug = debug
         self._body_cache: dict[str, dict] = {}
         self._token: str = ""
-        self._api_base: str = self._config.get("api_base", "https://graph.microsoft.com/v1.0")
+        self._api_base: str = self._config.get("api_base", "https://outlook.office.com/api/v2.0")
         self._selected_msg: dict | None = None
 
         # Load settings from config (or use provided initial_settings for tests)
