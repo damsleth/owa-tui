@@ -99,6 +99,12 @@ def _bootstrap_screens() -> None:
     if "planner" not in SCREEN_REGISTRY:
         register_screen("planner", "Planner", PlannerScreen)
 
+    # --- Azure DevOps (ADO) ---
+    from owa_tui.screens.ado import AdoScreen  # noqa: F401, PLC0415
+
+    if "ado" not in SCREEN_REGISTRY:
+        register_screen("ado", "Azure DevOps", AdoScreen)
+
     # --- Graph Explorer (self-registers on import) ---
     import owa_tui.screens.graph  # noqa: F401, PLC0415
 
