@@ -58,8 +58,9 @@ boundary: `owa_tui` imports `owa_<tool>.api` / `owa_<tool>.<data_module>` only
 > were **not** refactored onto it (they work; migration is optional later debt).
 > **Deferred:** `OwaTreeScreen` / `OwaGridScreen` / `OwaThreadScreen` are NOT built — they have
 > no consumer yet; build each alongside its first real card (T2 drive / T4 sched / T7 teams),
-> not speculatively. Known debt: OwaListScreen still has a local `_OwaList`/`_DetailPane`
-> instead of reusing `widgets.ListBrowser`/`DetailPane` — tracked as a follow-up.
+> not speculatively. `OwaListScreen` owns its list/detail via local `_OwaList`/`_DetailPane`;
+> the old unused `widgets.ListBrowser`/`DetailPane` were deleted (see plan 01 drift note) — if a
+> reusable widget is wanted, build it from plan 01 §5a/§5b and wire it in then.
 
 Extract common Textual structure into `src/owa_tui/base/`:
 

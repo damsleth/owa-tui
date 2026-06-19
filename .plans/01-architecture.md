@@ -33,12 +33,14 @@ The §5 "shared widget kit" only partly landed. Of `src/owa_tui/widgets/`:
 
 - **Live & shared:** `SettingsOverlay` + `MenuState` + `StatusBar` — used by cal/mail/graph/people
   and the base. Keep.
-- **Built but never adopted:** `ListBrowser` (§5a) and `DetailPane` (§5b). v1 screens each rolled
-  their own list/detail (`AgendaList`, `MessageList`, graph's list, people's, and the base's
-  `_OwaList`/`_DetailPane`) instead of subclassing these. They are **not dead — they are the
-  intended v2 list/detail foundation**; the open task is to make `OwaListScreen` (and, optionally,
-  the v1 screens) actually subclass them. **Do not delete** — adopt. (Tracked as a todo.)
-- **Dead, slated for removal:** the central `adapter.py` fetch layer — `fetch_token`,
+- **Built, never adopted, now removed:** `ListBrowser` (§5a) and `DetailPane` (§5b) were deleted
+  (commit follows). v1 screens each rolled their own list/detail (`AgendaList`, `MessageList`,
+  graph's list, people's `DetailPane`, the base's `_OwaList`/`_DetailPane`) and none ever subclassed
+  the kit versions — they were dead. The §5a/§5b **specs remain the blueprint**: if a v2 list card
+  wants a shared list/detail widget, rebuild from those sections (and have the new screen actually
+  use it) rather than resurrecting unused code. The base's `_OwaList`/`_DetailPane` are now the
+  canonical list/detail impls.
+- **Removed:** the central `adapter.py` fetch layer — `fetch_token`,
   `fetch_cal_events`, `fetch_mail_messages`, `fetch_graph_request`, and `FetchMixin` — was
   superseded by the per-screen fetch modules (`screens/cal/fetch.py`, mail inline, `graph/fetch.py`)
   and is referenced by no screen. Only `access_token_for` is live. v2 tools get their **own**
