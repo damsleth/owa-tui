@@ -26,6 +26,6 @@ jobs:
       - name: Compile
         run: python -m compileall -q src
       - name: Unit tests with coverage
-        run: pytest -q --cov --cov-fail-under=80
+        run: pytest -q --cov --cov-fail-under=85
       - name: Build package
         run: uv build

@@ -1,45 +1,108 @@
-"""Textual TUI front-end for the owa-tools Microsoft 365 CLI suite."""
+"""Textual TUI front-end for owa-tools Microsoft 365 CLI suite."""
 
 from __future__ import annotations
 
 import argparse
 from collections.abc import Sequence
+from typing import Any
 
 from textual.app import App, ComposeResult
-from textual.containers import Center, Middle
-from textual.widgets import Footer, Header, Label
+from textual.widgets import Footer, Header
 
 __version__ = "0.1.0"
 
 
 class OwaTuiApp(App[None]):
-    """Minimal launcher shell for the owa-tools TUI."""
+    """Single unified owa-tools TUI app with a screen-stack architecture.
+
+    On startup the ``HomeScreen`` is pushed (tool selector).  Individual tool
+    entrypoints can bypass the selector by passing ``tool='cal'`` etc., which
+    causes ``on_mount`` to push the tool's screen directly.
+
+    Parameters
+    ----------
+    config:
+        Optional pre-loaded owa-tools config dict.  When ``None`` the app
+        launches without auth (suitable for unit tests and offline UI work).
+    tool:
+        Optional tool key (``'cal'``, ``'mail'``, ``'graph'``) to push on
+        startup, bypassing the ``HomeScreen``.
+    debug:
+        Pass ``True`` to enable verbose owa-tools API logging.
+    """
 
     TITLE = "owa-tui"
     SUB_TITLE = "Microsoft 365 terminal UI"
+    CSS_PATH = "widgets/base.tcss"
     BINDINGS = [("q", "quit", "Quit")]
 
+    def __init__(
+        self,
+        config: dict[str, Any] | None = None,
+        *,
+        tool: str | None = None,
+        debug: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        self._config: dict[str, Any] = config or {}
+        self._tool = tool
+        self._debug = debug
+
+    # ------------------------------------------------------------------
+    # Composition — minimal shell; screens provide their own Header/Footer
+    # ------------------------------------------------------------------
+
     def compose(self) -> ComposeResult:
-        """Build the initial placeholder screen without making live service calls."""
         yield Header()
-        with Center(), Middle():
-            yield Label("owa-tui")
-            yield Label("Calendar, mail, and graph screens are under active development.")
-            yield Label("Press q to quit.")
         yield Footer()
+
+    def on_mount(self) -> None:
+        """Push the appropriate screen on startup."""
+        if self._tool:
+            self.push_tool(self._tool)
+        else:
+            from owa_tui.screens.home import HomeScreen
+
+            self.push_screen(HomeScreen())
+
+    # ------------------------------------------------------------------
+    # Public API used by HomeScreen and per-tool entrypoints
+    # ------------------------------------------------------------------
+
+    def push_tool(self, key: str) -> None:
+        """Push the screen registered for *key*, or log an error if unknown."""
+        from owa_tui.screens import get_screen_class
+
+        cls = get_screen_class(key)
+        if cls is None:
+            self.notify(f"Unknown tool: {key!r}.  No screen registered.", severity="error")
+            return
+        self.push_screen(cls(self._config, debug=self._debug))  # type: ignore[call-arg]
+
+
+# ---------------------------------------------------------------------------
+# CLI entrypoint
+# ---------------------------------------------------------------------------
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Create the command-line parser used by the console script."""
     parser = argparse.ArgumentParser(
         prog="owa-tui",
         description="Textual TUI front-end for the owa-tools Microsoft 365 CLI suite.",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    parser.add_argument("--debug", action="store_true", default=False, help="Enable debug logging.")
+    parser.add_argument(
+        "--tool",
+        choices=["cal", "mail", "graph"],
+        default=None,
+        help="Launch directly into a specific tool screen.",
+    )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> None:
     """Run the owa-tui application."""
-    build_parser().parse_args(argv)
-    OwaTuiApp().run()
+    args = build_parser().parse_args(argv)
+    OwaTuiApp(tool=args.tool, debug=args.debug).run()
