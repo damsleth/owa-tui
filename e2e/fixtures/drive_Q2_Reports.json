@@ -1,0 +1,44 @@
+{
+  "value": [
+    {
+      "id": "drive-file-101",
+      "name": "Q2 2026 Financial Summary.xlsx",
+      "size": 98304,
+      "file": {
+        "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "hashes": {
+          "quickXorHash": "def456="
+        }
+      },
+      "parentReference": {
+        "driveId": "b!abc123",
+        "driveType": "business",
+        "id": "drive-folder-001",
+        "path": "/drive/root:/Q2 Reports"
+      },
+      "createdDateTime": "2026-06-01T10:00:00Z",
+      "lastModifiedDateTime": "2026-06-15T16:30:00Z",
+      "webUrl": "https://contoso.sharepoint.com/personal/cjd/Documents/Q2%20Reports/Q2%202026%20Financial%20Summary.xlsx"
+    },
+    {
+      "id": "drive-file-102",
+      "name": "Q2 OKR Review.pptx",
+      "size": 204800,
+      "file": {
+        "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "hashes": {
+          "quickXorHash": "ghi789="
+        }
+      },
+      "parentReference": {
+        "driveId": "b!abc123",
+        "driveType": "business",
+        "id": "drive-folder-001",
+        "path": "/drive/root:/Q2 Reports"
+      },
+      "createdDateTime": "2026-06-05T09:00:00Z",
+      "lastModifiedDateTime": "2026-06-17T13:45:00Z",
+      "webUrl": "https://contoso.sharepoint.com/personal/cjd/Documents/Q2%20Reports/Q2%20OKR%20Review.pptx"
+    }
+  ]
+}

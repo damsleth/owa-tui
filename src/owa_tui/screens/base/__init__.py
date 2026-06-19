@@ -10,5 +10,6 @@ people do); there is no base auth wrapper.
 """
 
 from owa_tui.screens.base.screen import OwaListScreen
+from owa_tui.screens.base.tree import OwaTreeScreen, TreeNode
 
-__all__ = ["OwaListScreen"]
+__all__ = ["OwaListScreen", "OwaTreeScreen", "TreeNode"]

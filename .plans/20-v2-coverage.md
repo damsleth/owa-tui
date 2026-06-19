@@ -29,7 +29,7 @@ This plan covers **Textual** TUIs for the eight tools not yet in owa-tui v1:
 | Tool        | Canonical view / interaction                                    | Status  |
 |-------------|------------------------------------------------------------------|---------|
 | owa-todo    | TodoScreen(OwaListScreen): task list + detail, "/" search, complete-toggle | ✅ shipped (T1) |
-| owa-drive   | Tree file browser (`Tree`/`DirectoryTree`-style), open/download  | planned |
+| owa-drive   | DriveScreen(OwaTreeScreen): OneDrive folder nav (drill/up), file detail (read-only) | ✅ shipped (T2) |
 | owa-planner | PlannerScreen(OwaListScreen): my-tasks list + detail, "/" search (read-only) | ✅ shipped (T5) |
 | owa-sched   | Free/busy availability grid (attendees × time slots)             | planned |
 | owa-ado     | AdoScreen(OwaListScreen): my work-items list + detail, "/" search (read-only) | ✅ shipped (T6) |
@@ -58,7 +58,9 @@ boundary: `owa_tui` imports `owa_<tool>.api` / `owa_<tool>.<data_module>` only
 > The shipped cal/mail/graph/people screens were **not** refactored onto it (they work;
 > migration is optional later debt). The speculative `base/auth.py` helper was removed (no
 > consumer); tools mint tokens via `adapter.access_token_for` directly.
-> **Deferred:** `OwaTreeScreen` / `OwaGridScreen` / `OwaThreadScreen` are NOT built — they have
+> **`OwaTreeScreen` ✅ shipped** (`src/owa_tui/screens/base/tree.py`, `OwaTreeScreen(OwaListScreen)` +
+> `TreeNode`) — a list-of-children + node-stack navigator (drill into containers, `h` pops up),
+> proven by `owa-drive` (T2). **Still deferred:** `OwaGridScreen` / `OwaThreadScreen` — they have
 > no consumer yet; build each alongside its first real card (T2 drive / T4 sched / T7 teams),
 > not speculatively. `OwaListScreen` owns its list/detail via local `_OwaList`/`_DetailPane`;
 > the old unused `widgets.ListBrowser`/`DetailPane` were deleted (see plan 01 drift note) — if a
@@ -157,6 +159,13 @@ deferred (confirm dialog required — carry as a TODO comment).
 ---
 
 ### Card-set T2 — owa-drive
+
+> ✅ **Shipped.** `src/owa_tui/screens/drive.py` = `DriveScreen(OwaTreeScreen)` — first consumer of
+> the new tree base. Lists OneDrive children via `owa_drive.paths.children_endpoint` + `normalize_item`
+> (Graph base), drills into folders / `h` pops up, file detail, `/` search, path-keyed `OWA_TUI_FIXTURES`
+> seam (`drive` root + `drive_<slug>` per folder, fallback to root). **Read-only** (download/upload/delete
+> deferred). Tests: `src/tests/drive/` (Pilot, drive.py 99%) + `src/tests/base/test_tree_screen.py`
+> (tree.py 96%) + `e2e/drive.test.ts` (6/6, drill+up verified).
 
 **Canonical view:** `OwaTreeScreen` file navigator.
 

@@ -1,0 +1,41 @@
+{
+  "value": [
+    {
+      "id": "drive-folder-001",
+      "name": "Q2 Reports",
+      "size": 0,
+      "folder": {
+        "childCount": 3
+      },
+      "parentReference": {
+        "driveId": "b!abc123",
+        "driveType": "business",
+        "id": "root",
+        "path": "/drive/root:"
+      },
+      "createdDateTime": "2026-04-01T08:00:00Z",
+      "lastModifiedDateTime": "2026-06-10T14:22:00Z",
+      "webUrl": "https://contoso.sharepoint.com/personal/cjd/Documents/Q2%20Reports"
+    },
+    {
+      "id": "drive-file-002",
+      "name": "Architecture Decision Record.docx",
+      "size": 184320,
+      "file": {
+        "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "hashes": {
+          "quickXorHash": "abc123="
+        }
+      },
+      "parentReference": {
+        "driveId": "b!abc123",
+        "driveType": "business",
+        "id": "root",
+        "path": "/drive/root:"
+      },
+      "createdDateTime": "2026-05-15T09:30:00Z",
+      "lastModifiedDateTime": "2026-06-18T11:05:00Z",
+      "webUrl": "https://contoso.sharepoint.com/personal/cjd/Documents/Architecture%20Decision%20Record.docx"
+    }
+  ]
+}
