@@ -1,6 +1,10 @@
 Plan: GRAPH v1 — Textual rebuild of owa-graph TUI (flagship tui_kit adapter)
 
-**Status:** draft
+**Status:** ✅ shipped (commit b12d1cd); auth reworked to per-call token minting in fcfa2bc.
+Implemented as `src/owa_tui/screens/graph.py` + `src/owa_tui/graph/` (auth/fetch/nav/state).
+Covered by `src/tests/graph/` (Pilot) and `e2e/actions.test.ts` (tui-test, fixture-mode).
+Note: the e2e pass found and fixed a real regression — Escape→menu crashed because
+`SettingsOverlay` was called with the old `MenuState` signature. Kept as the reference.
 **Phase:** B (source files read; curses source will be deleted in a later phase)
 **Parity source:** `owa-tools/src/owa_graph/tui.py`, `tui_nav.py`, `tui_settings.py`, `tui_menu.py`; `src/tests/graph/test_tui_loop.py`, `test_tui_nav.py`, `test_tui_actions.py`, `test_tui_auth.py`; `.plans/owa-graph-explorer-tui.md`
 **Target file:** `owa-tui/src/owa_tui/graph/screen.py`

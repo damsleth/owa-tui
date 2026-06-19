@@ -1,6 +1,9 @@
 # Plan: CAL v1 — Textual rebuild of owa-cal TUI
 
-**Status:** draft  
+**Status:** ✅ shipped (commit b12d1cd). Parity covered by `src/tests/cal/` (Pilot)
+and `e2e/actions.test.ts` (tui-test, fixture-mode). Code landed under
+`src/owa_tui/screens/cal/`, not the `src/owa_tui/cal/` path this plan sketched.
+Kept as the behavioural reference; the checklists below are the parity contract.  
 **Phase:** B (source files to be deleted from owa-tools after this plan is complete)  
 **Parity source:** `owa-tools/src/owa_cal/tui.py`, `tui_menu.py`, `tui_settings.py`  
 **Target file:** `owa-tui/src/owa_tui/cal/screen.py` (primary), plus supporting modules listed below
