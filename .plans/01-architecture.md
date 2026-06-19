@@ -27,6 +27,23 @@ doc isn't read as gospel:
   so every user action runs deterministically with no live auth. `pytest-textual-snapshot` is a
   declared dep but **no snapshot tests were written** — Pilot + e2e replaced that approach.
 
+### Widget-kit adoption gap (ponytail-audit, 2026-06-19)
+
+The §5 "shared widget kit" only partly landed. Of `src/owa_tui/widgets/`:
+
+- **Live & shared:** `SettingsOverlay` + `MenuState` + `StatusBar` — used by cal/mail/graph/people
+  and the base. Keep.
+- **Built but never adopted:** `ListBrowser` (§5a) and `DetailPane` (§5b). v1 screens each rolled
+  their own list/detail (`AgendaList`, `MessageList`, graph's list, people's, and the base's
+  `_OwaList`/`_DetailPane`) instead of subclassing these. They are **not dead — they are the
+  intended v2 list/detail foundation**; the open task is to make `OwaListScreen` (and, optionally,
+  the v1 screens) actually subclass them. **Do not delete** — adopt. (Tracked as a todo.)
+- **Dead, slated for removal:** the central `adapter.py` fetch layer — `fetch_token`,
+  `fetch_cal_events`, `fetch_mail_messages`, `fetch_graph_request`, and `FetchMixin` — was
+  superseded by the per-screen fetch modules (`screens/cal/fetch.py`, mail inline, `graph/fetch.py`)
+  and is referenced by no screen. Only `access_token_for` is live. v2 tools get their **own**
+  per-tool `adapter.py` (plan 20), so nothing depends on these. Safe to delete with their tests.
+
 ---
 
 ## 0. Context
