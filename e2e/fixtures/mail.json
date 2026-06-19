@@ -1,0 +1,30 @@
+{
+  "value": [
+    {
+      "Id": "msg-001",
+      "ConversationId": "conv-001",
+      "ReceivedDateTime": "2026-06-18T08:15:00Z",
+      "SentDateTime": "2026-06-18T08:14:00Z",
+      "Subject": "Q3 planning notes",
+      "From": {"EmailAddress": {"Name": "Alice", "Address": "alice@x.com"}},
+      "ToRecipients": [{"EmailAddress": {"Name": "You", "Address": "you@x.com"}}],
+      "BodyPreview": "Here are the notes from today's planning session.",
+      "IsRead": false,
+      "HasAttachments": false,
+      "Importance": "normal"
+    },
+    {
+      "Id": "msg-002",
+      "ConversationId": "conv-002",
+      "ReceivedDateTime": "2026-06-17T16:40:00Z",
+      "SentDateTime": "2026-06-17T16:39:00Z",
+      "Subject": "Re: Invoice #4821",
+      "From": {"EmailAddress": {"Name": "Billing", "Address": "billing@vendor.com"}},
+      "ToRecipients": [{"EmailAddress": {"Name": "You", "Address": "you@x.com"}}],
+      "BodyPreview": "Thanks, payment received.",
+      "IsRead": true,
+      "HasAttachments": true,
+      "Importance": "high"
+    }
+  ]
+}

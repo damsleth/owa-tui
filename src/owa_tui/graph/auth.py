@@ -97,6 +97,11 @@ def _ensure_token(audience: str, state: "GraphState") -> TokenInfo | None:
     """
     now = time.time()
 
+    from owa_tui import fixtures  # noqa: PLC0415
+
+    if fixtures.enabled():
+        return TokenInfo(access_token=fixtures.TOKEN, exp_epoch=int(now) + 3600)
+
     # Cache hit?
     cached = state.token_cache.get(audience)
     if cached is not None and now < cached.exp_epoch - _EXP_SKEW:

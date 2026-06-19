@@ -39,6 +39,10 @@ def access_token_for(config: dict[str, Any], *, tool_name: str, audience: str) -
     contract), a dict, or a bare string. The dataclass case is why ``.get()``
     silently failed for mail/cal before — ``getattr`` is the correct accessor.
     """
+    from owa_tui import fixtures  # noqa: PLC0415
+
+    if fixtures.enabled():
+        return fixtures.TOKEN
     try:
         from owa_core.auth import get_token_for_config  # type: ignore[import]
 

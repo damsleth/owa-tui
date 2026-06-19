@@ -8,7 +8,7 @@ Usage
         settings_fields=[('show_declined', 'Show declined'), ('day_range', 'Day range')],
         settings=my_settings_instance,
     )
-    self.push_screen(overlay, self._handle_overlay_result)
+    self.app.push_screen(overlay, self._handle_overlay_result)
 
 The ``callback`` receives the action string (``'resume'``, ``'quit'``,
 ``'settings'``, ``'cycle:<field>'``) so the parent screen can act on it.

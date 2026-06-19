@@ -1,0 +1,8 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#collection",
+  "value": [
+    {"id": "item-001", "displayName": "First item", "mail": "first@x.com"},
+    {"id": "item-002", "displayName": "Second item", "mail": "second@x.com"},
+    {"id": "item-003", "displayName": "Third item", "mail": "third@x.com"}
+  ]
+}
