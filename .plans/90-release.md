@@ -25,11 +25,11 @@ referenced in `pyproject.toml` must already be live on PyPI.
    ```bash
    .venv/bin/ruff check .
    .venv/bin/python -m compileall -q src
-   .venv/bin/python -m pytest -q --cov --cov-fail-under=80
+   .venv/bin/python -m pytest -q --cov --cov-fail-under=85
    ```
-   All three must be green. The coverage gate is 80% (lower than owa-tools' 90%
-   because the Textual `compose()`/`on_mount()` layer is snapshot-tested, not
-   line-counted).
+   All three must be green. The coverage gate is 85% (lower than owa-tools' 90%
+   because the Textual `compose()`/`on_mount()` layer is exercised by Pilot + e2e
+   tests rather than line-counted).
 3. `uv build` and verify the wheel:
    ```bash
    python3 -m venv /tmp/owa-tui-verify
@@ -37,12 +37,12 @@ referenced in `pyproject.toml` must already be live on PyPI.
    /tmp/owa-tui-verify/bin/owa-tui --help
    ```
 4. Changelog updated for the new version.
-5. Snapshot tests green (pytest-textual-snapshot fixtures must not show unexpected diffs):
+5. End-to-end suite green (black-box, drives the real binary in a pty via fixture-mode):
    ```bash
-   .venv/bin/pytest -q src/tests --snapshot-default-extension SVGImageSnapshot
+   npx tui-test            # runs e2e/*.test.ts; no live auth needed (OWA_TUI_FIXTURES)
    ```
-   Update snapshots intentionally with `--snapshot-update` only when the UI change
-   is deliberate; never auto-update as part of a bug fix.
+   All specs must pass. (There are no `pytest-textual-snapshot` tests — the dep is declared
+   but unused; Pilot tests in step 2 plus this e2e suite are the UI gate.)
 
 ## Cutting a release
 
@@ -65,7 +65,7 @@ git push origin vX.Y.Z
 # Build, verify, publish to PyPI.
 rm -rf dist build
 uv build
-.venv/bin/python -m pytest -q --cov --cov-fail-under=80
+.venv/bin/python -m pytest -q --cov --cov-fail-under=85
 set -a && . ./.env && set +a && uv publish dist/owa_tui-X.Y.Z*
 ```
 
@@ -79,8 +79,8 @@ from `./.env` (gitignored — never commit it).
 The workflow mirrors owa-tools' `release.yml` with these adaptations:
 
 - **`gates` job**: lint (`ruff check .`), compile (`python -m compileall -q src`),
-  unit tests with 80% coverage gate, snapshot tests
-  (`pytest -q src/tests --snapshot-default-extension SVGImageSnapshot`).
+  unit/Pilot tests with 85% coverage gate (`pytest -q --cov --cov-fail-under=85`),
+  plus the tui-test e2e suite (`npx tui-test`, needs Node + `npm ci` in the job).
   Matrix: Python 3.10, 3.11, 3.12 on ubuntu-latest.
 - **`build` job**: `uv build` → upload wheel + sdist as `dist` artifact.
 - **`binaries` job**: see PyInstaller section below — **conditional on the known
@@ -210,8 +210,9 @@ Never force-push tags. Never delete published versions.
 
 ## Deferred work
 
-- **Snapshot fixtures for all v2 adapters:** each card-set in `20-v2-coverage.md`
-  must add snapshot tests before merge; they are referenced here as a release gate.
+- **Fixtures + e2e specs for all v2 adapters:** each card-set in `20-v2-coverage.md`
+  must add `e2e/fixtures/<tool>*.json` and tui-test specs before merge (same pattern as
+  `e2e/actions.test.ts`); they are a release gate.
 - **Generated shell completions:** once the `owa-tui <tool>` dispatch surface
   stabilises, generate completions from the subcommand registry.
 - **Live integration smoke tests:** opt-in authenticated tests gated by

@@ -3,6 +3,23 @@
 _Created 2026-06-18. Prerequisite: a v1 owa-tui release must exist on PyPI before
 any v2 card ships (the `owa-tools>=1.0.0` constraint keeps the import boundary clean)._
 
+> **Reality check (added 76c2675):** v1 shipped **cal/mail/graph only** — `owa-people` was
+> *not* built, so despite the line further down it is **not** v1 scope. Decide: add owa-people as
+> a ninth v2 card (a simple `OwaListScreen`) or do it as a v1.x follow-up.
+>
+> **base/ vs widgets/:** v1 already has a shared kit at `src/owa_tui/widgets/` (`list_browser`,
+> `detail_pane`, `settings_overlay`, `menu_state`, `status_bar`). "Step 0 `owa_tui.base`" below
+> should *build Screen-level scaffolds on top of those widgets*, not reinvent them — e.g.
+> `OwaListScreen` composes `ListBrowser` + `DetailPane` + `SettingsOverlay`.
+>
+> **Testing standard:** there are no `pytest-textual-snapshot` tests (the dep is declared but
+> unused). The real standard, set by v1, is **Pilot tests** (`src/tests/<tool>/`, monkeypatch
+> fetch) **plus tui-test e2e** (`e2e/`, fixture-mode). Every v2 card must ship: (1) Pilot tests,
+> (2) `e2e/fixtures/<tool>*.json` wired through `OWA_TUI_FIXTURES`, and (3) tui-test specs covering
+> its user actions — same pattern as `e2e/actions.test.ts`. Coverage gate is **85%** (`pyproject.toml`),
+> not 80%. Heads-up: the fixture seam currently keys on `cal`/`mail`/`mail_body`/`graph/*` — each new
+> tool needs its own `fixtures.load("<tool>")` call added at its fetch entrypoint.
+
 ## Context & scope
 
 owa-tools' original `tui_kit/` plan was curses-based and tied to `owa_core`.
@@ -21,7 +38,8 @@ This plan covers **Textual** TUIs for the eight tools not yet in owa-tui v1:
 | owa-doctor  | Live health DataTable: profiles × audiences, pass/fail, refresh  | planned |
 
 **owa-vids** remains deferred (URL-based, no natural list view).
-**owa-cal**, **owa-mail**, **owa-graph**, **owa-people** are v1 scope (not this plan).
+**owa-cal**, **owa-mail**, **owa-graph** are v1 scope (shipped). **owa-people** was planned as
+v1 but never built — see the Reality-check note above; treat it as a v2 card or a v1.x follow-up.
 
 ## Architecture — owa-tui Textual base pattern
 
@@ -51,8 +69,9 @@ Extract common Textual structure into `src/owa_tui/base/`:
 - **`base/auth.py`** — `get_token_async(profile, audience)`: thin async wrapper
   around `owa_core.auth.get_token_for_config`. Shows a status footer while minting.
 
-All base widgets are fully unit-tested with `pytest-textual-snapshot`; no live
-M365 calls. Coverage target: 85% on `owa_tui.base` (above the repo-wide 80% gate).
+All base widgets are tested with **Pilot** tests (monkeypatched fetch) plus the
+**tui-test e2e** harness in fixture-mode; no live M365 calls. Coverage target: 85% on
+`owa_tui.base`, matching the repo-wide 85% gate.
 
 ### Per-tool adapter layout
 
@@ -392,7 +411,7 @@ Max concurrent agents per batch: 3 (coverage gate + base widget churn).
 
 ## Coverage gate
 
-owa-tui uses a repo-wide 80% `fail_under` (see `pyproject.toml`). Each card-set
+owa-tui uses a repo-wide 85% `fail_under` (see `pyproject.toml`). Each card-set
 must keep the gate green on merge. Strategy: keep all logic in `rows.py` (pure,
 easily tested) and `adapter.py` (testable with mocked `owa_<tool>.api`). The
 Textual `app.py` App subclass is snapshot-tested but not line-coverage-critical —
