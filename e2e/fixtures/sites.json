@@ -1,0 +1,18 @@
+{
+  "value": [
+    {
+      "Title": "Project Tracker",
+      "Id": "list-001",
+      "ItemCount": 42,
+      "BaseTemplate": 100,
+      "Hidden": false
+    },
+    {
+      "Title": "Risk Register",
+      "Id": "list-002",
+      "ItemCount": 17,
+      "BaseTemplate": 100,
+      "Hidden": false
+    }
+  ]
+}
