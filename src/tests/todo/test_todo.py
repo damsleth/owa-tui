@@ -368,6 +368,67 @@ def test_toggle_no_selection_sets_status() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Live (non-fixture) complete-toggle PATCH path — not reachable via e2e
+# (fixture mode short-circuits in _patch_complete), so unit-test the worker.
+# ---------------------------------------------------------------------------
+
+
+class _SyncThread:
+    """Run the worker target inline on .start() — deterministic, traceable."""
+
+    def __init__(self, target=None, daemon=None, **_kw):
+        self._target = target
+
+    def start(self) -> None:
+        if self._target is not None:
+            self._target()
+
+
+def test_do_patch_complete_fires_patch_with_token() -> None:
+    """With a token, the worker PATCHes the task via owa_todo.api."""
+    calls: list[tuple] = []
+
+    screen = TodoScreen(config={})
+    with (
+        patch("threading.Thread", _SyncThread),
+        patch("owa_tui.adapter.access_token_for", return_value="tok"),
+        patch("owa_todo.api.api_request", side_effect=lambda *a, **k: calls.append((a, k))),
+    ):
+        screen._do_patch_complete("task-001", "Completed")
+
+    assert len(calls) == 1
+    args, kwargs = calls[0]
+    assert args[0] == "PATCH"
+    assert "me/tasks/task-001" in args[2]
+    assert kwargs["body"] == {"Status": "Completed"}
+
+
+def test_do_patch_complete_no_token_skips_patch() -> None:
+    """With no token, the worker returns early and never calls api_request."""
+    called: list[int] = []
+
+    screen = TodoScreen(config={})
+    with (
+        patch("threading.Thread", _SyncThread),
+        patch("owa_tui.adapter.access_token_for", return_value=""),
+        patch("owa_todo.api.api_request", side_effect=lambda *a, **k: called.append(1)),
+    ):
+        screen._do_patch_complete("task-001", "Completed")
+
+    assert called == []
+
+
+def test_do_patch_complete_swallows_errors() -> None:
+    """Exceptions in the worker are caught (best-effort PATCH, never crashes)."""
+    screen = TodoScreen(config={})
+    with (
+        patch("threading.Thread", _SyncThread),
+        patch("owa_tui.adapter.access_token_for", side_effect=RuntimeError("boom")),
+    ):
+        screen._do_patch_complete("task-001", "Completed")  # must not raise
+
+
+# ---------------------------------------------------------------------------
 # fetch_items tests (async, no Textual app)
 # ---------------------------------------------------------------------------
 
