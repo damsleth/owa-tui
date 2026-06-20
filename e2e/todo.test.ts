@@ -205,4 +205,44 @@ test.describe("todo", () => {
     await expect(terminal.getByText("Review quarterly report")).toBeVisible();
     await expect(terminal.getByText("Book team offsite venue")).toBeVisible();
   });
+
+  // ---------------------------------------------------------------------------
+  // 12. d — page_down on the short fixture list scrolls but is a visual no-op;
+  // assert the list still renders (no-crash check).
+  // ---------------------------------------------------------------------------
+  test("d page-down does not crash the list", async ({ terminal }) => {
+    await expect(terminal.getByText("Review quarterly report")).toBeVisible();
+    terminal.write("j"); // highlight a row first
+    terminal.write("d"); // page_down
+    await expect(
+      terminal.getByText("Review quarterly report", { strict: false })
+    ).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 13. u — page_up on the short fixture list scrolls but is a visual no-op;
+  // assert the list still renders (no-crash check).
+  // ---------------------------------------------------------------------------
+  test("u page-up does not crash the list", async ({ terminal }) => {
+    await expect(terminal.getByText("Review quarterly report")).toBeVisible();
+    terminal.write("j"); // highlight a row first
+    terminal.write("u"); // page_up
+    await expect(
+      terminal.getByText("Review quarterly report", { strict: false })
+    ).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 14. o — open_browser.  TodoScreen inherits the base open_browser_for, which
+  // returns None, so with a row selected the status becomes "no browser link
+  // for this item".
+  // ---------------------------------------------------------------------------
+  test("o open browser reports no link for the selected task", async ({ terminal }) => {
+    await expect(terminal.getByText("Review quarterly report")).toBeVisible();
+    terminal.write("j"); // highlight a row so an item is selected
+    terminal.write("o"); // open_browser
+    await expect(
+      terminal.getByText("no browser link for this item", { strict: false })
+    ).toBeVisible();
+  });
 });
