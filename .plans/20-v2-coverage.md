@@ -33,7 +33,7 @@ This plan covers **Textual** TUIs for the eight tools not yet in owa-tui v1:
 | owa-planner | PlannerScreen(OwaListScreen): my-tasks list + detail, "/" search (read-only) | ✅ shipped (T5) |
 | owa-sched   | SchedScreen(OwaGridScreen): free/busy grid (attendees × slots), read-only | ✅ shipped (T4) |
 | owa-ado     | AdoScreen(OwaListScreen): my work-items list + detail, "/" search (read-only) | ✅ shipped (T6) |
-| owa-teams   | Chats list → scrollable message thread (read-only v1)            | planned |
+| owa-teams   | TeamsScreen(OwaListScreen) chats -> OwaThreadScreen message thread (read-only) | ✅ shipped (T7) |
 | owa-sites   | SitesScreen(OwaTreeScreen): SharePoint lists -> items, detail, "/" search (read-only) | ✅ shipped (T3) |
 | owa-doctor  | DoctorScreen(OwaGridScreen): profiles × audiences health grid (local probes) | ✅ shipped (T8) |
 
@@ -60,9 +60,10 @@ boundary: `owa_tui` imports `owa_<tool>.api` / `owa_<tool>.<data_module>` only
 > consumer); tools mint tokens via `adapter.access_token_for` directly.
 > **`OwaTreeScreen` ✅ shipped** (`src/owa_tui/screens/base/tree.py`, `OwaTreeScreen(OwaListScreen)` +
 > `TreeNode`) — a list-of-children + node-stack navigator (drill into containers, `h` pops up),
-> proven by `owa-drive` (T2). **Still deferred:** `OwaGridScreen` / `OwaThreadScreen` — they have
-> no consumer yet; build each alongside its first real card (T2 drive / T4 sched / T7 teams),
-> not speculatively. `OwaListScreen` owns its list/detail via local `_OwaList`/`_DetailPane`;
+> proven by `owa-drive` (T2). **All four base screens now shipped** — `OwaListScreen`,
+> `OwaTreeScreen(OwaListScreen)`, `OwaGridScreen(Screen)` (DataTable), `OwaThreadScreen(Screen)`
+> (scrollable messages) — each proven by ≥1 real card. `OwaListScreen` owns its list/detail via
+> local `_OwaList`/`_DetailPane`;
 > the old unused `widgets.ListBrowser`/`DetailPane` were deleted (see plan 01 drift note) — if a
 > reusable widget is wanted, build it from plan 01 §5a/§5b and wire it in then.
 
@@ -373,6 +374,15 @@ drill to detail.
 ---
 
 ### Card-set T7 — owa-teams
+
+> ✅ **Shipped.** Two-screen card: `src/owa_tui/screens/teams.py` `TeamsScreen(OwaListScreen)` lists
+> chats (`owa_teams.api.graph_paginate` + `chats_endpoint` + `normalize_chats`); opening a chat pushes
+> a `TeamsThreadScreen(OwaThreadScreen)` — the new **`OwaThreadScreen`** base (`src/owa_tui/screens/base/thread.py`,
+> a scrollable message view with `fetch_messages`+`render_message` hooks) — showing `normalize_chat_messages`
+> (`strip_html`/`message_datetime`), `h` back to chats. Graph base; path-keyed `OWA_TUI_FIXTURES` seam.
+> **Read-only.** Tests: `src/tests/teams/` + `src/tests/base/test_thread_screen.py` (Pilot + unit, incl.
+> mocked live chats+messages) + `e2e/teams.test.ts` (6/6, chat→thread→back verified). Live path
+> (message bodies may need a separate token) mocked-tested, not e2e-verifiable without real Teams.
 
 **Canonical view:** `OwaListScreen` (chats) + `OwaThreadScreen` (message thread).
 

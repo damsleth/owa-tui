@@ -11,6 +11,14 @@ people do); there is no base auth wrapper.
 
 from owa_tui.screens.base.grid import GRID_BINDINGS, OwaGridScreen
 from owa_tui.screens.base.screen import OwaListScreen
+from owa_tui.screens.base.thread import OwaThreadScreen
 from owa_tui.screens.base.tree import OwaTreeScreen, TreeNode
 
-__all__ = ["OwaListScreen", "OwaTreeScreen", "TreeNode", "OwaGridScreen", "GRID_BINDINGS"]
+__all__ = [
+    "OwaListScreen",
+    "OwaTreeScreen",
+    "TreeNode",
+    "OwaGridScreen",
+    "GRID_BINDINGS",
+    "OwaThreadScreen",
+]
