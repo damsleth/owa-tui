@@ -226,6 +226,33 @@ test.describe("teams", () => {
     ).not.toBeVisible();
   });
 
+  // ---------------------------------------------------------------------------
+  // 9b. o — open_browser on the CHATS LIST screen.  TeamsScreen inherits the
+  // base open_browser_for, which returns None, so with a chat highlighted the
+  // status becomes "no browser link for this item".
+  // ---------------------------------------------------------------------------
+  test("o open browser reports no link for the selected chat", async ({ terminal }) => {
+    await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
+    terminal.write("j"); // highlight a chat so an item is selected
+    terminal.write("o"); // open_browser
+    await expect(
+      terminal.getByText("no browser link for this item", { strict: false })
+    ).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 9c. tab — focus_pane on the CHATS LIST screen toggles focus between list
+  // and detail pane.  No distinct visible text; assert the chats list still
+  // renders (no-crash check).
+  // ---------------------------------------------------------------------------
+  test("tab toggles pane focus on the chats list without crashing", async ({ terminal }) => {
+    await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
+    terminal.write("j"); // highlight a chat (populates the detail preview)
+    terminal.write("\t"); // tab -> focus detail pane
+    terminal.write("\t"); // tab -> focus list again
+    await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
+  });
+
   // ===========================================================================
   // Thread screen — its OWN scroll bindings (j/k line, d/u page, g/G top/bottom,
   // r refresh).  Open General Engineering first (j then l).  These are scroll
