@@ -138,4 +138,71 @@ test.describe("todo", () => {
     terminal.write("q");
     await expect(terminal.getByText("Review quarterly report")).not.toBeVisible();
   });
+
+  // ---------------------------------------------------------------------------
+  // 8. j — moves the highlight down one row
+  //
+  // Fixture order: Review quarterly report (0, High), Send onboarding docs
+  // (1, Normal), Book team offsite (2, Low). Press j twice to land on row 1,
+  // open detail, and confirm row 1's detail (Normal importance) — proving the
+  // cursor advanced past row 0.
+  // ---------------------------------------------------------------------------
+  test("j moves the highlight down", async ({ terminal }) => {
+    await expect(terminal.getByText("Review quarterly report")).toBeVisible();
+    terminal.write("j"); // row 0
+    terminal.write("j"); // row 1
+    terminal.write("l"); // open detail for row 1
+    await expect(
+      terminal.getByText("Send onboarding docs to new hire", { strict: false })
+    ).toBeVisible();
+    // Detail-only field confirms we are on row 1 (Normal), not row 0 (High).
+    await expect(terminal.getByText("Normal", { strict: false })).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 9. G then g — jump to bottom then back to top
+  //
+  // G lands on the last task (Book team offsite, Low); open detail to confirm.
+  // g returns to the first task (Review quarterly report, High); open detail
+  // to confirm — proving both jumps moved the cursor.
+  // ---------------------------------------------------------------------------
+  test("G jumps to bottom and g back to top", async ({ terminal }) => {
+    await expect(terminal.getByText("Review quarterly report")).toBeVisible();
+    terminal.write("j"); // highlight a row first
+    terminal.write("G"); // jump to last row
+    terminal.write("l"); // open detail
+    await expect(
+      terminal.getByText("Book team offsite venue", { strict: false })
+    ).toBeVisible();
+    await expect(terminal.getByText("Low", { strict: false })).toBeVisible();
+    terminal.write("h"); // back to list
+    terminal.write("g"); // jump to first row
+    terminal.write("l"); // open detail
+    await expect(
+      terminal.getByText("Review quarterly report", { strict: false })
+    ).toBeVisible();
+    await expect(terminal.getByText("High", { strict: false })).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 10. tab — focus_pane toggle does not crash; list still renders
+  // ---------------------------------------------------------------------------
+  test("tab focuses the pane without crashing", async ({ terminal }) => {
+    await expect(terminal.getByText("Review quarterly report")).toBeVisible();
+    terminal.write("j"); // highlight a row
+    terminal.write("\t"); // focus_pane
+    await expect(
+      terminal.getByText("Review quarterly report", { strict: false })
+    ).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 11. r — refresh re-fetches from fixtures; list still renders
+  // ---------------------------------------------------------------------------
+  test("r refresh re-renders the list", async ({ terminal }) => {
+    await expect(terminal.getByText("Review quarterly report")).toBeVisible();
+    terminal.write("r"); // refresh
+    await expect(terminal.getByText("Review quarterly report")).toBeVisible();
+    await expect(terminal.getByText("Book team offsite venue")).toBeVisible();
+  });
 });
