@@ -123,6 +123,12 @@ def _bootstrap_screens() -> None:
     if "sched" not in SCREEN_REGISTRY:
         register_screen("sched", "Scheduling", SchedScreen)
 
+    # --- Health (owa-doctor) ---
+    from owa_tui.screens.doctor import DoctorScreen  # noqa: PLC0415
+
+    if "doctor" not in SCREEN_REGISTRY:
+        register_screen("doctor", "Health", DoctorScreen)
+
     # --- Graph Explorer (self-registers on import) ---
     import owa_tui.screens.graph  # noqa: F401, PLC0415
 

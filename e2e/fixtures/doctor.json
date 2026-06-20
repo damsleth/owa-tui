@@ -1,0 +1,11 @@
+[
+  {"alias": "work",    "audience": "graph",  "token_ok": true,  "minutes_remaining": 55,  "token_audience": "https://graph.microsoft.com", "error": null},
+  {"alias": "work",    "audience": "mail",   "token_ok": true,  "minutes_remaining": 55,  "token_audience": "https://outlook.office.com",  "error": null},
+  {"alias": "work",    "audience": "cal",    "token_ok": true,  "minutes_remaining": 55,  "token_audience": "https://outlook.office.com",  "error": null},
+  {"alias": "personal","audience": "graph",  "token_ok": true,  "minutes_remaining": 6,   "token_audience": "https://graph.microsoft.com", "error": null},
+  {"alias": "personal","audience": "mail",   "token_ok": false, "minutes_remaining": null,"token_audience": null,                           "error": "token expired"},
+  {"alias": "personal","audience": "cal",    "token_ok": true,  "minutes_remaining": 6,   "token_audience": "https://outlook.office.com",  "error": null},
+  {"alias": "devbox",  "audience": "graph",  "token_ok": false, "minutes_remaining": null,"token_audience": null,                           "error": "no profile found"},
+  {"alias": "devbox",  "audience": "mail",   "token_ok": false, "minutes_remaining": null,"token_audience": null,                           "error": "no profile found"},
+  {"alias": "devbox",  "audience": "cal",    "token_ok": false, "minutes_remaining": null,"token_audience": null,                           "error": "no profile found"}
+]

@@ -18,6 +18,10 @@ def test_every_screen_accepts_positional_config_and_debug() -> None:
     tools = registered_tools()
     assert tools, "expected at least one registered tool"
     for key, _label in tools:
+        # Skip fakes other tests inject into the global registry (keys like
+        # "_test_tool"); real tool keys never start with an underscore.
+        if key.startswith("_"):
+            continue
         from owa_tui.screens import get_screen_class
 
         cls = get_screen_class(key)
