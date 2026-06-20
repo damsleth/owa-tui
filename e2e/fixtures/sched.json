@@ -1,0 +1,70 @@
+{
+  "value": [
+    {
+      "scheduleId": "alice@contoso.com",
+      "availabilityView": "002120000",
+      "scheduleItems": [
+        {
+          "status": "Busy",
+          "start": {"dateTime": "2026-06-23T09:00:00.0000000", "timeZone": "UTC"},
+          "end":   {"dateTime": "2026-06-23T10:00:00.0000000", "timeZone": "UTC"},
+          "subject": "Team standup"
+        },
+        {
+          "status": "Tentative",
+          "start": {"dateTime": "2026-06-23T11:00:00.0000000", "timeZone": "UTC"},
+          "end":   {"dateTime": "2026-06-23T12:00:00.0000000", "timeZone": "UTC"},
+          "subject": "1:1 with manager"
+        }
+      ],
+      "workingHours": {
+        "daysOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"],
+        "startTime": "08:00:00",
+        "endTime": "17:00:00",
+        "timeZone": {"name": "UTC"}
+      }
+    },
+    {
+      "scheduleId": "bob@contoso.com",
+      "availabilityView": "000000200",
+      "scheduleItems": [
+        {
+          "status": "Busy",
+          "start": {"dateTime": "2026-06-23T15:00:00.0000000", "timeZone": "UTC"},
+          "end":   {"dateTime": "2026-06-23T16:00:00.0000000", "timeZone": "UTC"},
+          "subject": "Project review"
+        }
+      ],
+      "workingHours": {
+        "daysOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"],
+        "startTime": "08:00:00",
+        "endTime": "17:00:00",
+        "timeZone": {"name": "UTC"}
+      }
+    },
+    {
+      "scheduleId": "carol@contoso.com",
+      "availabilityView": "002003000",
+      "scheduleItems": [
+        {
+          "status": "Busy",
+          "start": {"dateTime": "2026-06-23T09:00:00.0000000", "timeZone": "UTC"},
+          "end":   {"dateTime": "2026-06-23T10:00:00.0000000", "timeZone": "UTC"},
+          "subject": "All-hands"
+        },
+        {
+          "status": "OOF",
+          "start": {"dateTime": "2026-06-23T11:00:00.0000000", "timeZone": "UTC"},
+          "end":   {"dateTime": "2026-06-23T12:00:00.0000000", "timeZone": "UTC"},
+          "subject": "Out of office"
+        }
+      ],
+      "workingHours": {
+        "daysOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"],
+        "startTime": "08:00:00",
+        "endTime": "17:00:00",
+        "timeZone": {"name": "UTC"}
+      }
+    }
+  ]
+}
