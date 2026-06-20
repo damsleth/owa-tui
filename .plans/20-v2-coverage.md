@@ -31,7 +31,7 @@ This plan covers **Textual** TUIs for the eight tools not yet in owa-tui v1:
 | owa-todo    | TodoScreen(OwaListScreen): task list + detail, "/" search, complete-toggle | ✅ shipped (T1) |
 | owa-drive   | DriveScreen(OwaTreeScreen): OneDrive folder nav (drill/up), file detail (read-only) | ✅ shipped (T2) |
 | owa-planner | PlannerScreen(OwaListScreen): my-tasks list + detail, "/" search (read-only) | ✅ shipped (T5) |
-| owa-sched   | Free/busy availability grid (attendees × time slots)             | planned |
+| owa-sched   | SchedScreen(OwaGridScreen): free/busy grid (attendees × slots), read-only | ✅ shipped (T4) |
 | owa-ado     | AdoScreen(OwaListScreen): my work-items list + detail, "/" search (read-only) | ✅ shipped (T6) |
 | owa-teams   | Chats list → scrollable message thread (read-only v1)            | planned |
 | owa-sites   | SitesScreen(OwaTreeScreen): SharePoint lists -> items, detail, "/" search (read-only) | ✅ shipped (T3) |
@@ -246,6 +246,15 @@ SPO's three-tier hierarchy.
 ---
 
 ### Card-set T4 — owa-sched
+
+> ✅ **Shipped.** `src/owa_tui/screens/sched.py` = `SchedScreen(OwaGridScreen)` — first consumer of
+> the new **`OwaGridScreen`** base (`src/owa_tui/screens/base/grid.py`, a `DataTable` matrix with a
+> `fetch_grid`+`cell_style` hook contract; not list+detail). Free/busy grid: attendee rows × time-slot
+> columns, cells busy/free/tentative from `getSchedule` `availabilityView` (`owa_sched.api.api_post` +
+> `normalize_attendee` + `slots_in_window`, Graph base), `r` refresh, Esc menu, `OWA_TUI_FIXTURES`
+> seam. **Read-only.** Tests: `src/tests/sched/` + `src/tests/base/test_grid_screen.py` (Pilot + unit,
+> incl. mocked live getSchedule) + `e2e/sched.test.ts`. Live getSchedule path mocked-tested, not
+> e2e-verifiable without real calendars.
 
 **Canonical view:** `OwaGridScreen` availability grid — rows = attendees, columns = time slots.
 

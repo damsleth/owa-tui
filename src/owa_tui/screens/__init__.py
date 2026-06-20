@@ -117,6 +117,12 @@ def _bootstrap_screens() -> None:
     if "sites" not in SCREEN_REGISTRY:
         register_screen("sites", "SharePoint", SitesScreen)
 
+    # --- Scheduling (free/busy grid) ---
+    from owa_tui.screens.sched import SchedScreen  # noqa: PLC0415
+
+    if "sched" not in SCREEN_REGISTRY:
+        register_screen("sched", "Scheduling", SchedScreen)
+
     # --- Graph Explorer (self-registers on import) ---
     import owa_tui.screens.graph  # noqa: F401, PLC0415
 
