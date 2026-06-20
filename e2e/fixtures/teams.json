@@ -1,0 +1,44 @@
+{
+  "value": [
+    {
+      "id": "19:general-engineering_thread.v2",
+      "topic": "General Engineering",
+      "chatType": "group",
+      "createdDateTime": "2026-05-01T08:00:00Z",
+      "lastUpdatedDateTime": "2026-06-19T14:30:00Z",
+      "webUrl": "https://teams.microsoft.com/l/chat/19:general-engineering_thread.v2",
+      "members": [
+        {"displayName": "Alice Strand", "userId": "user-001"},
+        {"displayName": "Bob Nguyen", "userId": "user-002"},
+        {"displayName": "Carl Damsleth", "userId": "user-003"}
+      ],
+      "_memberNames": ["Alice Strand", "Bob Nguyen", "Carl Damsleth"]
+    },
+    {
+      "id": "19:q2-review_thread.v2",
+      "topic": "Q2 Review",
+      "chatType": "meeting",
+      "createdDateTime": "2026-06-10T09:00:00Z",
+      "lastUpdatedDateTime": "2026-06-18T16:00:00Z",
+      "webUrl": "https://teams.microsoft.com/l/chat/19:q2-review_thread.v2",
+      "members": [
+        {"displayName": "Alice Strand", "userId": "user-001"},
+        {"displayName": "Carl Damsleth", "userId": "user-003"}
+      ],
+      "_memberNames": ["Alice Strand", "Carl Damsleth"]
+    },
+    {
+      "id": "19:alice-carl_thread.v2",
+      "topic": null,
+      "chatType": "oneOnOne",
+      "createdDateTime": "2026-04-15T10:00:00Z",
+      "lastUpdatedDateTime": "2026-06-17T11:45:00Z",
+      "webUrl": "https://teams.microsoft.com/l/chat/19:alice-carl_thread.v2",
+      "members": [
+        {"displayName": "Alice Strand", "userId": "user-001"},
+        {"displayName": "Carl Damsleth", "userId": "user-003"}
+      ],
+      "_memberNames": ["Alice Strand", "Carl Damsleth"]
+    }
+  ]
+}

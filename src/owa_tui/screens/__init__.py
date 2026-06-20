@@ -129,6 +129,12 @@ def _bootstrap_screens() -> None:
     if "doctor" not in SCREEN_REGISTRY:
         register_screen("doctor", "Health", DoctorScreen)
 
+    # --- Teams (Microsoft Teams chats) ---
+    from owa_tui.screens.teams import TeamsScreen  # noqa: PLC0415
+
+    if "teams" not in SCREEN_REGISTRY:
+        register_screen("teams", "Teams", TeamsScreen)
+
     # --- Graph Explorer (self-registers on import) ---
     import owa_tui.screens.graph  # noqa: F401, PLC0415
 

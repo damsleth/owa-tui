@@ -1,0 +1,64 @@
+{
+  "value": [
+    {
+      "id": "msg-001",
+      "createdDateTime": "2026-06-19T09:01:00Z",
+      "deletedDateTime": null,
+      "from": {
+        "user": {
+          "id": "user-001",
+          "displayName": "Alice Strand"
+        }
+      },
+      "body": {
+        "contentType": "text",
+        "content": "Good morning everyone! Standup in 10 minutes."
+      }
+    },
+    {
+      "id": "msg-002",
+      "createdDateTime": "2026-06-19T09:05:00Z",
+      "deletedDateTime": null,
+      "from": {
+        "user": {
+          "id": "user-002",
+          "displayName": "Bob Nguyen"
+        }
+      },
+      "body": {
+        "contentType": "text",
+        "content": "On my way, just finishing a PR review."
+      }
+    },
+    {
+      "id": "msg-003",
+      "createdDateTime": "2026-06-19T09:12:00Z",
+      "deletedDateTime": null,
+      "from": {
+        "user": {
+          "id": "user-003",
+          "displayName": "Carl Damsleth"
+        }
+      },
+      "body": {
+        "contentType": "text",
+        "content": "Deploy pipeline is green, we are good for the release."
+      }
+    },
+    {
+      "id": "msg-004",
+      "createdDateTime": "2026-06-19T14:28:00Z",
+      "deletedDateTime": null,
+      "from": {
+        "user": {
+          "id": "user-001",
+          "displayName": "Alice Strand"
+        }
+      },
+      "body": {
+        "contentType": "html",
+        "content": "<p>Heads up: <b>architecture review</b> moved to Thursday.</p>"
+      }
+    }
+  ]
+}
