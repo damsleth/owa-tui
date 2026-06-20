@@ -29,7 +29,10 @@ owa-tui = "owa_tui:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
-packages = ["owa_tui"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["owa_tui*"]  # all subpackages (screens, screens.base, people, …); not src/tests
 
 [tool.ruff]
 line-length = 100
