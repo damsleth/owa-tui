@@ -1,0 +1,49 @@
+{
+  "value": [
+    {
+      "id": "msg-fallback-001",
+      "createdDateTime": "2026-06-19T10:00:00Z",
+      "deletedDateTime": null,
+      "from": {
+        "user": {
+          "id": "user-001",
+          "displayName": "Alice Strand"
+        }
+      },
+      "body": {
+        "contentType": "text",
+        "content": "Hello from the fallback thread."
+      }
+    },
+    {
+      "id": "msg-fallback-002",
+      "createdDateTime": "2026-06-19T10:05:00Z",
+      "deletedDateTime": null,
+      "from": {
+        "user": {
+          "id": "user-003",
+          "displayName": "Carl Damsleth"
+        }
+      },
+      "body": {
+        "contentType": "text",
+        "content": "Got it, thanks."
+      }
+    },
+    {
+      "id": "msg-fallback-003",
+      "createdDateTime": "2026-06-19T10:10:00Z",
+      "deletedDateTime": null,
+      "from": {
+        "user": {
+          "id": "user-002",
+          "displayName": "Bob Nguyen"
+        }
+      },
+      "body": {
+        "contentType": "text",
+        "content": "Catch you at the sync."
+      }
+    }
+  ]
+}
