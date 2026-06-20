@@ -112,8 +112,8 @@ class OwaGridScreen(Screen):
 
     def __init__(
         self,
-        *,
         config: dict[str, Any] | None = None,
+        *,
         tool_name: str = "owa-grid",
         audience: str = "graph",
         title: str = "",
