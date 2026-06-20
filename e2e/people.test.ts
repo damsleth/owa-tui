@@ -83,4 +83,92 @@ test.describe("people", () => {
     terminal.write("q");
     await expect(terminal.getByText("Alice Andersen")).not.toBeVisible();
   });
+
+  // -------------------------------------------------------------------------
+  // 7. j — moves the cursor down one row
+  //
+  // People sort name_asc: Alice (0), Bob (1), Carol (2). Press j twice to land
+  // on Bob, open detail, and confirm it is Bob's detail (his email) — proving
+  // the cursor advanced past row 0.
+  // -------------------------------------------------------------------------
+  test("j moves the cursor down", async ({ terminal }) => {
+    await expect(terminal.getByText("Alice Andersen")).toBeVisible();
+    terminal.write("j"); // highlight row 0 (Alice)
+    terminal.write("j"); // move to row 1 (Bob)
+    terminal.write("l"); // open detail for row 1
+    await expect(terminal.getByText("bob.bakken@example.com", { strict: false })).toBeVisible();
+  });
+
+  // -------------------------------------------------------------------------
+  // 8. k — moves the cursor back up after moving down
+  //
+  // j,j down to Bob then k up to Alice, open detail, confirm Alice's email —
+  // proving k moved the cursor up.
+  // -------------------------------------------------------------------------
+  test("k moves the cursor up", async ({ terminal }) => {
+    await expect(terminal.getByText("Alice Andersen")).toBeVisible();
+    terminal.write("j"); // row 0 (Alice)
+    terminal.write("j"); // row 1 (Bob)
+    terminal.write("k"); // back to row 0 (Alice)
+    terminal.write("l"); // open detail for row 0
+    await expect(terminal.getByText("alice.andersen@example.com", { strict: false })).toBeVisible();
+  });
+
+  // -------------------------------------------------------------------------
+  // 9. G then g — jump to bottom then top of the list
+  //
+  // G lands on Carol (last); open detail to confirm. Then g returns to Alice
+  // (first); open detail to confirm — proving both jumps moved the cursor.
+  // -------------------------------------------------------------------------
+  test("G jumps to bottom and g back to top", async ({ terminal }) => {
+    await expect(terminal.getByText("Alice Andersen")).toBeVisible();
+    terminal.write("j"); // highlight a row first
+    terminal.write("G"); // jump to last row (Carol)
+    terminal.write("l"); // open detail
+    await expect(terminal.getByText("carol.christensen@example.com", { strict: false })).toBeVisible();
+    terminal.write("h"); // back to list
+    terminal.write("g"); // jump to first row (Alice)
+    terminal.write("l"); // open detail
+    await expect(terminal.getByText("alice.andersen@example.com", { strict: false })).toBeVisible();
+  });
+
+  // -------------------------------------------------------------------------
+  // 10. tab — focus_pane toggle does not crash; list still renders
+  //
+  // Detail pane may be 'off' (action returns early) or visible (focus toggles);
+  // either way the list must remain visible after pressing tab.
+  // -------------------------------------------------------------------------
+  test("tab focuses the pane without crashing", async ({ terminal }) => {
+    await expect(terminal.getByText("Alice Andersen")).toBeVisible();
+    terminal.write("j"); // highlight a row
+    terminal.write("\t"); // focus_pane
+    await expect(terminal.getByText("Alice Andersen", { strict: false })).toBeVisible();
+  });
+
+  // -------------------------------------------------------------------------
+  // 11. r — refresh re-fetches from fixtures; list still renders
+  // -------------------------------------------------------------------------
+  test("r refresh re-renders the list", async ({ terminal }) => {
+    await expect(terminal.getByText("Alice Andersen")).toBeVisible();
+    terminal.write("r"); // refresh
+    await expect(terminal.getByText("Alice Andersen")).toBeVisible();
+    await expect(terminal.getByText("Bob Bakken")).toBeVisible();
+  });
+
+  // -------------------------------------------------------------------------
+  // 12. / — search that returns results filters the list to matches
+  //
+  // NB: people search re-fetches via fixtures (no client-side filter), so the
+  // search box hint confirms the modal; typing a name + Enter keeps the list
+  // populated. Assert the searched-for person stays visible.
+  // -------------------------------------------------------------------------
+  test("/ search returns results", async ({ terminal }) => {
+    await expect(terminal.getByText("Alice Andersen")).toBeVisible();
+    terminal.write("/");
+    await expect(terminal.getByText("Enter to search", { strict: false })).toBeVisible();
+    terminal.write("Bob"); // search term
+    terminal.submit(); // Enter -> apply search
+    // Match stays visible after the search round-trip.
+    await expect(terminal.getByText("Bob Bakken", { strict: false })).toBeVisible();
+  });
 });

@@ -131,4 +131,122 @@ test.describe("drive", () => {
       terminal.getByText("Q2 Reports", { strict: false })
     ).not.toBeVisible();
   });
+
+  // ---------------------------------------------------------------------------
+  // 7. j / k — move the cursor between rows.
+  //
+  // Movement is proven via the auto-preview detail pane (detail_pane_mode
+  // defaults to "right"): on_list_view_highlighted previews the highlighted
+  // item.  Row 1 = "Q2 Reports" folder (detail shows "Children:"), row 2 =
+  // the .docx file (detail shows the formatted size "180.0 KB", a string that
+  // only appears in the file detail, never in a row).
+  // ---------------------------------------------------------------------------
+  test("j and k move the cursor between rows", async ({ terminal }) => {
+    await expect(terminal.getByText("Q2 Reports", { strict: false })).toBeVisible();
+
+    terminal.write("j"); // highlight row 1 (folder)
+    terminal.write("j"); // move down to row 2 (the .docx file)
+
+    // File detail preview — size string is unique to the file detail pane.
+    await expect(terminal.getByText("180.0 KB", { strict: false })).toBeVisible();
+
+    terminal.write("k"); // move back up to row 1 (the folder)
+
+    // Folder detail preview — "Children:" only appears for the folder.
+    await expect(terminal.getByText("Children:", { strict: false })).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 8. G / g — jump to bottom / top of the listing.
+  //
+  // Proven via the same auto-preview pane: G lands on the last row (file →
+  // "180.0 KB"), g returns to the first row (folder → "Children:").
+  // ---------------------------------------------------------------------------
+  test("G jumps to bottom and g jumps to top", async ({ terminal }) => {
+    await expect(terminal.getByText("Q2 Reports", { strict: false })).toBeVisible();
+
+    terminal.write("G"); // jump to last row (the file)
+    await expect(terminal.getByText("180.0 KB", { strict: false })).toBeVisible();
+
+    terminal.write("g"); // jump to first row (the folder)
+    await expect(terminal.getByText("Children:", { strict: false })).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 9. r — refresh re-fetches the current node; the tree still renders.
+  // ---------------------------------------------------------------------------
+  test("r refresh keeps the listing rendered", async ({ terminal }) => {
+    await expect(terminal.getByText("Q2 Reports", { strict: false })).toBeVisible();
+
+    terminal.write("r");
+
+    // After refresh the same root items must still be visible.
+    await expect(terminal.getByText("Q2 Reports", { strict: false })).toBeVisible();
+    await expect(
+      terminal.getByText("Architecture Decision Record.docx", { strict: false })
+    ).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 10. / search returning results — type a name, submit, listing is filtered.
+  //
+  // load_node applies a case-insensitive substring filter on the item name.
+  // Searching "Architecture" keeps the .docx and drops the "Q2 Reports" folder.
+  // ---------------------------------------------------------------------------
+  test("/ search filters the listing to matching items", async ({ terminal }) => {
+    await expect(terminal.getByText("Q2 Reports", { strict: false })).toBeVisible();
+
+    terminal.write("/");
+    await expect(
+      terminal.getByText("Enter to search", { strict: false })
+    ).toBeVisible();
+
+    terminal.write("Architecture");
+    terminal.submit(); // Enter — run the search
+
+    // Match stays visible; the non-matching folder is filtered out.
+    await expect(
+      terminal.getByText("Architecture Decision Record.docx", { strict: false })
+    ).toBeVisible();
+    await expect(terminal.getByText("Q2 Reports", { strict: false })).not.toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 11. Deeper navigation: drill into the folder, then open a file leaf.
+  //
+  // Folders drill in (push a node); files are leaves and open the detail pane.
+  // After drilling into "Q2 Reports", opening a file with "l" shows its detail
+  // (MIME line is unique to the detail pane).
+  // ---------------------------------------------------------------------------
+  test("drill into folder then open a file leaf shows its detail", async ({ terminal }) => {
+    await expect(terminal.getByText("Q2 Reports", { strict: false })).toBeVisible();
+
+    terminal.write("j"); // highlight folder
+    terminal.write("l"); // drill into Q2 Reports
+
+    await expect(
+      terminal.getByText("Q2 2026 Financial Summary.xlsx", { strict: false })
+    ).toBeVisible();
+
+    terminal.write("j"); // highlight first file
+    terminal.write("l"); // open the file leaf (detail mode)
+
+    // Detail pane renders the file metadata — "MIME:" only appears in detail.
+    await expect(terminal.getByText("MIME:", { strict: false })).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 12. o — open in browser.  Effect (spawning a browser) is not observable in
+  // a headless pty; assert only that the screen does not crash and the listing
+  // stays rendered.
+  // ---------------------------------------------------------------------------
+  test("o (open browser) does not crash the screen", async ({ terminal }) => {
+    await expect(terminal.getByText("Q2 Reports", { strict: false })).toBeVisible();
+
+    terminal.write("j"); // need a selected item
+    terminal.write("o");
+
+    // Stable element still present — no crash.
+    await expect(terminal.getByText("Q2 Reports", { strict: false })).toBeVisible();
+  });
 });

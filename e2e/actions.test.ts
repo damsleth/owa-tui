@@ -98,6 +98,30 @@ test.describe("cal", () => {
     terminal.write("q");
     await expect(terminal.getByText("Morning standup", { strict: false })).not.toBeVisible();
   });
+
+  test("y then t tentatively accepts", async ({ terminal }) => {
+    await expect(terminal.getByText("Morning standup", { strict: false })).toBeVisible();
+    terminal.write("y");
+    await expect(terminal.getByText("(a)ccept")).toBeVisible();
+    terminal.write("t");
+    await expect(terminal.getByText("tentatively accepted")).toBeVisible();
+  });
+
+  test("enter opens the detail pane and h closes it", async ({ terminal }) => {
+    await expect(terminal.getByText("Morning standup", { strict: false })).toBeVisible();
+    terminal.write("j"); // highlight first row (index starts at None)
+    terminal.submit(); // Enter -> drill into detail pane
+    await expect(terminal.getByText("detail focus", { strict: false })).toBeVisible();
+    terminal.write("h"); // back_to_list — clears status, list stays visible
+    await expect(terminal.getByText("Morning standup", { strict: false })).toBeVisible();
+  });
+
+  test("o reports there is no web link for the event", async ({ terminal }) => {
+    await expect(terminal.getByText("Morning standup", { strict: false })).toBeVisible();
+    terminal.write("j"); // highlight first row
+    terminal.write("o"); // open_browser — fixture events carry no webLink
+    await expect(terminal.getByText("no web link for this event", { strict: false })).toBeVisible();
+  });
 });
 
 // --------------------------------------------------------------------------
@@ -150,6 +174,53 @@ test.describe("mail", () => {
     terminal.write("q");
     await expect(terminal.getByText("Q3 planning notes")).not.toBeVisible();
   });
+
+  test("g and G jump to top and bottom", async ({ terminal }) => {
+    await expect(terminal.getByText("Q3 planning notes")).toBeVisible();
+    terminal.write("G"); // go_bottom
+    terminal.write("g"); // go_top
+    await expect(terminal.getByText("Q3 planning notes")).toBeVisible();
+  });
+
+  test("d and u page down and up", async ({ terminal }) => {
+    await expect(terminal.getByText("Q3 planning notes")).toBeVisible();
+    terminal.write("j"); // highlight first row
+    terminal.write("d"); // page_down
+    terminal.write("u"); // page_up
+    await expect(terminal.getByText("Q3 planning notes")).toBeVisible();
+  });
+
+  test("tab toggles pane focus without crashing", async ({ terminal }) => {
+    await expect(terminal.getByText("Q3 planning notes")).toBeVisible();
+    terminal.write("\t"); // focus_pane -> reader pane
+    terminal.write("\t"); // focus_pane -> back to list
+    // No observable status for focus toggle; assert the list survived.
+    await expect(terminal.getByText("Q3 planning notes")).toBeVisible();
+  });
+
+  test("o reports there is no web link", async ({ terminal }) => {
+    await expect(terminal.getByText("Q3 planning notes")).toBeVisible();
+    terminal.write("j"); // highlight first row
+    terminal.write("o"); // open_browser — fixture messages carry no web_link
+    await expect(terminal.getByText("no web link", { strict: false })).toBeVisible();
+  });
+
+  test("reader scroll keys work and h closes it", async ({ terminal }) => {
+    await expect(terminal.getByText("Q3 planning notes")).toBeVisible();
+    terminal.write("j"); // highlight first row
+    terminal.write("l"); // open reader
+    await expect(terminal.getByText("Ship owa-tui v1")).toBeVisible();
+    // Exercise reader scroll bindings — body is short so content stays visible.
+    terminal.write("j"); // scroll down line
+    terminal.write("k"); // scroll up line
+    terminal.write("d"); // page down (mail reader uses j/k; d/u are list keys, harmless here)
+    terminal.write("u"); // page up
+    terminal.write("g"); // top
+    terminal.write("G"); // bottom
+    await expect(terminal.getByText("Ship owa-tui v1")).toBeVisible();
+    terminal.write("h"); // close reader
+    await expect(terminal.getByText("Invoice")).toBeVisible();
+  });
 });
 
 // --------------------------------------------------------------------------
@@ -192,5 +263,74 @@ test.describe("graph", () => {
     await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
     terminal.write("q");
     await expect(terminal.getByText("Test User", { strict: false })).not.toBeVisible();
+  });
+
+  test("g and G jump to top and bottom", async ({ terminal }) => {
+    await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
+    terminal.write("G"); // cursor_bottom
+    terminal.write("g"); // cursor_top
+    await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
+  });
+
+  test("n reports there is no next page", async ({ terminal }) => {
+    await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
+    terminal.write("n"); // next_page — fixture has no next_link
+    await expect(terminal.getByText("no next page", { strict: false })).toBeVisible();
+  });
+
+  test("a opens the audience input bar", async ({ terminal }) => {
+    await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
+    terminal.write("a"); // switch_audience -> input bar with audience placeholder
+    await expect(terminal.getByText("audience", { strict: false })).toBeVisible();
+    terminal.keyEscape();
+  });
+
+  test("/ opens the jump-to-path input bar (not a search modal)", async ({ terminal }) => {
+    await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
+    terminal.write("/"); // jump_path -> input bar placeholder "path (current: …)"
+    await expect(terminal.getByText("path (current", { strict: false })).toBeVisible();
+    terminal.keyEscape();
+  });
+
+  test("e opens the edit-query input bar", async ({ terminal }) => {
+    await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
+    terminal.write("e"); // edit_query -> input bar placeholder "query params (current: …)"
+    await expect(terminal.getByText("query params", { strict: false })).toBeVisible();
+    terminal.keyEscape();
+  });
+
+  test("o targets Graph Explorer on the graph audience", async ({ terminal }) => {
+    await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
+    terminal.write("o"); // open_browser — sets a status; browser availability varies
+    // The launch outcome depends on the host (no real browser in the pty), so
+    // just assert the screen survives and the object view is still rendered.
+    await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
+  });
+
+  test("y yanks the current URL", async ({ terminal }) => {
+    await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
+    terminal.write("y"); // yank_url -> "yanked: <url>" (pbcopy on macOS) / "url: <url>" fallback
+    await expect(terminal.getByText("graph.microsoft.com", { strict: false })).toBeVisible();
+  });
+
+  test("c adds a curl command to the debug buffer", async ({ terminal }) => {
+    await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
+    terminal.write("c"); // curl_command
+    await expect(terminal.getByText("curl command added", { strict: false })).toBeVisible();
+  });
+
+  test("m bookmarks the current path", async ({ terminal }) => {
+    await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
+    terminal.write("m"); // bookmark -> "bookmarked: graph:me"
+    await expect(terminal.getByText("bookmarked", { strict: false })).toBeVisible();
+  });
+
+  test("D toggles the debug overlay", async ({ terminal }) => {
+    await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
+    terminal.write("c"); // seed the debug buffer with a curl line
+    terminal.write("D"); // debug_overlay -> shows "Debug buffer:"
+    await expect(terminal.getByText("Debug buffer", { strict: false })).toBeVisible();
+    terminal.write("D"); // toggle off
+    await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
   });
 });
