@@ -35,7 +35,7 @@ This plan covers **Textual** TUIs for the eight tools not yet in owa-tui v1:
 | owa-ado     | AdoScreen(OwaListScreen): my work-items list + detail, "/" search (read-only) | ✅ shipped (T6) |
 | owa-teams   | Chats list → scrollable message thread (read-only v1)            | planned |
 | owa-sites   | SitesScreen(OwaTreeScreen): SharePoint lists -> items, detail, "/" search (read-only) | ✅ shipped (T3) |
-| owa-doctor  | Live health DataTable: profiles × audiences, pass/fail, refresh  | planned |
+| owa-doctor  | DoctorScreen(OwaGridScreen): profiles × audiences health grid (local probes) | ✅ shipped (T8) |
 
 **owa-vids** remains deferred (URL-based, no natural list view).
 **owa-cal**, **owa-mail**, **owa-graph** are v1 scope (shipped). **owa-people** was planned as
@@ -409,6 +409,14 @@ blocked until `owa_teams.api` has `get_chats` and `get_messages`.)
 ---
 
 ### Card-set T8 — owa-doctor
+
+> ✅ **Shipped.** `src/owa_tui/screens/doctor.py` = `DoctorScreen(OwaGridScreen)` — second grid
+> consumer. Profiles (rows, from `list_piggy_profiles`) × audiences (columns) health grid; each cell
+> = `classify_finding(probe_profile_token(alias, audience))` rendered ok/warn/fail (green/yellow/red).
+> **Local probes — no api_base/token/network**; probes run in an executor thread; fixture mode
+> short-circuits before probing. `r` refresh, Esc menu. Tests: `src/tests/doctor/` (Pilot + unit,
+> doctor.py 100%, incl. mocked live probe path) + `e2e/doctor.test.ts` (5/5). Live probe path
+> mocked-tested, not e2e-verifiable in CI (needs owa-piggy + profiles).
 
 **Canonical view:** `OwaGridScreen` live health dashboard — profiles × audiences.
 
