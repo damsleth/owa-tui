@@ -247,4 +247,38 @@ test.describe("sites", () => {
 
     await expect(terminal.getByText("Project Tracker", { strict: false })).toBeVisible();
   });
+
+  // ---------------------------------------------------------------------------
+  // 13. d — page_down on the short fixture listing scrolls but is a visual
+  // no-op; assert the listing still renders (no-crash check).
+  // ---------------------------------------------------------------------------
+  test("d page-down does not crash the listing", async ({ terminal }) => {
+    await expect(terminal.getByText("Project Tracker", { strict: false })).toBeVisible();
+    terminal.write("j"); // highlight a row first
+    terminal.write("d"); // page_down
+    await expect(terminal.getByText("Project Tracker", { strict: false })).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 14. u — page_up on the short fixture listing scrolls but is a visual no-op;
+  // assert the listing still renders (no-crash check).
+  // ---------------------------------------------------------------------------
+  test("u page-up does not crash the listing", async ({ terminal }) => {
+    await expect(terminal.getByText("Project Tracker", { strict: false })).toBeVisible();
+    terminal.write("j"); // highlight a row first
+    terminal.write("u"); // page_up
+    await expect(terminal.getByText("Project Tracker", { strict: false })).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 15. tab — focus_pane toggles focus between list and detail pane.  No
+  // distinct visible text; assert the listing still renders (no-crash check).
+  // ---------------------------------------------------------------------------
+  test("tab toggles pane focus without crashing", async ({ terminal }) => {
+    await expect(terminal.getByText("Project Tracker", { strict: false })).toBeVisible();
+    terminal.write("j"); // highlight a row (populates the detail preview)
+    terminal.write("\t"); // tab -> focus detail pane
+    terminal.write("\t"); // tab -> focus list again
+    await expect(terminal.getByText("Project Tracker", { strict: false })).toBeVisible();
+  });
 });

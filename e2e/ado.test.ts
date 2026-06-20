@@ -187,4 +187,44 @@ test.describe("ado", () => {
     terminal.write("q");
     await expect(terminal.getByText("Migrate auth flow to MSAL v3")).not.toBeVisible();
   });
+
+  // ---------------------------------------------------------------------------
+  // 12. d — page_down on the short fixture list scrolls but is a visual no-op;
+  // assert the list still renders (no-crash check).
+  // ---------------------------------------------------------------------------
+  test("d page-down does not crash the list", async ({ terminal }) => {
+    await expect(terminal.getByText("Migrate auth flow to MSAL v3")).toBeVisible();
+    terminal.write("j"); // highlight a row first
+    terminal.write("d"); // page_down
+    await expect(
+      terminal.getByText("Migrate auth flow to MSAL v3", { strict: false })
+    ).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 13. u — page_up on the short fixture list scrolls but is a visual no-op;
+  // assert the list still renders (no-crash check).
+  // ---------------------------------------------------------------------------
+  test("u page-up does not crash the list", async ({ terminal }) => {
+    await expect(terminal.getByText("Migrate auth flow to MSAL v3")).toBeVisible();
+    terminal.write("j"); // highlight a row first
+    terminal.write("u"); // page_up
+    await expect(
+      terminal.getByText("Migrate auth flow to MSAL v3", { strict: false })
+    ).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 14. o — open_browser.  AdoScreen.open_browser_for returns item["url"] (each
+  // fixture work item has one), so "o" genuinely launches a browser.  That is
+  // not observable in a headless pty; assert only that the screen survives.
+  // ---------------------------------------------------------------------------
+  test("o (open browser) does not crash the screen", async ({ terminal }) => {
+    await expect(terminal.getByText("Migrate auth flow to MSAL v3")).toBeVisible();
+    terminal.write("j"); // highlight a row so an item is selected
+    terminal.write("o"); // open_browser (item has a url)
+    await expect(
+      terminal.getByText("Migrate auth flow to MSAL v3", { strict: false })
+    ).toBeVisible();
+  });
 });
