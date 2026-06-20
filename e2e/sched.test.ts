@@ -78,4 +78,48 @@ test.describe("sched", () => {
     terminal.write("q");
     // After quit the sched grid is no longer the active view — no crash.
   });
+
+  // 7. All distinct availability statuses decode and render in the matrix.
+  //    alice "002120000" yields a tentative slot; carol "002003000" yields oof.
+  test("renders tentative and oof cells from availabilityView digits", async ({ terminal }) => {
+    await expect(terminal.getByText("alice@contoso.com", { strict: false })).toBeVisible();
+    // Decoded cell strings — every status repeats across the matrix so strict:false
+    expect(terminal.getByText("tentative", { strict: false })).toBeVisible();
+    expect(terminal.getByText("oof", { strict: false })).toBeVisible();
+    expect(terminal.getByText("free", { strict: false })).toBeVisible();
+  });
+
+  // 8. Explicit column navigation (l / right) walks the cursor across slot
+  //    columns. The grid is a read-only matrix — the StatusBar shows a fixed
+  //    "N rows × M columns" line, not per-cell detail — so we assert the grid
+  //    stays intact and a later time-slot header remains visible after moving.
+  test("h/l and arrow column navigation walks across slots", async ({ terminal }) => {
+    await expect(terminal.getByText("alice@contoso.com", { strict: false })).toBeVisible();
+    // Step right across several slot columns, then back left.
+    terminal.write("l");
+    terminal.write("l");
+    terminal.keyRight();
+    terminal.keyRight();
+    terminal.write("h");
+    terminal.keyLeft();
+    // A late-window header and the grid itself are still visible.
+    expect(terminal.getByText("16:00", { strict: false })).toBeVisible();
+    expect(terminal.getByText("alice@contoso.com", { strict: false })).toBeVisible();
+  });
+
+  // 9. The grid status line reports the matrix shape (3 attendees × 9 slots).
+  test("status bar reports the matrix shape", async ({ terminal }) => {
+    await expect(terminal.getByText("alice@contoso.com", { strict: false })).toBeVisible();
+    expect(terminal.getByText("3 rows", { strict: false })).toBeVisible();
+  });
+
+  // 10. enter / a are NOT bound on OwaGridScreen (read-only matrix — no
+  //     drill-down detail, no add-attendee prompt). Pressing them must be a
+  //     no-op: the grid stays put and does not crash.
+  test("enter and a are no-ops on the read-only grid", async ({ terminal }) => {
+    await expect(terminal.getByText("alice@contoso.com", { strict: false })).toBeVisible();
+    terminal.submit(); // enter — unbound
+    terminal.write("a"); // add-attendee — unbound
+    expect(terminal.getByText("alice@contoso.com", { strict: false })).toBeVisible();
+  });
 });

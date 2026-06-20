@@ -81,6 +81,105 @@ test.describe("ado", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // 4b. / — search that returns results filters the list to matches
+  // ---------------------------------------------------------------------------
+  test("/ search filters list to matching work items", async ({ terminal }) => {
+    await expect(terminal.getByText("Migrate auth flow to MSAL v3")).toBeVisible();
+    terminal.write("/");
+    await expect(terminal.getByText("Enter to search", { strict: false })).toBeVisible();
+    terminal.write("Migrate");
+    terminal.submit(); // Enter -> apply search
+    // Matching work item stays visible; a non-matching one is filtered out.
+    await expect(terminal.getByText("Migrate auth flow to MSAL v3")).toBeVisible();
+    await expect(
+      terminal.getByText("Add integration tests for ADO fetch layer")
+    ).not.toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 7. j — moves the highlight down to the next work item
+  //
+  // Drive j twice (row 0 -> row 1), open detail, and confirm it is the second
+  // item's detail (State "New", unique to row 1) — proves j moved the cursor.
+  // ---------------------------------------------------------------------------
+  test("j moves the highlight down", async ({ terminal }) => {
+    await expect(terminal.getByText("Migrate auth flow to MSAL v3")).toBeVisible();
+    terminal.write("j"); // row 0
+    terminal.write("j"); // row 1
+    terminal.write("l"); // open detail for row 1
+    await expect(
+      terminal.getByText("Add integration tests for ADO fetch layer", { strict: false })
+    ).toBeVisible();
+    // State "New" is unique to the second work item's detail.
+    await expect(terminal.getByText("New", { strict: false })).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 8. k — moves the highlight back up after moving down
+  //
+  // Drive j,j down then k up to row 0, open detail, confirm it is the first
+  // item's detail (Type "User Story") — proves k moved the cursor up.
+  // ---------------------------------------------------------------------------
+  test("k moves the highlight up", async ({ terminal }) => {
+    await expect(terminal.getByText("Migrate auth flow to MSAL v3")).toBeVisible();
+    terminal.write("j"); // row 0
+    terminal.write("j"); // row 1
+    terminal.write("k"); // back to row 0
+    terminal.write("l"); // open detail for row 0
+    await expect(
+      terminal.getByText("Migrate auth flow to MSAL v3", { strict: false })
+    ).toBeVisible();
+    await expect(terminal.getByText("User Story", { strict: false })).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 9. G / g — jump to bottom then top of the list
+  //
+  // G -> last row; open detail confirms the last item (State "Resolved",
+  // unique to row 2). g -> first row; open detail confirms "User Story".
+  // ---------------------------------------------------------------------------
+  test("G jumps to bottom and g jumps to top", async ({ terminal }) => {
+    await expect(terminal.getByText("Migrate auth flow to MSAL v3")).toBeVisible();
+    terminal.write("j"); // highlight a row so the cursor exists
+    terminal.write("G"); // jump to last row
+    terminal.write("l"); // open detail for last item
+    await expect(
+      terminal.getByText("Document owa-tui ADO screen keybindings", { strict: false })
+    ).toBeVisible();
+    await expect(terminal.getByText("Resolved", { strict: false })).toBeVisible();
+    terminal.write("h"); // back to list
+    terminal.write("g"); // jump to first row
+    terminal.write("l"); // open detail for first item
+    await expect(terminal.getByText("User Story", { strict: false })).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 10. r — refresh re-fetches; list still renders from fixtures afterwards
+  // ---------------------------------------------------------------------------
+  test("r refreshes and the list still renders", async ({ terminal }) => {
+    await expect(terminal.getByText("Migrate auth flow to MSAL v3")).toBeVisible();
+    terminal.write("r"); // refresh -> re-runs fetch_items against fixtures
+    await expect(terminal.getByText("Migrate auth flow to MSAL v3")).toBeVisible();
+    await expect(terminal.getByText("Add integration tests for ADO fetch layer")).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 11. tab — toggles focus between list and detail pane (no crash)
+  //
+  // focus_pane only moves focus; there is no distinct visible text to assert,
+  // so confirm the list is still rendered after the toggle.
+  // ---------------------------------------------------------------------------
+  test("tab toggles pane focus without crashing", async ({ terminal }) => {
+    await expect(terminal.getByText("Migrate auth flow to MSAL v3")).toBeVisible();
+    terminal.write("j"); // highlight a row (populates the detail preview)
+    terminal.write("\t"); // tab -> focus detail pane
+    terminal.write("\t"); // tab -> focus list again
+    await expect(
+      terminal.getByText("Migrate auth flow to MSAL v3", { strict: false })
+    ).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
   // 6. q — quits the ADO screen (list no longer visible)
   // ---------------------------------------------------------------------------
   test("q quits", async ({ terminal }) => {

@@ -144,4 +144,189 @@ test.describe("teams", () => {
       terminal.getByText("General Engineering", { strict: false })
     ).not.toBeVisible();
   });
+
+  // ===========================================================================
+  // List screen — cursor movement (j / k) and search returning results
+  // ===========================================================================
+
+  // ---------------------------------------------------------------------------
+  // 7. j j l — moving the cursor down twice then opening picks the SECOND chat
+  //
+  // Chats are sorted newest-first by lastUpdatedDateTime:
+  //   row 0  General Engineering   (2026-06-19)  → teams_19_general_…json
+  //   row 1  Q2 Review             (2026-06-18)  → teams_messages.json (fallback)
+  //   row 2  Alice Strand (1:1)    (2026-06-17)  → teams_messages.json (fallback)
+  // So "j" highlights row 0, a second "j" moves to row 1 (Q2 Review).  Opening
+  // that row proves the cursor actually moved — the fallback thread body
+  // ("Hello from the fallback thread.") is unique to NON-General threads.
+  // ---------------------------------------------------------------------------
+  test("j moves the cursor down (second chat opens its thread)", async ({ terminal }) => {
+    await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
+
+    terminal.write("j"); // highlight row 0 (General Engineering)
+    terminal.write("j"); // move to row 1 (Q2 Review)
+    terminal.write("l"); // open the highlighted thread
+
+    // Q2 Review breadcrumb + its fallback messages confirm the SECOND row opened,
+    // not the first.  "Standup in 10 minutes" (General-only) must NOT show.
+    await expect(terminal.getByText("Q2 Review", { strict: false })).toBeVisible();
+    await expect(
+      terminal.getByText("Hello from the fallback thread", { strict: false })
+    ).toBeVisible();
+    await expect(
+      terminal.getByText("Standup in 10 minutes", { strict: false })
+    ).not.toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 8. k moves the cursor back up — j j (row 1) then k (back to row 0) opens
+  //    General Engineering, whose unique body is "Standup in 10 minutes".
+  // ---------------------------------------------------------------------------
+  test("k moves the cursor up (returns to the first chat)", async ({ terminal }) => {
+    await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
+
+    terminal.write("j"); // row 0
+    terminal.write("j"); // row 1 (Q2 Review)
+    terminal.write("k"); // back to row 0 (General Engineering)
+    terminal.write("l"); // open the highlighted thread
+
+    // General Engineering thread body is unique to the specific fixture.
+    await expect(
+      terminal.getByText("Standup in 10 minutes", { strict: false })
+    ).toBeVisible();
+    // The fallback body must NOT appear — proves we opened row 0, not row 1.
+    await expect(
+      terminal.getByText("Hello from the fallback thread", { strict: false })
+    ).not.toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 9. / search RETURNING RESULTS — typing a chat keyword + Enter filters the
+  //    list down to the matching chat; non-matches disappear.
+  //
+  // fetch_items filters on _chat_display_name(c) containing the search string
+  // (case-insensitive).  Searching "Q2" matches only "Q2 Review".
+  // ---------------------------------------------------------------------------
+  test("/ search filters the chats list to matches", async ({ terminal }) => {
+    await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
+    await expect(terminal.getByText("Q2 Review", { strict: false })).toBeVisible();
+
+    terminal.write("/");
+    await expect(
+      terminal.getByText("Enter to search", { strict: false })
+    ).toBeVisible();
+
+    terminal.write("Q2");
+    terminal.submit(); // Enter — apply the filter
+
+    // Matching chat stays; non-matching chat is filtered out.
+    await expect(terminal.getByText("Q2 Review", { strict: false })).toBeVisible();
+    await expect(
+      terminal.getByText("General Engineering", { strict: false })
+    ).not.toBeVisible();
+  });
+
+  // ===========================================================================
+  // Thread screen — its OWN scroll bindings (j/k line, d/u page, g/G top/bottom,
+  // r refresh).  Open General Engineering first (j then l).  These are scroll
+  // operations with no easily-asserted visual delta on a tall RichLog, so each
+  // asserts "no crash": a known message body is still visible afterward.
+  // ===========================================================================
+
+  // ---------------------------------------------------------------------------
+  // 10. j / k scroll the thread by a line — content survives (no crash).
+  // ---------------------------------------------------------------------------
+  test("thread j/k scroll without crashing", async ({ terminal }) => {
+    await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
+    terminal.write("j");
+    terminal.write("l");
+    await expect(
+      terminal.getByText("Standup in 10 minutes", { strict: false })
+    ).toBeVisible();
+
+    // Scroll up a line then back down a line — thread must stay intact.
+    terminal.write("k");
+    terminal.write("j");
+    await expect(
+      terminal.getByText("Standup in 10 minutes", { strict: false })
+    ).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 11. d / u page the thread — content survives (no crash).
+  // ---------------------------------------------------------------------------
+  test("thread d/u page scroll without crashing", async ({ terminal }) => {
+    await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
+    terminal.write("j");
+    terminal.write("l");
+    await expect(
+      terminal.getByText("Standup in 10 minutes", { strict: false })
+    ).toBeVisible();
+
+    // Page up then page down — no observable delta on a short thread; assert no crash.
+    terminal.write("u");
+    terminal.write("d");
+    await expect(
+      terminal.getByText("Standup in 10 minutes", { strict: false })
+    ).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 12. g / G jump to top / bottom of the thread.  g (top) reveals the FIRST
+  //     message ("Standup in 10 minutes"); G (bottom) is the default view.
+  // ---------------------------------------------------------------------------
+  test("thread g/G jump to top and bottom", async ({ terminal }) => {
+    await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
+    terminal.write("j");
+    terminal.write("l");
+    await expect(
+      terminal.getByText("Standup in 10 minutes", { strict: false })
+    ).toBeVisible();
+
+    terminal.write("g"); // jump to top — first message is visible
+    await expect(
+      terminal.getByText("Standup in 10 minutes", { strict: false })
+    ).toBeVisible();
+
+    terminal.write("G"); // jump to bottom — last message body is visible
+    // msg-004 is HTML; tags are stripped leaving plain text.
+    await expect(
+      terminal.getByText("architecture review", { strict: false })
+    ).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 13. r refreshes the thread — re-fetches + re-renders; content reappears.
+  // ---------------------------------------------------------------------------
+  test("thread r refreshes and keeps content visible", async ({ terminal }) => {
+    await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
+    terminal.write("j");
+    terminal.write("l");
+    await expect(
+      terminal.getByText("Standup in 10 minutes", { strict: false })
+    ).toBeVisible();
+
+    terminal.write("r"); // refresh — clears + re-fetches from the fixture
+    await expect(
+      terminal.getByText("Standup in 10 minutes", { strict: false })
+    ).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 14. Esc pops the thread back to the chats list (mirror of the h test).
+  // ---------------------------------------------------------------------------
+  test("thread Esc pops back to the chats list", async ({ terminal }) => {
+    await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
+    terminal.write("j");
+    terminal.write("l");
+    await expect(
+      terminal.getByText("Standup in 10 minutes", { strict: false })
+    ).toBeVisible();
+
+    terminal.keyEscape(); // pop_back to the chats list
+
+    // All chats visible again; the thread body is gone.
+    await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
+    await expect(terminal.getByText("Q2 Review", { strict: false })).toBeVisible();
+  });
 });

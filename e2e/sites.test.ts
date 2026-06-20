@@ -127,4 +127,124 @@ test.describe("sites", () => {
       terminal.getByText("Project Tracker", { strict: false })
     ).not.toBeVisible();
   });
+
+  // ---------------------------------------------------------------------------
+  // 7. j / k — move the cursor between rows.
+  //
+  // Proven via the auto-preview detail pane (detail_pane_mode defaults to
+  // "right").  We move at the *item* level (inside Project Tracker) because an
+  // item's detail shows its "FileLeafRef:" filename — a string that only
+  // appears in the detail pane, never in a list row.
+  // ---------------------------------------------------------------------------
+  test("j and k move the cursor between rows", async ({ terminal }) => {
+    await expect(terminal.getByText("Project Tracker", { strict: false })).toBeVisible();
+
+    terminal.write("j"); // highlight the first list
+    terminal.write("l"); // drill into Project Tracker
+
+    await expect(
+      terminal.getByText("Crayon Norway — Q3 delivery roadmap", { strict: false })
+    ).toBeVisible();
+
+    terminal.write("j"); // highlight item 1 → detail previews Q3Roadmap.docx
+    await expect(terminal.getByText("Q3Roadmap.docx", { strict: false })).toBeVisible();
+
+    terminal.write("j"); // move down to item 2 → detail previews CloudGov.docx
+    await expect(terminal.getByText("CloudGov.docx", { strict: false })).toBeVisible();
+
+    terminal.write("k"); // move back up to item 1
+    await expect(terminal.getByText("Q3Roadmap.docx", { strict: false })).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 8. G / g — jump to bottom / top, proven via the same item-detail preview.
+  // ---------------------------------------------------------------------------
+  test("G jumps to bottom and g jumps to top", async ({ terminal }) => {
+    await expect(terminal.getByText("Project Tracker", { strict: false })).toBeVisible();
+
+    terminal.write("j"); // highlight first list
+    terminal.write("l"); // drill into Project Tracker
+
+    await expect(
+      terminal.getByText("Crayon Norway — Q3 delivery roadmap", { strict: false })
+    ).toBeVisible();
+
+    terminal.write("G"); // jump to last item → Onboarding.docx
+    await expect(terminal.getByText("Onboarding.docx", { strict: false })).toBeVisible();
+
+    terminal.write("g"); // jump back to first item → Q3Roadmap.docx
+    await expect(terminal.getByText("Q3Roadmap.docx", { strict: false })).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 9. r — refresh re-fetches the current node; the root lists still render.
+  // ---------------------------------------------------------------------------
+  test("r refresh keeps the listing rendered", async ({ terminal }) => {
+    await expect(terminal.getByText("Project Tracker", { strict: false })).toBeVisible();
+
+    terminal.write("r");
+
+    await expect(terminal.getByText("Project Tracker", { strict: false })).toBeVisible();
+    await expect(terminal.getByText("Risk Register", { strict: false })).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 10. / search returning results — type a list title, submit, listing filters.
+  //
+  // load_node applies a case-insensitive substring filter on the list title.
+  // Searching "Risk" keeps "Risk Register" and drops "Project Tracker".
+  // ---------------------------------------------------------------------------
+  test("/ search filters the listing to matching lists", async ({ terminal }) => {
+    await expect(terminal.getByText("Project Tracker", { strict: false })).toBeVisible();
+
+    terminal.write("/");
+    await expect(
+      terminal.getByText("Enter to search", { strict: false })
+    ).toBeVisible();
+
+    terminal.write("Risk");
+    terminal.submit(); // Enter — run the search
+
+    await expect(terminal.getByText("Risk Register", { strict: false })).toBeVisible();
+    await expect(
+      terminal.getByText("Project Tracker", { strict: false })
+    ).not.toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 11. Deeper navigation: drill into a list, then open an item leaf.
+  //
+  // Lists drill in (push a node); items are leaves and open the detail pane.
+  // After opening an item with "l", its detail renders "Kind:      item".
+  // ---------------------------------------------------------------------------
+  test("drill into list then open an item leaf shows its detail", async ({ terminal }) => {
+    await expect(terminal.getByText("Project Tracker", { strict: false })).toBeVisible();
+
+    terminal.write("j"); // highlight first list
+    terminal.write("l"); // drill into Project Tracker
+
+    await expect(
+      terminal.getByText("Crayon Norway — Q3 delivery roadmap", { strict: false })
+    ).toBeVisible();
+
+    terminal.write("j"); // highlight first item
+    terminal.write("l"); // open the item leaf (detail mode)
+
+    // Detail pane renders the item metadata — "Kind:" appears only in detail.
+    await expect(terminal.getByText("Kind:", { strict: false })).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 12. o — open in browser.  Effect (spawning a browser) is not observable in
+  // a headless pty; assert only that the screen does not crash and the listing
+  // stays rendered.
+  // ---------------------------------------------------------------------------
+  test("o (open browser) does not crash the screen", async ({ terminal }) => {
+    await expect(terminal.getByText("Project Tracker", { strict: false })).toBeVisible();
+
+    terminal.write("j"); // need a selected item
+    terminal.write("o");
+
+    await expect(terminal.getByText("Project Tracker", { strict: false })).toBeVisible();
+  });
 });
