@@ -68,6 +68,40 @@ test.describe("todo", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // 4b. / — search that returns results filters the list to matches
+  // ---------------------------------------------------------------------------
+  test("/ search filters list to matching tasks", async ({ terminal }) => {
+    await expect(terminal.getByText("Send onboarding docs to new hire")).toBeVisible();
+    terminal.write("/");
+    await expect(terminal.getByText("Enter to search", { strict: false })).toBeVisible();
+    terminal.write("Review");
+    terminal.submit(); // Enter -> apply search
+    // Matching task stays visible; a non-matching one is filtered out.
+    await expect(terminal.getByText("Review quarterly report")).toBeVisible();
+    await expect(
+      terminal.getByText("Send onboarding docs to new hire")
+    ).not.toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 4c. k / up — moves the highlight back up after moving down
+  //
+  // Drive j,j down then k up to row 0, open detail, and confirm it is the
+  // first task's detail (High importance) — proves k moved the cursor up.
+  // ---------------------------------------------------------------------------
+  test("k moves the highlight up", async ({ terminal }) => {
+    await expect(terminal.getByText("Review quarterly report")).toBeVisible();
+    terminal.write("j"); // row 0
+    terminal.write("j"); // row 1
+    terminal.write("k"); // back to row 0
+    terminal.write("l"); // open detail for row 0
+    await expect(
+      terminal.getByText("Review quarterly report", { strict: false })
+    ).toBeVisible();
+    await expect(terminal.getByText("High", { strict: false })).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
   // 5. Complete-toggle key — no-op in fixture mode; list stays visible
   //
   // TodoScreen binds "c" to toggle Status between NotStarted and Completed.
