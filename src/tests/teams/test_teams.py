@@ -927,3 +927,21 @@ def test_teams_thread_screen_positional_config() -> None:
     """TeamsThreadScreen must accept config as first positional arg."""
     screen = TeamsThreadScreen({}, chat_id="19:x@thread.v2")
     assert screen is not None
+
+
+# ---------------------------------------------------------------------------
+# open_browser_for — chats expose webUrl  [hardening]
+# ---------------------------------------------------------------------------
+
+
+def test_open_browser_for_returns_weburl() -> None:
+    screen = TeamsScreen(config={})
+    assert screen.open_browser_for({"webUrl": "https://teams.microsoft.com/x"}) == (
+        "https://teams.microsoft.com/x"
+    )
+
+
+def test_open_browser_for_none_when_absent() -> None:
+    screen = TeamsScreen(config={})
+    assert screen.open_browser_for({"id": "chat-1"}) is None
+    assert screen.open_browser_for({"webUrl": ""}) is None

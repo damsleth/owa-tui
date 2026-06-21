@@ -508,3 +508,54 @@ def test_error_row_styled_in_grid() -> None:
     bad_row = next(r for r in rows if r[0] == "bad@contoso.com")
     # All cells for the error row should be "error"
     assert all(cell == "error" for cell in bad_row[1])
+
+
+# ---------------------------------------------------------------------------
+# a — add-attendee prompt → append → re-fetch  [hardening]
+# ---------------------------------------------------------------------------
+
+
+def test_a_opens_prompt_and_appends_on_submit() -> None:
+    """`a` pushes the add-attendee prompt; submitting appends + re-fetches."""
+    from owa_tui.screens.base.screen import _SearchModal
+
+    async def _run() -> tuple[int, list[str], bool]:
+        app = _make_app()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause(0.1)
+            screen: SchedScreen = app.screen  # type: ignore[assignment]
+            n0 = len(screen._attendees)
+            await pilot.press("a")
+            await pilot.pause(0.05)
+            modal = app.screen
+            is_prompt = isinstance(modal, _SearchModal)
+            modal.dismiss("carol@contoso.com")  # type: ignore[union-attr]
+            await pilot.pause(0.05)
+            await app.workers.wait_for_complete()
+            return n0, list(screen._attendees), is_prompt
+
+    with patch("owa_tui.fixtures.load", return_value=_FIXTURE_VALUE):
+        n0, attendees, is_prompt = asyncio.run(_run())
+    assert is_prompt
+    assert "carol@contoso.com" in attendees
+    assert len(attendees) == n0 + 1
+
+
+def test_a_cancel_does_not_append() -> None:
+    """Cancelling the add-attendee prompt (empty result) appends nothing."""
+
+    async def _run() -> tuple[int, list[str]]:
+        app = _make_app()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause(0.1)
+            screen: SchedScreen = app.screen  # type: ignore[assignment]
+            n0 = len(screen._attendees)
+            await pilot.press("a")
+            await pilot.pause(0.05)
+            app.screen.dismiss(None)  # cancel  # type: ignore[union-attr]
+            await pilot.pause(0.05)
+            return n0, list(screen._attendees)
+
+    with patch("owa_tui.fixtures.load", return_value=_FIXTURE_VALUE):
+        n0, attendees = asyncio.run(_run())
+    assert len(attendees) == n0
