@@ -227,17 +227,15 @@ test.describe("teams", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // 9b. o — open_browser on the CHATS LIST screen.  TeamsScreen inherits the
-  // base open_browser_for, which returns None, so with a chat highlighted the
-  // status becomes "no browser link for this item".
+  // 9b. o — open_browser on the CHATS LIST screen.  TeamsScreen now overrides
+  // open_browser_for to return the chat's webUrl, so `o` launches the browser
+  // (host-dependent in a headless pty) — assert the screen survives.
   // ---------------------------------------------------------------------------
-  test("o open browser reports no link for the selected chat", async ({ terminal }) => {
+  test("o open browser does not crash the chats list", async ({ terminal }) => {
     await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
     terminal.write("j"); // highlight a chat so an item is selected
-    terminal.write("o"); // open_browser
-    await expect(
-      terminal.getByText("no browser link for this item", { strict: false })
-    ).toBeVisible();
+    terminal.write("o"); // open_browser (webUrl present)
+    await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
   });
 
   // ---------------------------------------------------------------------------

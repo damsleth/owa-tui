@@ -38,7 +38,9 @@ import asyncio
 from datetime import date, timedelta
 from typing import Any
 
-from owa_tui.screens.base.grid import GridData, OwaGridScreen
+from textual.binding import Binding
+
+from owa_tui.screens.base.grid import GRID_BINDINGS, GridData, OwaGridScreen
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -167,6 +169,10 @@ class SchedScreen(OwaGridScreen):
         IANA / Windows timezone name for the Graph request body.
     """
 
+    BINDINGS = GRID_BINDINGS + [  # type: ignore[assignment]
+        Binding("a", "add_attendee", "Add attendee"),
+    ]
+
     def __init__(
         self,
         config: dict[str, Any] | None = None,
@@ -261,3 +267,22 @@ class SchedScreen(OwaGridScreen):
 
     def menu_config(self) -> tuple[str, list[tuple[str, str]]]:
         return ("Scheduling — settings", [])
+
+    # -------------------------------------------------------------------------
+    # Add attendee (a) — prompt, append, re-fetch the grid
+    # -------------------------------------------------------------------------
+
+    def action_add_attendee(self) -> None:
+        from owa_tui.screens.base.screen import _SearchModal  # noqa: PLC0415
+
+        def _on_result(value: str | None) -> None:
+            email = (value or "").strip()
+            if not email:
+                return
+            self._attendees.append(email)
+            self._status = f"added {email} — refreshing…"
+            self._fetch_grid()
+
+        self.app.push_screen(
+            _SearchModal("Add attendee:", "email address…"), _on_result
+        )

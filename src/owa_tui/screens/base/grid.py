@@ -31,11 +31,13 @@ Bindings
     k / up        cursor_up
     h / left      cursor_left
     l / right     cursor_right
+    enter         show_detail (selected cell → status footer)
     r             refresh (re-run fetch_grid)
     escape        open SettingsOverlay menu
     q             quit (pop screen)
 
-No search, no drill-down, no detail pane in v1 — grids are read-only matrices.
+No search, no drill-down — grids are read-only matrices; ``enter`` surfaces the
+selected cell's detail in the status footer.
 """
 
 from __future__ import annotations
@@ -71,6 +73,8 @@ GRID_BINDINGS: list[Binding] = [
     Binding("left", "cursor_left", "Left", show=False),
     Binding("l", "cursor_right", "Right", show=False),
     Binding("right", "cursor_right", "Right", show=False),
+    # cell detail
+    Binding("enter", "show_detail", "Detail"),
     # universal actions
     Binding("r", "refresh", "Refresh"),
     Binding("escape", "open_menu", "Menu"),
@@ -128,6 +132,10 @@ class OwaGridScreen(Screen):
         self._screen_title = title or tool_name
         self._cursor_type = cursor_type
         self._debug = debug
+        # Raw (unstyled) grid data kept so the cursor cell can be resolved for
+        # action_show_detail. Populated by _apply_grid.
+        self._col_labels: list[str] = []
+        self._rows: list[tuple[str, list[str]]] = []
 
     # -------------------------------------------------------------------------
     # Abstract hooks — subclass MUST implement
@@ -259,6 +267,10 @@ class OwaGridScreen(Screen):
         Layout: the first column is always the row label ("") — unlabelled so
         it reads as a header stub — followed by one column per col_label.
         """
+        # Keep raw data for action_show_detail (cursor → cell lookup).
+        self._col_labels = col_labels
+        self._rows = rows
+
         tbl = self.query_one("#owa-grid-table", DataTable)
         tbl.clear(columns=True)
 
@@ -346,3 +358,45 @@ class OwaGridScreen(Screen):
             self.query_one("#owa-grid-table", DataTable).action_scroll_right()
         except Exception:
             pass
+
+    # -------------------------------------------------------------------------
+    # Cell detail (enter)
+    # -------------------------------------------------------------------------
+
+    def cell_detail(self, row_label: str, col_label: str, value: str) -> str:
+        """Detail string for the selected cell, shown in the status footer.
+
+        Default is ``"<row> · <col>: <value>"`` (or just the row label when the
+        cursor is on the row-label stub). Subclasses override for richer text
+        (e.g. doctor appends the probe error / minutes remaining).
+        """
+        if not col_label:
+            return row_label
+        return f"{row_label} · {col_label}: {value}"
+
+    def _show_cell_detail(self, row: int, column: int) -> None:
+        """Resolve a cursor (row, column) to raw data and show its detail."""
+        if not (0 <= row < len(self._rows)):
+            return
+        row_label, cells = self._rows[row]
+        if column <= 0:  # the unlabelled row-label stub column
+            self._status = self.cell_detail(row_label, "", row_label)
+            return
+        ci = column - 1
+        if ci >= len(self._col_labels):
+            return
+        value = cells[ci] if ci < len(cells) else ""
+        self._status = self.cell_detail(row_label, self._col_labels[ci], value)
+
+    def action_show_detail(self) -> None:
+        """Show the detail for the cell under the cursor (fallback for enter)."""
+        try:
+            coord = self.query_one("#owa-grid-table", DataTable).cursor_coordinate
+        except Exception:
+            return
+        if coord is not None:
+            self._show_cell_detail(coord.row, coord.column)
+
+    def on_data_table_cell_selected(self, event: DataTable.CellSelected) -> None:
+        """DataTable posts this on enter when cursor_type='cell'."""
+        self._show_cell_detail(event.coordinate.row, event.coordinate.column)

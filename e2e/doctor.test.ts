@@ -121,11 +121,13 @@ test.describe("doctor", () => {
     expect(terminal.getByText("3 rows", { strict: false })).toBeVisible();
   });
 
-  // 9. enter is NOT bound on OwaGridScreen — the doctor grid is a pure matrix
-  //    with no error-detail drill-down. Pressing enter must be a no-op.
-  test("enter is a no-op on the read-only grid", async ({ terminal }) => {
+  // 9. enter shows the selected cell's full detail in the footer, including
+  //    the probe's token lifetime / error (doctor's cell_detail override).
+  test("enter shows the cell's probe detail in the footer", async ({ terminal }) => {
     await expect(terminal.getByText("work", { strict: false })).toBeVisible();
-    terminal.submit(); // enter — unbound
-    expect(terminal.getByText("work", { strict: false })).toBeVisible();
+    terminal.keyRight(); // move cursor onto the first audience cell (work × graph)
+    terminal.submit(); // enter -> show detail
+    // work × graph has minutes_remaining=55 -> "... — 55 min left"
+    await expect(terminal.getByText("min left", { strict: false })).toBeVisible();
   });
 });

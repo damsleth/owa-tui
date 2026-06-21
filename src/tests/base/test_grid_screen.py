@@ -612,3 +612,93 @@ def test_fixture_seam_skips_live_fetch() -> None:
     rows, live_called = asyncio.run(_run())
     assert rows == 1
     assert not live_called
+
+
+# ---------------------------------------------------------------------------
+# Tests: cell detail (enter / CellSelected)  [hardening]
+# ---------------------------------------------------------------------------
+
+
+def test_cell_detail_default_format() -> None:
+    """Default cell_detail is '<row> · <col>: <value>'; row-label stub → row."""
+    screen = _FakeGridScreen(grid_data=_canned_grid())
+    assert screen.cell_detail("Alice", "Tue", "busy") == "Alice · Tue: busy"
+    assert screen.cell_detail("Alice", "", "Alice") == "Alice"
+
+
+def test_show_cell_detail_resolves_data_cell() -> None:
+    """_show_cell_detail maps a (row, column) coord to the raw cell + footer."""
+
+    async def _run() -> str:
+        app = _make_app(grid_data=_canned_grid())
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause(0.1)
+            screen: _FakeGridScreen = app.screen  # type: ignore[assignment]
+            screen._show_cell_detail(1, 2)  # Bob, column "Tue" (index 1) -> "free"
+            await pilot.pause(0.05)
+            return screen._status
+
+    assert asyncio.run(_run()) == "Bob · Tue: free"
+
+
+def test_show_cell_detail_on_row_label_stub() -> None:
+    """Column 0 is the unlabelled row-label stub → detail is just the row."""
+
+    async def _run() -> str:
+        app = _make_app(grid_data=_canned_grid())
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause(0.1)
+            screen: _FakeGridScreen = app.screen  # type: ignore[assignment]
+            screen._show_cell_detail(0, 0)
+            await pilot.pause(0.05)
+            return screen._status
+
+    assert asyncio.run(_run()) == "Alice"
+
+
+def test_show_cell_detail_ignores_out_of_range() -> None:
+    """Out-of-range row/column coords are ignored (no crash, status unchanged)."""
+
+    async def _run() -> str:
+        app = _make_app(grid_data=_canned_grid())
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause(0.1)
+            screen: _FakeGridScreen = app.screen  # type: ignore[assignment]
+            before = screen._status
+            screen._show_cell_detail(99, 0)  # bad row
+            screen._show_cell_detail(0, 99)  # bad column
+            await pilot.pause(0.05)
+            return screen._status == before
+
+    assert asyncio.run(_run())
+
+
+def test_enter_shows_cell_detail_via_cellselected() -> None:
+    """Pressing enter on a data cell posts CellSelected → footer shows detail."""
+
+    async def _run() -> str:
+        app = _make_app(grid_data=_canned_grid())
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause(0.1)
+            await pilot.press("right")  # move cursor onto first data cell
+            await pilot.press("enter")
+            await pilot.pause(0.05)
+            return app.screen._status  # type: ignore[union-attr]
+
+    # Alice row, first data column "Mon" -> "free"
+    assert asyncio.run(_run()) == "Alice · Mon: free"
+
+
+def test_action_show_detail_uses_cursor() -> None:
+    """action_show_detail reads the table cursor and shows that cell's detail."""
+
+    async def _run() -> str:
+        app = _make_app(grid_data=_canned_grid())
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause(0.1)
+            screen: _FakeGridScreen = app.screen  # type: ignore[assignment]
+            screen.action_show_detail()  # cursor at origin (0,0) -> row stub
+            await pilot.pause(0.05)
+            return screen._status
+
+    assert asyncio.run(_run()) == "Alice"

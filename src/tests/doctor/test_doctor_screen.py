@@ -434,3 +434,33 @@ def test_live_path_empty_profiles_returns_no_data() -> None:
 
     status = asyncio.run(_run())
     assert "(no data)" in status or "error" in status
+
+
+# ---------------------------------------------------------------------------
+# cell_detail override — append probe error / token lifetime  [hardening]
+# ---------------------------------------------------------------------------
+
+
+def test_cell_detail_appends_error() -> None:
+    screen = DoctorScreen()
+    screen._findings = {("work", "graph"): {"error": "token expired"}}
+    assert screen.cell_detail("work", "graph", "fail") == (
+        "work · graph: fail — token expired"
+    )
+
+
+def test_cell_detail_appends_minutes_remaining() -> None:
+    screen = DoctorScreen()
+    screen._findings = {("work", "graph"): {"error": None, "minutes_remaining": 55}}
+    assert screen.cell_detail("work", "graph", "warn") == (
+        "work · graph: warn — 55 min left"
+    )
+
+
+def test_cell_detail_base_when_no_finding_or_extra() -> None:
+    screen = DoctorScreen()
+    screen._findings = {("work", "graph"): {"error": None, "minutes_remaining": None}}
+    # no finding for this key -> base only
+    assert screen.cell_detail("home", "mail", "ok") == "home · mail: ok"
+    # finding with neither error nor minutes -> base only
+    assert screen.cell_detail("work", "graph", "ok") == "work · graph: ok"

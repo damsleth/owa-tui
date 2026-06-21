@@ -284,6 +284,13 @@ class TeamsScreen(OwaListScreen):
         return _detail_text(item)
 
     # -------------------------------------------------------------------------
+    # Optional hook: open_browser_for — chats carry a webUrl
+    # -------------------------------------------------------------------------
+
+    def open_browser_for(self, item: dict) -> str | None:
+        return item.get("webUrl") or None
+
+    # -------------------------------------------------------------------------
     # Abstract hook: menu_config
     # -------------------------------------------------------------------------
 
