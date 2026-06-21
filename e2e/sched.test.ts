@@ -113,13 +113,22 @@ test.describe("sched", () => {
     expect(terminal.getByText("3 rows", { strict: false })).toBeVisible();
   });
 
-  // 10. enter / a are NOT bound on OwaGridScreen (read-only matrix — no
-  //     drill-down detail, no add-attendee prompt). Pressing them must be a
-  //     no-op: the grid stays put and does not crash.
-  test("enter and a are no-ops on the read-only grid", async ({ terminal }) => {
+  // 10. enter shows the selected cell's detail in the status footer.
+  //     Arrow keys move the cell cursor; enter posts CellSelected -> footer
+  //     shows "<attendee> · <slot>: <value>" (the " ·" only appears there).
+  test("enter shows the selected cell detail in the footer", async ({ terminal }) => {
     await expect(terminal.getByText("alice@contoso.com", { strict: false })).toBeVisible();
-    terminal.submit(); // enter — unbound
-    terminal.write("a"); // add-attendee — unbound
-    expect(terminal.getByText("alice@contoso.com", { strict: false })).toBeVisible();
+    terminal.keyRight(); // move cursor onto the first data cell
+    terminal.submit(); // enter -> show detail
+    await expect(terminal.getByText("alice@contoso.com ·", { strict: false })).toBeVisible();
+  });
+
+  // 11. a opens the add-attendee prompt; Esc cancels it.
+  test("a opens the add-attendee prompt", async ({ terminal }) => {
+    await expect(terminal.getByText("alice@contoso.com", { strict: false })).toBeVisible();
+    terminal.write("a");
+    await expect(terminal.getByText("Add attendee:", { strict: false })).toBeVisible();
+    terminal.keyEscape(); // cancel — grid still there
+    await expect(terminal.getByText("alice@contoso.com", { strict: false })).toBeVisible();
   });
 });

@@ -144,6 +144,8 @@ class DoctorScreen(OwaGridScreen):
             debug=debug,
             **kw,
         )
+        # (alias, audience) -> finding dict, for cell_detail. Filled by fetch_grid.
+        self._findings: dict[tuple[str, str], dict] = {}
 
     # -------------------------------------------------------------------------
     # Abstract hook: fetch_grid
@@ -161,6 +163,7 @@ class DoctorScreen(OwaGridScreen):
         raw = fixtures.load(self._tool_name)
         if raw is not None:
             # raw is a list of findings from doctor.json
+            self._index_findings(raw)
             return _parse_grid(raw)
 
         # --- live path: local probes via owa-piggy, no network/token ---
@@ -183,7 +186,14 @@ class DoctorScreen(OwaGridScreen):
         if not findings:
             return [], []
 
+        self._index_findings(findings)
         return _parse_grid(findings)
+
+    def _index_findings(self, findings: list[dict]) -> None:
+        """Build the (alias, audience) -> finding lookup for cell_detail."""
+        self._findings = {
+            (f.get("alias", "?"), f.get("audience", "?")): f for f in findings
+        }
 
     # -------------------------------------------------------------------------
     # Abstract hook: cell_style
@@ -192,6 +202,20 @@ class DoctorScreen(OwaGridScreen):
     def cell_style(self, row_label: str, col_label: str, value: str) -> str | None:
         """Return a Rich markup style string for a health-check cell."""
         return _RESULT_STYLE.get(value)
+
+    def cell_detail(self, row_label: str, col_label: str, value: str) -> str:
+        """Append the probe error / token lifetime to the base cell detail."""
+        base = super().cell_detail(row_label, col_label, value)
+        f = self._findings.get((row_label, col_label))
+        if not f:
+            return base
+        err = f.get("error")
+        if err:
+            return f"{base} — {err}"
+        mins = f.get("minutes_remaining")
+        if mins is not None:
+            return f"{base} — {mins} min left"
+        return base
 
     # -------------------------------------------------------------------------
     # Optional overrides
