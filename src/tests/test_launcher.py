@@ -131,3 +131,23 @@ def test_toggle_transparency_round_trips() -> None:
     start, on, off = asyncio.run(_run())
     assert on == "ansi-dark"          # transparent theme uses ansi_default bg
     assert off == start               # restored the original theme
+
+
+def test_load_identity_sets_header_subtitle() -> None:
+    """The identity worker writes 'profile · upn' into the header subtitle."""
+    from unittest.mock import patch
+
+    async def _run() -> str:
+        app = owa_tui.OwaTuiApp(config={})
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            with patch(
+                "owa_tui.adapter.current_identity",
+                return_value=("crayon", "me@crayon.no"),
+            ):
+                app._load_identity()  # worker is skipped in on_mount when headless
+                await app.workers.wait_for_complete()
+                await pilot.pause()
+            return app.sub_title
+
+    assert asyncio.run(_run()) == "crayon  ·  me@crayon.no"
