@@ -1,13 +1,9 @@
-/* base.tcss — shared colours, status bar, and overlay styles for owa-tui */
-
-/* ── Colour palette (dark theme) ──────────────────────────────────────── */
-$primary:    #4fc3f7;   /* selected row highlight, header text */
-$secondary:  #81c784;   /* status success messages */
-$error:      #e57373;   /* status error messages */
-$surface:    #1e1e1e;   /* app / pane background */
-$border:     #444444;   /* divider lines, overlay borders */
-$text:       #e0e0e0;   /* default text */
-$text-muted: #9e9e9e;   /* footer hints, attendee details */
+/* base.tcss — shared status bar and overlay styles for owa-tui.
+ *
+ * Colours come from the active Textual theme ($primary, $surface, $border,
+ * $text, $text-muted, …) so the app follows whatever theme the user picks
+ * (light or dark) via the command palette.  Do NOT redefine those variables
+ * here with literal hex — that shadows the theme and pins one palette. */
 
 /* ── App shell ────────────────────────────────────────────────────────── */
 Screen {
