@@ -34,7 +34,14 @@ class OwaTuiApp(App[None]):
     TITLE = "owa-tui"
     SUB_TITLE = "Microsoft 365 terminal UI"
     CSS_PATH = "widgets/base.tcss"
-    BINDINGS = [("q", "quit", "Quit")]
+    BINDINGS = [
+        ("q", "quit", "Quit"),
+        ("ctrl+t", "toggle_transparency", "Transparent bg"),
+    ]
+
+    # ANSI themes use 'ansi_default' for surface/background, i.e. the
+    # terminal's own colours — so they render with a transparent background.
+    _ANSI_THEME = "ansi-dark"
 
     def __init__(
         self,
@@ -48,6 +55,21 @@ class OwaTuiApp(App[None]):
         self._config: dict[str, Any] = config or {}
         self._tool = tool
         self._debug = debug
+        self._theme_before_transparent: str | None = None
+
+    def action_toggle_transparency(self) -> None:
+        """Toggle a transparent (native terminal) background on and off.
+
+        Swaps to an ANSI theme (whose background is the terminal's own colour)
+        and back to whatever theme was active before, independent of the theme
+        picker.
+        """
+        if self.theme == self._ANSI_THEME:
+            self.theme = self._theme_before_transparent or "textual-dark"
+            self._theme_before_transparent = None
+        else:
+            self._theme_before_transparent = self.theme
+            self.theme = self._ANSI_THEME
 
     # ------------------------------------------------------------------
     # Composition — minimal shell; screens provide their own Header/Footer

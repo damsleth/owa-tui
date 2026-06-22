@@ -15,6 +15,21 @@ Header {
     color: $primary;
 }
 
+/* ── Content breathing room ───────────────────────────────────────────────
+ * Header/Footer/StatusBar dock flush to the screen edges; only the body
+ * content is indented. Type selectors match subclasses, so this one rule
+ * covers _OwaList / MessageList / PeopleList (ListView) and grid DataTables.
+ * Tune the values to taste. */
+ListView,
+DataTable {
+    margin: 1 0 0 1;
+}
+
+#owa-grid-breadcrumb,
+#breadcrumb {
+    padding-left: 1;
+}
+
 /* ── Status bar ───────────────────────────────────────────────────────── */
 StatusBar {
     height: 1;
