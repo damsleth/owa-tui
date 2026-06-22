@@ -413,12 +413,18 @@ class PeopleScreen(Screen[None]):
             id="people-list",
         )
 
+        if pane == "off":
+            return Horizontal(pl, id="people-layout")
+
+        detail = DetailPane(id="detail-pane")
         if pane == "right":
-            return _LayoutRight(ratio, pl, DetailPane(id="detail-pane"))
-        elif pane == "bottom":
-            return _LayoutBottom(ratio, pl, DetailPane(id="detail-pane"))
-        else:  # off
-            return _LayoutOff(pl)
+            pl.styles.width = f"{ratio}%"
+            detail.styles.width = f"{100 - ratio}%"
+            return Horizontal(pl, detail, id="people-layout")
+        # bottom
+        pl.styles.height = f"{ratio}%"
+        detail.styles.height = f"{100 - ratio}%"
+        return Vertical(pl, detail, id="people-layout")
 
     # ------------------------------------------------------------------
     # Mount / lifecycle
@@ -758,50 +764,3 @@ class PeopleScreen(Screen[None]):
         sorted_people = self._sorted_people()
         pl.update_people(sorted_people, self.settings)
 
-
-# ---------------------------------------------------------------------------
-# Layout helpers (inner container widgets)
-# ---------------------------------------------------------------------------
-
-
-class _LayoutRight(Horizontal):
-    """Horizontal layout: PeopleList left, DetailPane right."""
-
-    def __init__(self, ratio: int, people_list: PeopleList, detail: DetailPane) -> None:
-        super().__init__(id="people-layout")
-        self._ratio = ratio
-        self._people_list = people_list
-        self._detail = detail
-
-    def compose(self) -> ComposeResult:
-        self._people_list.styles.width = f"{self._ratio}%"
-        self._detail.styles.width = f"{100 - self._ratio}%"
-        yield self._people_list
-        yield self._detail
-
-
-class _LayoutBottom(Vertical):
-    """Vertical layout: PeopleList top, DetailPane bottom."""
-
-    def __init__(self, ratio: int, people_list: PeopleList, detail: DetailPane) -> None:
-        super().__init__(id="people-layout")
-        self._ratio = ratio
-        self._people_list = people_list
-        self._detail = detail
-
-    def compose(self) -> ComposeResult:
-        self._people_list.styles.height = f"{self._ratio}%"
-        self._detail.styles.height = f"{100 - self._ratio}%"
-        yield self._people_list
-        yield self._detail
-
-
-class _LayoutOff(Horizontal):
-    """Single-pane layout: only the PeopleList (no DetailPane)."""
-
-    def __init__(self, people_list: PeopleList) -> None:
-        super().__init__(id="people-layout")
-        self._people_list = people_list
-
-    def compose(self) -> ComposeResult:
-        yield self._people_list

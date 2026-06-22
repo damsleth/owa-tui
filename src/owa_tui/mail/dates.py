@@ -13,25 +13,23 @@ validate_custom_format(s) -> bool
 
 from __future__ import annotations
 
-import re
 from datetime import datetime
 
-_STRIP_TZ = re.compile(r"(Z|[+-]\d{2}:\d{2})$")
-_PARSE_FMTS = ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d")
 _SAMPLE = datetime(2000, 1, 2, 3, 4, 5)
 
 
 def _parse_iso(iso: str) -> datetime | None:
-    """Strip timezone suffix and parse to datetime; return None on failure."""
+    """Parse an ISO 8601 string to datetime; return None on failure.
+
+    ``datetime.fromisoformat`` (3.11+) handles bare dates, missing seconds,
+    and trailing ``Z`` / ``±HH:MM`` offsets directly.
+    """
     if not iso:
         return None
-    s = _STRIP_TZ.sub("", iso.strip())
-    for fmt in _PARSE_FMTS:
-        try:
-            return datetime.strptime(s, fmt)
-        except ValueError:
-            continue
-    return None
+    try:
+        return datetime.fromisoformat(iso.strip())
+    except ValueError:
+        return None
 
 
 def format_received(iso: str, fmt: str, custom: str = "") -> str:
