@@ -989,6 +989,26 @@ class TestCalScreenPilot:
         asyncio.run(_run())
         assert len(exited) >= 1
 
+    def test_q_returns_to_home_menu(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """When opened from the HomeScreen, q returns to the menu, not the terminal."""
+        _patch_fetch(monkeypatch, [])
+
+        async def _run() -> tuple[bool, bool]:
+            import owa_tui
+            from owa_tui.screens.home import HomeScreen
+
+            app = owa_tui.OwaTuiApp(config={})  # launches HomeScreen
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app.push_tool("cal")
+                await pilot.pause()
+                await pilot.press("q")
+                await pilot.pause()
+                return app.is_running, isinstance(app.screen, HomeScreen)
+
+        running, on_home = asyncio.run(_run())
+        assert running and on_home
+
     def test_persist_settings_no_crash(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """_persist_settings swallows exceptions (lines 574-580)."""
         _patch_fetch(monkeypatch, [])

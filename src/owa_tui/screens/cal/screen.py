@@ -126,7 +126,7 @@ class CalScreen(Screen):
     TITLE = "owa-cal"
 
     BINDINGS = [
-        Binding("q", "quit", "Quit"),
+        Binding("q", "quit", "Back"),
         Binding("r", "refresh", "Refresh"),
         Binding("y", "respond_arm", "Respond", show=False),
         Binding("a", "respond_key('a')", "Accept", show=False),
@@ -468,7 +468,12 @@ class CalScreen(Screen):
         self._status = ""
 
     def action_quit(self) -> None:
-        self.app.exit()
+        # Return to the tool menu like the other screens; exit the app only
+        # when launched directly into this tool (no HomeScreen underneath).
+        if len(self.app.screen_stack) > 2:
+            self.app.pop_screen()
+        else:
+            self.app.exit()
 
     # ------------------------------------------------------------------
     # Resize
