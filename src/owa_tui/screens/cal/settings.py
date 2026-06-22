@@ -46,8 +46,8 @@ class CalSettings:
         """Return the allowed value sequence for *field*."""
         return _ALLOWED.get(field, ())
 
-    def cycle(self, field: str) -> "CalSettings":
-        """Return a new ``CalSettings`` with *field* advanced to its next allowed value."""
+    def cycle(self, field: str, direction: int = 1) -> "CalSettings":
+        """Return a new ``CalSettings`` with *field* advanced by *direction* (±1)."""
         allowed = self.allowed(field)
         if not allowed:
             return self
@@ -57,7 +57,7 @@ class CalSettings:
             idx = allowed.index(current)
         except ValueError:
             idx = 0
-        next_val = allowed[(idx + 1) % len(allowed)]
+        next_val = allowed[(idx + direction) % len(allowed)]
         # Coerce back to int for split_ratio
         if field == "split_ratio":
             return dataclasses.replace(self, **{field: int(next_val)})

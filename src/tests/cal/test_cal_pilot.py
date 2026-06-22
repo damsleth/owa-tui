@@ -1016,133 +1016,66 @@ class TestCalScreenPilot:
         assert True
 
     def test_action_open_menu_resume(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """action_open_menu → resume does nothing (lines 527-535)."""
-        _patch_fetch(monkeypatch, [_EV1])
-
+        """Esc opens the menu; Esc again resumes without changing status."""
         async def _run() -> str:
-            from textual.app import App, ComposeResult
-
-            class _App(App[None]):
-                def compose(self) -> ComposeResult:
-                    yield CalScreen(config={}, access_token="fake", api_base="https://fake.api")
-
-            app = _App()
+            app = _make_cal_app(monkeypatch, [_EV1])
             async with app.run_test() as pilot:
                 await pilot.pause()
-                await pilot.pause()
                 screen = app.query_one(CalScreen)
-                # Invoke the menu handler directly with 'resume'
                 screen._status = "before"
-                # Simulate what _handle does for "resume" — just pass through
-                result = "resume"
-                if result == "resume":
-                    pass  # nothing
+                await pilot.press("escape")  # open menu
+                await pilot.pause()
+                await pilot.press("escape")  # resume / close
+                await pilot.pause()
                 return screen._status
 
-        status = asyncio.run(_run())
-        assert status == "before"
+        assert asyncio.run(_run()) == "before"
 
     def test_action_open_menu_help(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """action_open_menu → help sets status to HELP_LINE (line 532-533)."""
-        _patch_fetch(monkeypatch, [])
-
+        """Selecting Help from the menu sets status to the help line."""
         async def _run() -> str:
-            from textual.app import App, ComposeResult
-
-
-            class _App(App[None]):
-                def compose(self) -> ComposeResult:
-                    yield CalScreen(config={}, access_token="fake", api_base="https://fake.api")
-
-            app = _App()
+            app = _make_cal_app(monkeypatch, [])
             async with app.run_test() as pilot:
                 await pilot.pause()
                 screen = app.query_one(CalScreen)
-                # Directly invoke the result handler with "help"
-                from owa_tui.screens.cal.screen import HELP_LINE, _CalSettingsOverlay
-
-                overlay = _CalSettingsOverlay(screen._settings)
-
-                def _handle(result: str) -> None:
-                    if result == "quit":
-                        screen.app.exit()
-                    elif result == "help":
-                        screen._status = HELP_LINE
-                    elif result == "resume":
-                        pass
-                    elif result == "reset":
-                        screen._settings = CalSettings()
-                        screen._persist_settings()
-                        screen._update_header()
-                        screen._refresh_detail()
-                        screen.load_events()
-                    elif result and result.startswith("cycle:"):
-                        field = result[len("cycle:"):]
-                        screen._settings = overlay._settings
-                        screen._persist_settings()
-                        screen._update_header()
-                        if field in ("day_range", "show_declined"):
-                            screen.load_events()
-                        else:
-                            screen._refresh_detail()
-
-                _handle("help")
+                await pilot.press("escape")  # open menu (top: Resume/Settings/Help/Quit)
+                await pilot.pause()
+                await pilot.press("j", "j")  # → Help
+                await pilot.press("enter")
+                await pilot.pause()
                 return screen._status
 
         status = asyncio.run(_run())
         assert "move" in status or "j/k" in status
 
     def test_action_open_menu_reset(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """action_open_menu → reset restores defaults (lines 536-541)."""
-        _patch_fetch(monkeypatch, [])
-
+        """Selecting 'Reset to defaults' in the settings sub-menu restores defaults."""
         async def _run() -> str:
-            from textual.app import App, ComposeResult
-
-            class _App(App[None]):
-                def compose(self) -> ComposeResult:
-                    yield CalScreen(config={}, access_token="fake", api_base="https://fake.api")
-
-            app = _App()
+            app = _make_cal_app(monkeypatch, [], reading_pane="off", day_range="month")
             async with app.run_test() as pilot:
                 await pilot.pause()
                 screen = app.query_one(CalScreen)
-                screen._settings = CalSettings(reading_pane="off", day_range="month")
-
-                def _handle(result: str) -> None:
-                    if result == "reset":
-                        screen._settings = CalSettings()
-                        screen._persist_settings()
-                        screen._update_header()
-                        screen._refresh_detail()
-                        screen.load_events()
-
-                _handle("reset")
+                await pilot.press("escape")        # open menu
+                await pilot.press("j", "enter")    # → Settings → open sub-menu
+                await pilot.pause()
+                # settings fields: reading_pane, split_ratio, day_range,
+                # show_declined, event_detail, _reset (index 5)
+                await pilot.press("j", "j", "j", "j", "j")
+                await pilot.press("enter")         # activate _reset
                 await pilot.pause()
                 return screen._settings.reading_pane
 
-        pane = asyncio.run(_run())
-        assert pane == "right"  # default
+        assert asyncio.run(_run()) == "right"  # default
 
     def test_action_open_menu_cycle_day_range(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """action_open_menu → cycle:day_range triggers load_events (lines 542-548)."""
-        _patch_fetch(monkeypatch, [])
+        """Cycling day_range in place (l/→) reloads events and never closes the menu."""
         loaded: list = []
 
-        async def _run() -> None:
-            from textual.app import App, ComposeResult
-
-            from owa_tui.screens.cal.screen import _CalSettingsOverlay
-
-            class _App(App[None]):
-                def compose(self) -> ComposeResult:
-                    yield CalScreen(config={}, access_token="fake", api_base="https://fake.api")
-
-            app = _App()
+        async def _run() -> str:
+            app = _make_cal_app(monkeypatch, [])
             async with app.run_test() as pilot:
                 await pilot.pause()
                 screen = app.query_one(CalScreen)
-                overlay = _CalSettingsOverlay(screen._settings)
                 orig_load = screen.load_events
 
                 def _fake_load():
@@ -1150,43 +1083,30 @@ class TestCalScreenPilot:
                     return orig_load()
 
                 screen.load_events = _fake_load  # type: ignore[method-assign]
-
-                def _handle(result: str) -> None:
-                    if result and result.startswith("cycle:"):
-                        field = result[len("cycle:"):]
-                        screen._settings = overlay._settings
-                        screen._persist_settings()
-                        screen._update_header()
-                        if field in ("day_range", "show_declined"):
-                            screen.load_events()
-                        else:
-                            screen._refresh_detail()
-
-                _handle("cycle:day_range")
+                before = screen._settings.day_range
+                await pilot.press("escape")        # open menu
+                await pilot.press("j", "enter")    # → Settings sub-menu
+                await pilot.press("j", "j")        # → day_range (index 2)
+                await pilot.press("l")             # cycle forward in place
                 await pilot.pause()
+                # still in the menu — confirm by cycling again
+                await pilot.press("l")
+                await pilot.pause()
+                return before
 
-        asyncio.run(_run())
-        assert len(loaded) >= 1
+        before = asyncio.run(_run())
+        assert len(loaded) >= 2  # one reload per cycle, menu stayed open
+        assert before == "today"
 
     def test_action_open_menu_cycle_reading_pane(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """action_open_menu → cycle:reading_pane calls _refresh_detail (lines 549-550)."""
-        _patch_fetch(monkeypatch, [])
+        """Cycling reading_pane in place calls _refresh_detail."""
         refreshed: list = []
 
-        async def _run() -> None:
-            from textual.app import App, ComposeResult
-
-            from owa_tui.screens.cal.screen import _CalSettingsOverlay
-
-            class _App(App[None]):
-                def compose(self) -> ComposeResult:
-                    yield CalScreen(config={}, access_token="fake", api_base="https://fake.api")
-
-            app = _App()
+        async def _run() -> str:
+            app = _make_cal_app(monkeypatch, [])
             async with app.run_test() as pilot:
                 await pilot.pause()
                 screen = app.query_one(CalScreen)
-                overlay = _CalSettingsOverlay(screen._settings)
                 orig = screen._refresh_detail
 
                 def _fake():
@@ -1194,334 +1114,16 @@ class TestCalScreenPilot:
                     orig()
 
                 screen._refresh_detail = _fake  # type: ignore[method-assign]
-
-                def _handle(result: str) -> None:
-                    if result and result.startswith("cycle:"):
-                        field = result[len("cycle:"):]
-                        screen._settings = overlay._settings
-                        screen._persist_settings()
-                        screen._update_header()
-                        if field in ("day_range", "show_declined"):
-                            screen.load_events()
-                        else:
-                            screen._refresh_detail()
-
-                _handle("cycle:reading_pane")
+                await pilot.press("escape")        # open menu
+                await pilot.press("j", "enter")    # → Settings sub-menu (cursor on reading_pane)
+                await pilot.press("l")             # cycle reading_pane forward
                 await pilot.pause()
+                return screen._settings.reading_pane
 
-        asyncio.run(_run())
+        pane = asyncio.run(_run())
         assert len(refreshed) >= 1
+        assert pane != "right"  # advanced from default
 
-
-# ===========================================================================
-# _CalSettingsOverlay — covers lines 91-219 (the overlay internals)
-# ===========================================================================
-
-
-class TestCalSettingsOverlay:
-    """Mount _CalSettingsOverlay and drive its navigation.
-
-    _CalSettingsOverlay is a Screen[str] pushed on top of a base screen.
-    Calling dismiss() from the root screen raises ScreenStackError, so we
-    always push it as an overlay above a trivial _BaseScreen.
-
-    After on_mount pushes the overlay, ``app.screen`` is the overlay — Screens
-    are not in the widget tree so ``app.query_one(_CalSettingsOverlay)`` raises
-    NoMatches.  We use ``app.screen`` throughout instead.
-    """
-
-    def _make_overlay_app(self, settings: CalSettings | None = None):
-        from textual.app import App, ComposeResult
-        from textual.screen import Screen
-        from textual.widgets import Static
-
-        from owa_tui.screens.cal.screen import _CalSettingsOverlay
-
-        if settings is None:
-            settings = CalSettings()
-
-        overlay_settings = settings
-
-        class _BaseScreen(Screen[None]):
-            def compose(self) -> ComposeResult:
-                yield Static("base")
-
-        class _App(App[str]):
-            def compose(self) -> ComposeResult:
-                yield _BaseScreen()
-
-            def on_mount(self) -> None:
-                self.push_screen(_CalSettingsOverlay(overlay_settings))
-
-        return _App()
-
-    def test_overlay_mounts_without_crash(self) -> None:
-        """Overlay mounts and renders the top menu (lines 139-173)."""
-
-        async def _run() -> None:
-            from owa_tui.screens.cal.screen import _CalSettingsOverlay
-            app = self._make_overlay_app()
-            async with app.run_test() as pilot:
-                await pilot.pause()
-                # The overlay is on top of the stack; app.screen is the overlay
-                overlay = app.screen
-                assert isinstance(overlay, _CalSettingsOverlay)
-
-        asyncio.run(_run())
-
-    def test_action_move_down_wraps(self) -> None:
-        """action_move_down increments cursor (lines 180-183)."""
-
-        async def _run() -> int:
-            from owa_tui.screens.cal.screen import _CalSettingsOverlay
-            app = self._make_overlay_app()
-            async with app.run_test() as pilot:
-                await pilot.pause()
-                overlay: _CalSettingsOverlay = app.screen  # type: ignore[assignment]
-                overlay._cursor = 0
-                overlay.action_move_down()
-                return overlay._cursor
-
-        cursor = asyncio.run(_run())
-        assert cursor == 1
-
-    def test_action_move_up(self) -> None:
-        """action_move_up decrements cursor (lines 175-178)."""
-
-        async def _run() -> int:
-            from owa_tui.screens.cal.screen import _CalSettingsOverlay
-            app = self._make_overlay_app()
-            async with app.run_test() as pilot:
-                await pilot.pause()
-                overlay: _CalSettingsOverlay = app.screen  # type: ignore[assignment]
-                overlay._cursor = 2
-                overlay.action_move_up()
-                return overlay._cursor
-
-        cursor = asyncio.run(_run())
-        assert cursor == 1
-
-    def test_action_select_settings_nav(self) -> None:
-        """Selecting 'Settings' from top menu switches to settings screen (lines 193-196)."""
-
-        async def _run() -> str:
-            from owa_tui.screens.cal.screen import _TOP_MENU_ITEMS, _CalSettingsOverlay
-            app = self._make_overlay_app()
-            async with app.run_test() as pilot:
-                await pilot.pause()
-                overlay: _CalSettingsOverlay = app.screen  # type: ignore[assignment]
-                # Find the Settings item
-                for i, (_label, action) in enumerate(_TOP_MENU_ITEMS):
-                    if action == "settings":
-                        overlay._cursor = i
-                        break
-                overlay.action_select()
-                return overlay._screen
-
-        screen_name = asyncio.run(_run())
-        assert screen_name == "settings"
-
-    def test_action_select_top_non_settings_dismisses(self) -> None:
-        """Selecting a non-settings top-menu item dismisses the overlay (line 198)."""
-        dismissed: list = []
-
-        async def _run() -> None:
-            from owa_tui.screens.cal.screen import _TOP_MENU_ITEMS, _CalSettingsOverlay
-            app = self._make_overlay_app()
-            async with app.run_test() as pilot:
-                await pilot.pause()
-                overlay: _CalSettingsOverlay = app.screen  # type: ignore[assignment]
-                # Find "Resume"
-                for i, (_label, action) in enumerate(_TOP_MENU_ITEMS):
-                    if action == "resume":
-                        overlay._cursor = i
-                        break
-                orig = overlay.dismiss
-
-                def _cap(result=None):
-                    dismissed.append(result)
-                    orig(result)
-
-                overlay.dismiss = _cap  # type: ignore[method-assign]
-                overlay.action_select()
-                await pilot.pause()
-
-        asyncio.run(_run())
-        assert len(dismissed) >= 1
-
-    def test_action_select_settings_cycle_field(self) -> None:
-        """Selecting a non-special settings field cycles it (lines 209-211)."""
-        dismissed: list = []
-
-        async def _run() -> None:
-            from owa_tui.screens.cal.screen import _SETTINGS_FIELDS, _CalSettingsOverlay
-            app = self._make_overlay_app(CalSettings(reading_pane="right"))
-            async with app.run_test() as pilot:
-                await pilot.pause()
-                overlay: _CalSettingsOverlay = app.screen  # type: ignore[assignment]
-                overlay._screen = "settings"
-                overlay._cursor = 0
-                # Find the first non-_reset/_back field
-                for i, (_field, action) in enumerate(_SETTINGS_FIELDS):
-                    if action not in ("_reset", "_back"):
-                        overlay._cursor = i
-                        break
-
-                orig = overlay.dismiss
-
-                def _cap(result=None):
-                    dismissed.append(result)
-                    orig(result)
-
-                overlay.dismiss = _cap  # type: ignore[method-assign]
-                overlay.action_select()
-                await pilot.pause()
-
-        asyncio.run(_run())
-        assert any(str(d).startswith("cycle:") for d in dismissed)
-
-    def test_action_select_reset(self) -> None:
-        """Selecting '_reset' in settings — action_select falls through to else/cycle
-        because action_select checks ``action`` (display label) not ``field``
-        (the first tuple element).  For the ``("_reset", "Reset to defaults")`` item,
-        action="Reset to defaults", so the reset branch is skipped and the else
-        branch fires: dismiss("cycle:_reset").  This test verifies actual behavior.
-        """
-        dismissed: list = []
-
-        async def _run() -> None:
-            from owa_tui.screens.cal.screen import _SETTINGS_FIELDS, _CalSettingsOverlay
-            app = self._make_overlay_app()
-            async with app.run_test() as pilot:
-                await pilot.pause()
-                overlay: _CalSettingsOverlay = app.screen  # type: ignore[assignment]
-                overlay._screen = "settings"
-                # Find _reset by field name (first element)
-                for i, (field_name, _label) in enumerate(_SETTINGS_FIELDS):
-                    if field_name == "_reset":
-                        overlay._cursor = i
-                        break
-                orig = overlay.dismiss
-
-                def _cap(result=None):
-                    dismissed.append(result)
-                    orig(result)
-
-                overlay.dismiss = _cap  # type: ignore[method-assign]
-                overlay.action_select()
-                await pilot.pause()
-
-        asyncio.run(_run())
-        # Actual: else branch fires → dismiss("cycle:_reset")
-        assert len(dismissed) >= 1
-        assert dismissed[0] is not None
-
-    def test_action_select_back(self) -> None:
-        """Selecting '_back' item — same situation as _reset: action_select checks
-        ``action`` (display label "Back"), not ``field`` ("_back"), so the _back
-        branch is dead code and the else branch fires instead, calling cycle("_back")
-        and dismiss("cycle:_back").  Verify actual behavior: dismiss is called.
-        """
-        dismissed: list = []
-
-        async def _run() -> None:
-            from owa_tui.screens.cal.screen import _SETTINGS_FIELDS, _CalSettingsOverlay
-            app = self._make_overlay_app()
-            async with app.run_test() as pilot:
-                await pilot.pause()
-                overlay: _CalSettingsOverlay = app.screen  # type: ignore[assignment]
-                overlay._screen = "settings"
-                # Find _back by field name (first element)
-                for i, (field_name, _label) in enumerate(_SETTINGS_FIELDS):
-                    if field_name == "_back":
-                        overlay._cursor = i
-                        break
-                orig = overlay.dismiss
-
-                def _cap(result=None):
-                    dismissed.append(result)
-                    orig(result)
-
-                overlay.dismiss = _cap  # type: ignore[method-assign]
-                overlay.action_select()
-                await pilot.pause()
-
-        asyncio.run(_run())
-        # Actual: else branch fires → dismiss("cycle:_back")
-        assert len(dismissed) >= 1
-        assert dismissed[0] is not None
-
-    def test_action_back_or_close_from_settings(self) -> None:
-        """Esc from settings screen returns to top (lines 213-217)."""
-
-        async def _run() -> str:
-            from owa_tui.screens.cal.screen import _CalSettingsOverlay
-            app = self._make_overlay_app()
-            async with app.run_test() as pilot:
-                await pilot.pause()
-                overlay: _CalSettingsOverlay = app.screen  # type: ignore[assignment]
-                overlay._screen = "settings"
-                overlay.action_back_or_close()
-                return overlay._screen
-
-        screen_name = asyncio.run(_run())
-        assert screen_name == "top"
-
-    def test_action_back_or_close_from_top_dismisses(self) -> None:
-        """Esc from top menu dismisses with 'resume' (lines 218-219)."""
-        dismissed: list = []
-
-        async def _run() -> None:
-            from owa_tui.screens.cal.screen import _CalSettingsOverlay
-            app = self._make_overlay_app()
-            async with app.run_test() as pilot:
-                await pilot.pause()
-                overlay: _CalSettingsOverlay = app.screen  # type: ignore[assignment]
-                overlay._screen = "top"
-                orig = overlay.dismiss
-
-                def _cap(result=None):
-                    dismissed.append(result)
-                    orig(result)
-
-                overlay.dismiss = _cap  # type: ignore[method-assign]
-                overlay.action_back_or_close()
-                await pilot.pause()
-
-        asyncio.run(_run())
-        assert "resume" in dismissed
-
-    def test_items_returns_settings_fields_when_on_settings(self) -> None:
-        """_items() returns _SETTINGS_FIELDS when _screen='settings' (lines 154-157)."""
-
-        async def _run() -> str:
-            from owa_tui.screens.cal.screen import _SETTINGS_FIELDS, _CalSettingsOverlay
-            app = self._make_overlay_app()
-            async with app.run_test() as pilot:
-                await pilot.pause()
-                overlay: _CalSettingsOverlay = app.screen  # type: ignore[assignment]
-                overlay._screen = "settings"
-                return "match" if overlay._items() is _SETTINGS_FIELDS else "mismatch"
-
-        result = asyncio.run(_run())
-        assert result == "match"
-
-    def test_refresh_shows_settings_values(self) -> None:
-        """_refresh with settings screen displays current setting values (lines 167-169)."""
-
-        async def _run() -> None:
-            from owa_tui.screens.cal.screen import _CalSettingsOverlay
-            app = self._make_overlay_app(CalSettings(reading_pane="bottom"))
-            async with app.run_test() as pilot:
-                await pilot.pause()
-                overlay: _CalSettingsOverlay = app.screen  # type: ignore[assignment]
-                overlay._screen = "settings"
-                overlay._cursor = 0
-                overlay._refresh()  # must not raise
-                await pilot.pause()
-
-        asyncio.run(_run())
-        assert True
 
 
 # ===========================================================================

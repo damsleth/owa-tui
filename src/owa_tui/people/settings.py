@@ -26,8 +26,8 @@ class PeopleSettings:
 DEFAULTS = PeopleSettings()
 
 
-def cycle(settings: PeopleSettings, field: str) -> PeopleSettings:
-    """Return a new PeopleSettings with *field* advanced to the next allowed value."""
+def cycle(settings: PeopleSettings, field: str, direction: int = 1) -> PeopleSettings:
+    """Return a new PeopleSettings with *field* advanced by *direction* (±1)."""
     if field == "detail_pane":
         vals: tuple = DETAIL_PANE_VALUES
         current = settings.detail_pane
@@ -42,7 +42,7 @@ def cycle(settings: PeopleSettings, field: str) -> PeopleSettings:
 
     try:
         idx = list(vals).index(current)
-        next_val = vals[(idx + 1) % len(vals)]
+        next_val = vals[(idx + direction) % len(vals)]
     except ValueError:
         next_val = vals[0]
 

@@ -691,10 +691,11 @@ class MailScreen(Screen[None]):
 
     def action_open_menu(self) -> None:
         settings_fields = [
-            ("reading_pane", f"Reading pane: {self.settings.reading_pane}"),
-            ("split_ratio", f"Split ratio: {self.settings.split_ratio}"),
-            ("sort_by", f"Sort by: {self.settings.sort_by}"),
-            ("date_format", f"Date format: {self.settings.date_format}"),
+            ("reading_pane", "Reading pane"),
+            ("split_ratio", "Split ratio"),
+            ("sort_by", "Sort by"),
+            ("date_format", "Date format"),
+            ("_reset", "Reset to defaults"),
         ]
         overlay = SettingsOverlay(
             title_lines=["owa-mail — settings"],
@@ -705,9 +706,15 @@ class MailScreen(Screen[None]):
                 ("Quit", "quit"),
             ],
             settings_fields=settings_fields,
-            settings=None,  # We handle cycle ourselves
+            settings=self.settings,
+            cycle_fn=cycle,
+            on_change=self._on_setting_changed,
         )
         self.app.push_screen(overlay, self._handle_overlay)
+
+    def _on_setting_changed(self, _field: str, new_settings: MailSettings) -> None:
+        """Live callback from the overlay each time a field is cycled."""
+        self._apply_settings(new_settings)
 
     def _handle_overlay(self, result: str) -> None:
         if result == "resume" or result is None:
@@ -718,25 +725,8 @@ class MailScreen(Screen[None]):
         if result == "help":
             self.status = "j/k move  g/G top/bottom  Enter open  / search  r toggle-read  o browser"
             return
-        if result.startswith("cycle:"):
-            field = result[len("cycle:"):]
-            if field == "reading_pane":
-                new_settings = cycle(self.settings, "reading_pane")
-                self._apply_settings(new_settings)
-            elif field == "split_ratio":
-                new_settings = cycle(self.settings, "split_ratio")
-                self._apply_settings(new_settings)
-            elif field == "sort_by":
-                new_settings = cycle(self.settings, "sort_by")
-                self._apply_settings(new_settings)
-            elif field == "date_format":
-                new_settings = cycle(self.settings, "date_format")
-                self._apply_settings(new_settings)
-            elif field == "reset":
-                self._apply_settings(SETTINGS_DEFAULTS)
-            elif field == "date_custom":
-                # Free-text — not cycled here
-                pass
+        if result == "reset":
+            self._apply_settings(SETTINGS_DEFAULTS)
 
     def _apply_settings(self, new_settings: MailSettings) -> None:
         self.settings = new_settings

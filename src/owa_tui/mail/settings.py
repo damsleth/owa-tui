@@ -45,8 +45,8 @@ class MailSettings:
 DEFAULTS = MailSettings()
 
 
-def cycle(settings: MailSettings, field: str) -> MailSettings:
-    """Return a new MailSettings with *field* advanced to the next allowed value.
+def cycle(settings: MailSettings, field: str, direction: int = 1) -> MailSettings:
+    """Return a new MailSettings with *field* advanced by *direction* (±1).
 
     ``date_custom`` is free-text and cannot be cycled — returns *settings*
     unchanged.  Unknown *field* raises ``ValueError``.
@@ -71,7 +71,7 @@ def cycle(settings: MailSettings, field: str) -> MailSettings:
 
     try:
         idx = list(vals).index(current)
-        next_val = vals[(idx + 1) % len(vals)]
+        next_val = vals[(idx + direction) % len(vals)]
     except ValueError:
         next_val = vals[0]
 
