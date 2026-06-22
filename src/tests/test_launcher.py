@@ -105,3 +105,29 @@ def test_push_tool_unknown_key_notifies(monkeypatch: pytest.MonkeyPatch) -> None
 
     asyncio.run(run_app())
     assert any("nonexistent-tool-xyz" in n for n in notifications)
+
+
+# ---------------------------------------------------------------------------
+# Transparency toggle (Ctrl+T)
+# ---------------------------------------------------------------------------
+
+
+def test_toggle_transparency_round_trips() -> None:
+    """Ctrl+T swaps to an ANSI (terminal-background) theme and back."""
+
+    async def _run() -> tuple[str, str, str]:
+        app = owa_tui.OwaTuiApp(config={})
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            start = app.theme
+            app.action_toggle_transparency()
+            await pilot.pause()
+            on = app.theme
+            app.action_toggle_transparency()
+            await pilot.pause()
+            off = app.theme
+            return start, on, off
+
+    start, on, off = asyncio.run(_run())
+    assert on == "ansi-dark"          # transparent theme uses ansi_default bg
+    assert off == start               # restored the original theme
