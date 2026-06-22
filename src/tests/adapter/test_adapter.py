@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import json
 from dataclasses import dataclass
 from unittest.mock import patch
 
@@ -83,3 +85,58 @@ def test_registered_tools_includes_registered() -> None:
     register_screen("_test_tool2", "Test Tool 2", FakeScreen2)
     tools = registered_tools()
     assert any(k == "_test_tool2" for k, _ in tools)
+
+
+# ---------------------------------------------------------------------------
+# current_identity / _upn_from_jwt — header top row (best-effort, never raises)
+# ---------------------------------------------------------------------------
+
+
+def _fake_jwt(claims: dict) -> str:
+    body = base64.urlsafe_b64encode(json.dumps(claims).encode()).decode().rstrip("=")
+    return f"header.{body}.sig"
+
+
+def test_upn_from_jwt_reads_claims() -> None:
+    from owa_tui.adapter import _upn_from_jwt
+
+    assert _upn_from_jwt(_fake_jwt({"upn": "a@b.com"})) == "a@b.com"
+    # falls back through the claim list
+    assert _upn_from_jwt(_fake_jwt({"preferred_username": "p@b.com"})) == "p@b.com"
+
+
+def test_upn_from_jwt_handles_garbage() -> None:
+    from owa_tui.adapter import _upn_from_jwt
+
+    assert _upn_from_jwt("") is None
+    assert _upn_from_jwt("not-a-jwt") is None
+    assert _upn_from_jwt("fixture-token") is None  # dummy token has no claims
+
+
+def test_current_identity_combines_profile_and_upn() -> None:
+    from owa_tui.adapter import current_identity
+
+    @dataclass
+    class _Profile:
+        alias: str
+        default: bool
+
+    profiles = [_Profile("work", False), _Profile("crayon", True)]
+    with (
+        patch("owa_core.auth.get_profiles", return_value=profiles),
+        patch(
+            "owa_tui.adapter.access_token_for",
+            return_value=_fake_jwt({"upn": "me@crayon.no"}),
+        ),
+    ):
+        assert current_identity({}) == ("crayon", "me@crayon.no")
+
+
+def test_current_identity_never_raises_on_failure() -> None:
+    from owa_tui.adapter import current_identity
+
+    with (
+        patch("owa_core.auth.get_profiles", side_effect=RuntimeError("broker down")),
+        patch("owa_tui.adapter.access_token_for", side_effect=RuntimeError("no token")),
+    ):
+        assert current_identity({}) == (None, None)
