@@ -516,17 +516,23 @@ class GraphScreen(Screen[None]):
                 ("scope_warnings", "Scope warnings"),
             ],
             settings=self._settings,
+            cycle_fn=lambda s, field, direction: s.cycle(field, direction),
+            on_change=self._on_setting_changed,
         )
 
         def _on_dismiss(result: str) -> None:
             if result == "quit":
                 self.app.exit()
-            elif result == "resume":
-                pass
-            elif result and result.startswith("cycle:"):
-                pass
 
         self.app.push_screen(overlay, _on_dismiss)
+
+    def _on_setting_changed(self, _field: str, new_settings: GraphSettings) -> None:
+        """Live callback from the overlay each time a setting is cycled."""
+        self._settings = new_settings
+        # pretty_json / scope_warnings take effect on the next render pass.
+        # ponytail: reading_pane live re-layout not wired (was a no-op before too).
+        self._refresh_detail(None)
+        self._refresh_status()
 
     # ------------------------------------------------------------------
     # Cursor movement

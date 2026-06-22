@@ -52,7 +52,6 @@ _SETTINGS_FIELDS = [
     ("show_declined", "Show declined"),
     ("event_detail", "Event detail"),
     ("_reset", "Reset to defaults"),
-    ("_back", "Back"),
 ]
 
 _RESPOND_KEYS: dict[str, str] = {
@@ -100,123 +99,6 @@ class _SearchInput(Screen[str]):
 
     def action_cancel(self) -> None:
         self.dismiss("")
-
-
-# ---------------------------------------------------------------------------
-# Settings overlay (cal-specific)
-# ---------------------------------------------------------------------------
-
-
-class _CalSettingsOverlay(Screen[str]):
-    """Two-level settings overlay for CalScreen."""
-
-    DEFAULT_CSS = """
-    _CalSettingsOverlay {
-        align: center middle;
-    }
-    #cal-overlay-box {
-        width: 55;
-        height: auto;
-        border: solid $border;
-        background: $surface;
-        padding: 1 2;
-    }
-    .overlay-title { color: $primary; text-style: bold; }
-    .overlay-item { color: $text; }
-    .overlay-item-selected { color: $primary; text-style: bold; }
-    .overlay-hint { color: $text-muted; margin-top: 1; }
-    """
-
-    BINDINGS = [
-        Binding("up", "move_up", "Up", show=False),
-        Binding("k", "move_up", "Up", show=False),
-        Binding("down", "move_down", "Down", show=False),
-        Binding("j", "move_down", "Down", show=False),
-        Binding("enter", "select", "Select"),
-        Binding("escape", "back_or_close", "Back/Close"),
-    ]
-
-    def __init__(self, settings: CalSettings) -> None:
-        super().__init__()
-        self._settings = settings
-        self._screen = "top"  # 'top' or 'settings'
-        self._cursor = 0
-
-    def compose(self) -> ComposeResult:
-        with Static(id="cal-overlay-box"):
-            yield Label("owa-cal — menu", classes="overlay-title")
-            yield Static(id="cal-menu-items")
-            yield Label("↑/↓ move  Enter select  Esc back", classes="overlay-hint")
-
-    def on_mount(self) -> None:
-        self._refresh()
-
-    def _items(self) -> list[tuple[str, str]]:
-        if self._screen == "settings":
-            return _SETTINGS_FIELDS
-        return _TOP_MENU_ITEMS
-
-    def _refresh(self) -> None:
-        items = self._items()
-        cursor = self._cursor
-        container = self.query_one("#cal-menu-items", Static)
-        lines = []
-        for i, (label, action) in enumerate(items):
-            prefix = "▶ " if i == cursor else "  "
-            css = "overlay-item-selected" if i == cursor else "overlay-item"
-            if self._screen == "settings" and action not in ("_reset", "_back"):
-                val = getattr(self._settings, label, "")
-                display = f"{prefix}{label.replace('_', ' ').title()}: {val}"
-            else:
-                display = f"{prefix}{label}"
-            lines.append(f"[{css}]{display}[/{css}]")
-        container.update("\n".join(lines))
-
-    def action_move_up(self) -> None:
-        count = len(self._items())
-        self._cursor = max(0, self._cursor - 1) if count else 0
-        self._refresh()
-
-    def action_move_down(self) -> None:
-        count = len(self._items())
-        self._cursor = min(count - 1, self._cursor + 1) if count else 0
-        self._refresh()
-
-    def action_select(self) -> None:
-        items = self._items()
-        if not items:
-            return
-        idx = max(0, min(self._cursor, len(items) - 1))
-        field, action = items[idx]
-
-        if self._screen == "top":
-            if action == "settings":
-                self._screen = "settings"
-                self._cursor = 0
-                self._refresh()
-            else:
-                self.dismiss(action)
-            return
-
-        # Settings screen
-        if action == "_reset":
-            self.dismiss("reset")
-        elif action == "_back":
-            self._screen = "top"
-            self._cursor = 0
-            self._refresh()
-        else:
-            self._settings = self._settings.cycle(field)
-            self._refresh()
-            self.dismiss(f"cycle:{field}")
-
-    def action_back_or_close(self) -> None:
-        if self._screen == "settings":
-            self._screen = "top"
-            self._cursor = 0
-            self._refresh()
-        else:
-            self.dismiss("resume")
 
 
 # ---------------------------------------------------------------------------
@@ -545,32 +427,40 @@ class CalScreen(Screen):
 
     def action_open_menu(self) -> None:
         """Esc — open the settings overlay."""
-        overlay = _CalSettingsOverlay(self._settings)
+        from owa_tui.widgets.settings_overlay import SettingsOverlay  # noqa: PLC0415
+
+        overlay = SettingsOverlay(
+            title_lines=["owa-cal — menu"],
+            top_items=_TOP_MENU_ITEMS,
+            settings_fields=_SETTINGS_FIELDS,
+            settings=self._settings,
+            cycle_fn=lambda s, field, direction: s.cycle(field, direction),
+            on_change=self._on_setting_changed,
+        )
 
         def _handle(result: str) -> None:
             if result == "quit":
                 self.app.exit()
             elif result == "help":
                 self._status = HELP_LINE
-            elif result == "resume":
-                pass
             elif result == "reset":
                 self._settings = CalSettings()
                 self._persist_settings()
                 self._update_header()
                 self._refresh_detail()
                 self.load_events()
-            elif result and result.startswith("cycle:"):
-                field = result[len("cycle:"):]
-                self._settings = overlay._settings
-                self._persist_settings()
-                self._update_header()
-                if field in ("day_range", "show_declined"):
-                    self.load_events()
-                else:
-                    self._refresh_detail()
 
         self.app.push_screen(overlay, _handle)
+
+    def _on_setting_changed(self, field: str, new_settings: CalSettings) -> None:
+        """Live callback from the overlay each time a field is cycled."""
+        self._settings = new_settings
+        self._persist_settings()
+        self._update_header()
+        if field in ("day_range", "show_declined"):
+            self.load_events()
+        else:
+            self._refresh_detail()
 
     def action_back_to_list(self) -> None:
         """h / ← — return focus to the agenda list from the detail pane."""

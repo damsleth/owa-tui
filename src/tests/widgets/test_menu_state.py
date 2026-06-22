@@ -2,16 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from owa_tui.widgets.menu_state import MenuState
-
-
-@dataclass
-class FakeSettings:
-    show_declined: bool = False
-    day_range: int = 7
-
 
 # ---------------------------------------------------------------------------
 # Construction
@@ -123,70 +114,3 @@ def test_reset_returns_to_top_cursor_zero() -> None:
     ms.reset()
     assert ms.screen == "top"
     assert ms.cursor == 0
-
-
-# ---------------------------------------------------------------------------
-# select()
-# ---------------------------------------------------------------------------
-
-
-def test_select_returns_action_on_top_screen() -> None:
-    ms = MenuState(title_lines=[], top_items=[("Resume", "resume"), ("Quit", "quit")])
-    ms.cursor = 1
-    result = ms.select()
-    assert result == "quit"
-
-
-def test_select_settings_action_opens_settings_submenu() -> None:
-    ms = MenuState(
-        title_lines=[],
-        top_items=[("Settings", "settings")],
-        settings_fields=[("x", "X")],
-    )
-    result = ms.select()
-    assert result == "settings"
-    assert ms.screen == "settings"
-
-
-def test_select_on_settings_screen_cycles_bool_field() -> None:
-    ms = MenuState(
-        title_lines=[],
-        top_items=[("Settings", "settings")],
-        settings_fields=[("show_declined", "Show declined")],
-    )
-    ms.open_settings()
-    settings = FakeSettings(show_declined=False)
-    result = ms.select(settings)
-    assert result == "cycle:show_declined"
-    assert settings.show_declined is True
-
-
-def test_select_on_settings_screen_toggles_back() -> None:
-    ms = MenuState(
-        title_lines=[],
-        top_items=[("Settings", "settings")],
-        settings_fields=[("show_declined", "Show declined")],
-    )
-    ms.open_settings()
-    settings = FakeSettings(show_declined=True)
-    ms.select(settings)
-    assert settings.show_declined is False
-
-
-def test_select_with_empty_items_returns_empty_string() -> None:
-    ms = MenuState(title_lines=[], top_items=[])
-    assert ms.select() == ""
-
-
-def test_select_without_settings_object_for_non_bool_field() -> None:
-    ms = MenuState(
-        title_lines=[],
-        top_items=[("Settings", "settings")],
-        settings_fields=[("day_range", "Day range")],
-    )
-    ms.open_settings()
-    settings = FakeSettings(day_range=7)
-    result = ms.select(settings)
-    # day_range is int, not bool — no cycling done but still returns action
-    assert result == "cycle:day_range"
-    assert settings.day_range == 7  # unchanged
