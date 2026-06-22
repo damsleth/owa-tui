@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, ClassVar
 
 # ---------------------------------------------------------------------------
 # Bookmark helpers
@@ -112,6 +112,32 @@ class GraphSettings:
             default_path=_str("graph_tui_default_path", "me"),
             bookmarks=_str("graph_tui_bookmarks", ""),
         )
+
+    # ------------------------------------------------------------------
+    # Cycling (driven by SettingsOverlay)
+    # ------------------------------------------------------------------
+
+    _SPLIT_RATIO_VALUES: ClassVar[tuple[int, ...]] = (40, 50, 60)
+
+    def cycle(self, field: str, direction: int = 1) -> "GraphSettings":
+        """Return a new ``GraphSettings`` with *field* advanced by *direction* (±1).
+
+        Bool fields toggle; ``split_ratio`` steps through its allowed values.
+        Unknown / non-cyclable fields return *self* unchanged.
+        """
+        from dataclasses import replace
+
+        current = getattr(self, field, None)
+        if isinstance(current, bool):
+            return replace(self, **{field: not current})
+        if field == "split_ratio":
+            vals = self._SPLIT_RATIO_VALUES
+            try:
+                idx = vals.index(int(current))
+            except (ValueError, TypeError):
+                idx = 0
+            return replace(self, **{field: vals[(idx + direction) % len(vals)]})
+        return self
 
     def to_config_dict(self) -> dict[str, Any]:
         """Serialise settings back to a config dict for persistence."""

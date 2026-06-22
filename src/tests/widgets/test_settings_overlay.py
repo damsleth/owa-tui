@@ -119,8 +119,8 @@ def test_settings_overlay_enter_settings_submenu() -> None:
     assert result == "resume"
 
 
-def test_settings_overlay_cycle_bool_field() -> None:
-    """Cycling a bool settings field should toggle it."""
+def test_settings_overlay_cycle_bool_field_in_place() -> None:
+    """Enter on a bool field toggles it in place without closing the menu."""
 
     async def run() -> tuple[str | None, bool]:
         app = _OverlayApp()
@@ -132,11 +132,123 @@ def test_settings_overlay_cycle_bool_field() -> None:
             await pilot.press("j")
             await pilot.press("enter")
             await pilot.pause()
-            # Select the first (only) settings field
+            # Enter on the field cycles it in place (no dismiss)
             await pilot.press("enter")
             await pilot.pause()
             return app.result, app._settings.show_declined
 
     result, val = asyncio.run(run())
-    assert result == "cycle:show_declined"
+    assert result is None  # menu stayed open
     assert val is True  # was False, now toggled
+
+
+def test_settings_overlay_shows_value_next_to_label() -> None:
+    """Settings rows render as ``label: value`` from the live settings object."""
+
+    async def run() -> list[str]:
+        app = _OverlayApp()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app.show_overlay()
+            await pilot.pause()
+            await pilot.press("j")  # → Settings
+            await pilot.press("enter")  # open sub-menu
+            await pilot.pause()
+            from textual.widgets import Static
+
+            return [str(app.screen.query_one("#menu-items", Static).render())]
+
+    rendered = asyncio.run(run())[0]
+    assert "Show declined: False" in rendered
+
+
+def test_settings_overlay_space_and_arrows_cycle() -> None:
+    """space / l / right / h / left all cycle the field in place."""
+
+    async def run() -> bool:
+        app = _OverlayApp()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app.show_overlay()
+            await pilot.pause()
+            await pilot.press("j", "enter")  # → Settings sub-menu
+            await pilot.pause()
+            await pilot.press("space")  # toggle True
+            await pilot.press("l")      # toggle False
+            await pilot.press("right")  # toggle True
+            await pilot.press("h")      # toggle False
+            await pilot.press("left")   # toggle True
+            await pilot.pause()
+            return app._settings.show_declined
+
+    assert asyncio.run(run()) is True  # odd number of toggles from False
+
+
+def test_settings_overlay_on_change_called_live() -> None:
+    """on_change fires on every cycle while the menu stays open."""
+    changes: list[tuple[str, bool]] = []
+
+    @dataclass
+    class S:
+        flag: bool = False
+
+    class _App(App[None]):
+        def compose(self) -> ComposeResult:
+            yield Label("host")
+
+        def show(self) -> None:
+            self.push_screen(
+                SettingsOverlay(
+                    title_lines=["T"],
+                    top_items=[("Resume", "resume"), ("Settings", "settings")],
+                    settings_fields=[("flag", "Flag")],
+                    settings=S(),
+                    cycle_fn=lambda s, f, d: S(flag=not s.flag),
+                    on_change=lambda f, s: changes.append((f, s.flag)),
+                )
+            )
+
+    async def run() -> None:
+        app = _App()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app.show()
+            await pilot.pause()
+            await pilot.press("j", "enter")  # → Settings
+            await pilot.press("l", "l")      # two cycles
+            await pilot.pause()
+
+    asyncio.run(run())
+    assert changes == [("flag", True), ("flag", False)]
+
+
+def test_settings_overlay_action_field_dismisses() -> None:
+    """A ``_``-prefixed field is a plain action: Enter dismisses with the name."""
+
+    class _App(App[None]):
+        def compose(self) -> ComposeResult:
+            yield Label("host")
+            self.result: str | None = None
+
+        def show(self) -> None:
+            self.push_screen(
+                SettingsOverlay(
+                    title_lines=["T"],
+                    top_items=[("Resume", "resume"), ("Settings", "settings")],
+                    settings_fields=[("_reset", "Reset to defaults")],
+                ),
+                lambda r: setattr(self, "result", r),
+            )
+
+    async def run() -> str | None:
+        app = _App()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app.show()
+            await pilot.pause()
+            await pilot.press("j", "enter")  # → Settings sub-menu
+            await pilot.press("enter")       # activate _reset
+            await pilot.pause()
+            return app.result
+
+    assert asyncio.run(run()) == "reset"

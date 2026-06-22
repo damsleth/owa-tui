@@ -866,8 +866,15 @@ def test_handle_overlay_quit_exits() -> None:
     assert asyncio.run(_run())
 
 
+def _cycle_field(screen, field: str) -> None:
+    """Drive a live in-place cycle the way SettingsOverlay does."""
+    from owa_tui.mail.settings import cycle
+
+    screen._on_setting_changed(field, cycle(screen.settings, field))
+
+
 def test_handle_overlay_cycle_reading_pane() -> None:
-    """_handle_overlay('cycle:reading_pane') advances reading_pane setting."""
+    """Cycling reading_pane advances the setting via _on_setting_changed."""
 
     async def _run() -> str:
         app = _make_app(messages=_msgs(1), reading_pane="right")
@@ -877,7 +884,7 @@ def test_handle_overlay_cycle_reading_pane() -> None:
 
             screen: MailScreen = app.screen  # type: ignore[assignment]
             with patch.object(screen, "_persist_settings"):
-                screen._handle_overlay("cycle:reading_pane")
+                _cycle_field(screen, "reading_pane")
             await pilot.pause(0.05)
             return screen.settings.reading_pane
 
@@ -886,7 +893,7 @@ def test_handle_overlay_cycle_reading_pane() -> None:
 
 
 def test_handle_overlay_cycle_split_ratio() -> None:
-    """_handle_overlay('cycle:split_ratio') advances split_ratio setting."""
+    """Cycling split_ratio advances the setting."""
 
     async def _run() -> int:
         app = _make_app(messages=_msgs(1), reading_pane="right")
@@ -895,17 +902,18 @@ def test_handle_overlay_cycle_split_ratio() -> None:
             from owa_tui.screens.mail import MailScreen
 
             screen: MailScreen = app.screen  # type: ignore[assignment]
+            before = screen.settings.split_ratio
             with patch.object(screen, "_persist_settings"):
-                screen._handle_overlay("cycle:split_ratio")
+                _cycle_field(screen, "split_ratio")
             await pilot.pause(0.05)
-            return screen.settings.split_ratio
+            return screen.settings.split_ratio, before
 
-    result = asyncio.run(_run())
-    assert result in (40, 50, 60)
+    result, before = asyncio.run(_run())
+    assert result in (40, 50, 60) and result != before
 
 
 def test_handle_overlay_cycle_sort_by() -> None:
-    """_handle_overlay('cycle:sort_by') advances sort_by setting."""
+    """Cycling sort_by advances the setting."""
 
     async def _run() -> str:
         app = _make_app(messages=_msgs(3), reading_pane="off")
@@ -915,7 +923,7 @@ def test_handle_overlay_cycle_sort_by() -> None:
 
             screen: MailScreen = app.screen  # type: ignore[assignment]
             with patch.object(screen, "_persist_settings"):
-                screen._handle_overlay("cycle:sort_by")
+                _cycle_field(screen, "sort_by")
             await pilot.pause(0.05)
             return screen.settings.sort_by
 
@@ -924,7 +932,7 @@ def test_handle_overlay_cycle_sort_by() -> None:
 
 
 def test_handle_overlay_cycle_date_format() -> None:
-    """_handle_overlay('cycle:date_format') advances date_format setting."""
+    """Cycling date_format advances the setting."""
 
     async def _run() -> str:
         app = _make_app(messages=_msgs(1), reading_pane="off")
@@ -933,17 +941,18 @@ def test_handle_overlay_cycle_date_format() -> None:
             from owa_tui.screens.mail import MailScreen
 
             screen: MailScreen = app.screen  # type: ignore[assignment]
+            before = screen.settings.date_format
             with patch.object(screen, "_persist_settings"):
-                screen._handle_overlay("cycle:date_format")
+                _cycle_field(screen, "date_format")
             await pilot.pause(0.05)
-            return screen.settings.date_format
+            return screen.settings.date_format, before
 
-    result = asyncio.run(_run())
-    assert result in ("iso8601", "ddmm", "ddmm_hhmm", "custom")
+    result, before = asyncio.run(_run())
+    assert result in ("iso8601", "ddmm", "ddmm_hhmm", "custom") and result != before
 
 
-def test_handle_overlay_cycle_reset() -> None:
-    """_handle_overlay('cycle:reset') restores SETTINGS_DEFAULTS."""
+def test_handle_overlay_reset() -> None:
+    """_handle_overlay('reset') restores SETTINGS_DEFAULTS."""
 
     async def _run() -> MailSettings:
         app = _make_app(messages=_msgs(1), reading_pane="bottom")
@@ -953,7 +962,7 @@ def test_handle_overlay_cycle_reset() -> None:
 
             screen: MailScreen = app.screen  # type: ignore[assignment]
             with patch.object(screen, "_persist_settings"):
-                screen._handle_overlay("cycle:reset")
+                screen._handle_overlay("reset")
             await pilot.pause(0.05)
             return screen.settings
 
@@ -962,7 +971,7 @@ def test_handle_overlay_cycle_reset() -> None:
 
 
 def test_handle_overlay_cycle_date_custom_noop() -> None:
-    """_handle_overlay('cycle:date_custom') is a safe no-op."""
+    """Cycling date_custom is a safe no-op (free-text field)."""
 
     async def _run() -> str:
         app = _make_app(messages=_msgs(1), reading_pane="off")
@@ -971,7 +980,8 @@ def test_handle_overlay_cycle_date_custom_noop() -> None:
             from owa_tui.screens.mail import MailScreen
 
             screen: MailScreen = app.screen  # type: ignore[assignment]
-            screen._handle_overlay("cycle:date_custom")
+            with patch.object(screen, "_persist_settings"):
+                _cycle_field(screen, "date_custom")
             await pilot.pause(0.05)
             return screen.settings.date_custom
 

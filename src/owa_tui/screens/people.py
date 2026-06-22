@@ -631,9 +631,10 @@ class PeopleScreen(Screen[None]):
 
     def action_open_menu(self) -> None:
         settings_fields = [
-            ("detail_pane", f"Detail pane: {self.settings.detail_pane}"),
-            ("split_ratio", f"Split ratio: {self.settings.split_ratio}"),
-            ("sort_by", f"Sort by: {self.settings.sort_by}"),
+            ("detail_pane", "Detail pane"),
+            ("split_ratio", "Split ratio"),
+            ("sort_by", "Sort by"),
+            ("_reset", "Reset to defaults"),
         ]
         overlay = SettingsOverlay(
             title_lines=["owa-people — settings"],
@@ -644,9 +645,15 @@ class PeopleScreen(Screen[None]):
                 ("Quit", "quit"),
             ],
             settings_fields=settings_fields,
-            settings=None,
+            settings=self.settings,
+            cycle_fn=cycle,
+            on_change=self._on_setting_changed,
         )
         self.app.push_screen(overlay, self._handle_overlay)
+
+    def _on_setting_changed(self, _field: str, new_settings: PeopleSettings) -> None:
+        """Live callback from the overlay each time a field is cycled."""
+        self._apply_settings(new_settings)
 
     def _handle_overlay(self, result: str) -> None:
         if result == "resume" or result is None:
@@ -657,11 +664,8 @@ class PeopleScreen(Screen[None]):
         if result == "help":
             self.status = "j/k move  g/G top/bottom  Enter open  / search  r refresh"
             return
-        if result.startswith("cycle:"):
-            field = result[len("cycle:"):]
-            if field in ("detail_pane", "split_ratio", "sort_by"):
-                new_settings = cycle(self.settings, field)
-                self._apply_settings(new_settings)
+        if result == "reset":
+            self._apply_settings(SETTINGS_DEFAULTS)
 
     def _apply_settings(self, new_settings: PeopleSettings) -> None:
         self.settings = new_settings

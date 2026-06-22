@@ -674,15 +674,17 @@ def test_handle_overlay_resume_is_noop() -> None:
 
 
 def test_handle_overlay_cycle_applies_and_persists() -> None:
-    """Overlay 'cycle:sort_by' changes the sort setting via _apply_settings."""
+    """Live cycle of sort_by changes the setting via _on_setting_changed."""
 
     async def _run() -> str:
         app = _make_app(detail_pane="off", sort_by="name_asc")
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause(0.1)
             screen: PeopleScreen = app.screen  # type: ignore[assignment]
+            from owa_tui.people.settings import cycle
+
             # _persist_settings hits owa_people.config; swallow whatever it does.
-            screen._handle_overlay("cycle:sort_by")
+            screen._on_setting_changed("sort_by", cycle(screen.settings, "sort_by"))
             await pilot.pause(0.05)
             return screen.settings.sort_by
 

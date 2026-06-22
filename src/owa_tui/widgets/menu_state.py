@@ -9,7 +9,6 @@ No Textual imports — this module is fully unit-testable without a running App.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
 
 @dataclass
@@ -69,39 +68,3 @@ class MenuState:
         """Reset to the top screen with the cursor at position 0."""
         self.screen = "top"
         self.cursor = 0
-
-    def select(self, settings: Any = None) -> str:
-        """Activate the item at the current cursor position.
-
-        On the top screen, if the selected action is ``'settings'``, this
-        transitions to the settings sub-menu and returns ``'settings'``.
-
-        On the settings screen, it cycles the selected field on *settings*
-        (if provided) and returns ``'cycle:<field_name>'``.
-
-        Returns the action string for the caller to handle.
-        """
-        current_items = self.items()
-        if not current_items:
-            return ""
-
-        idx = max(0, min(self.cursor, len(current_items) - 1))
-        first, second = current_items[idx]
-
-        if self.screen == "top":
-            # top_items: (label, action_str)
-            action = second
-            if action == "settings":
-                self.open_settings()
-                return "settings"
-            return action
-
-        # settings screen — settings_fields: (field_name, display_label)
-        # first element is the field_name (attribute on the settings object)
-        field_name = first
-        if settings is not None and hasattr(settings, field_name):
-            val = getattr(settings, field_name)
-            # Cycle booleans; other types left to the caller
-            if isinstance(val, bool):
-                setattr(settings, field_name, not val)
-        return f"cycle:{field_name}"
