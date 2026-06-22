@@ -38,3 +38,46 @@ def access_token_for(config: dict[str, Any], *, tool_name: str, audience: str) -
     if isinstance(info, dict):
         return info.get("access_token") or ""
     return getattr(info, "access_token", "") or ""
+
+
+def current_identity(config: dict[str, Any]) -> tuple[str | None, str | None]:
+    """Best-effort ``(profile_alias, upn)`` for the header top row.
+
+    Never raises — returns ``None`` for either field on any failure. Blocking
+    (shells out to owa-piggy and decodes a token); call from a worker thread.
+    """
+    profile: str | None = None
+    upn: str | None = None
+    try:
+        from owa_core.auth import get_profiles  # type: ignore[import]  # noqa: PLC0415
+
+        profiles = get_profiles(tool_name="owa-tui")
+        profile = next((p.alias for p in profiles if p.default), None)
+    except Exception:
+        pass
+    try:
+        token = access_token_for(config, tool_name="owa-tui", audience="graph")
+        upn = _upn_from_jwt(token)
+    except Exception:
+        pass
+    return profile, upn
+
+
+def _upn_from_jwt(token: str) -> str | None:
+    """Extract a user principal name from a JWT's claims, or None."""
+    if not token or token.count(".") < 2:
+        return None
+    import base64  # noqa: PLC0415
+    import json  # noqa: PLC0415
+
+    payload = token.split(".")[1]
+    payload += "=" * (-len(payload) % 4)  # restore base64 padding
+    try:
+        claims = json.loads(base64.urlsafe_b64decode(payload))
+    except Exception:
+        return None
+    for key in ("upn", "preferred_username", "unique_name", "email"):
+        value = claims.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return None

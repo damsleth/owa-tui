@@ -6,6 +6,7 @@ import argparse
 from collections.abc import Sequence
 from typing import Any
 
+from textual import work
 from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header
 
@@ -87,6 +88,24 @@ class OwaTuiApp(App[None]):
             from owa_tui.screens.home import HomeScreen
 
             self.push_screen(HomeScreen())
+
+        # Resolve the profile/UPN top row off the UI thread. Skipped under the
+        # headless test driver and in fixture mode so neither shells out to
+        # owa-piggy.
+        from owa_tui import fixtures  # noqa: PLC0415
+
+        if not self.is_headless and not fixtures.enabled():
+            self._load_identity()
+
+    @work(thread=True, exclusive=True)
+    def _load_identity(self) -> None:
+        """Set the header subtitle to ``profile · upn`` (best-effort)."""
+        from owa_tui.adapter import current_identity  # noqa: PLC0415
+
+        profile, upn = current_identity(self._config)
+        label = "  ·  ".join(part for part in (profile, upn) if part)
+        if label:
+            self.call_from_thread(setattr, self, "sub_title", label)
 
     # ------------------------------------------------------------------
     # Public API used by HomeScreen and per-tool entrypoints
