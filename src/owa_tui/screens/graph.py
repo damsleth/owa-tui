@@ -74,7 +74,7 @@ HELP_LINES = [
     "[bold]General[/bold]",
     "  Esc            Toggle menu",
     "  D              Debug overlay (last 400 chars of debug buffer)",
-    "  q              Quit",
+    "  q              Back to menu",
 ]
 
 # 17 FOCI audiences in tier order
@@ -146,7 +146,7 @@ class GraphScreen(Screen[None]):
 
     TITLE = "owa-tui — Graph Explorer"
     BINDINGS = [
-        Binding("q", "quit", "Quit"),
+        Binding("q", "quit", "Back"),
         Binding("escape", "toggle_menu", "Menu"),
         Binding("r", "refresh", "Refresh", show=False),
         Binding("n", "next_page", "Next page", show=False),
@@ -557,7 +557,12 @@ class GraphScreen(Screen[None]):
             lv.index = len(self._state.items) - 1
 
     def action_quit(self) -> None:
-        self.app.exit()
+        # Return to the tool menu like the other screens; exit the app only
+        # when launched directly into this tool (no HomeScreen underneath).
+        if len(self.app.screen_stack) > 2:
+            self.app.pop_screen()
+        else:
+            self.app.exit()
 
     # ------------------------------------------------------------------
     # Key pass-through for PgUp/PgDn/Space

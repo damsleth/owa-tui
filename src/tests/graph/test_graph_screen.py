@@ -135,7 +135,7 @@ def test_graph_screen_list_view_present() -> None:
 
 
 def test_quit_terminates_app() -> None:
-    """TP53: pressing q exits the app."""
+    """TP53: pressing q exits when launched directly (no HomeScreen below)."""
 
     async def _run() -> bool:
         with patch("owa_tui.screens.graph.fetch_items", side_effect=_noop_fetch):
@@ -147,6 +147,27 @@ def test_quit_terminates_app() -> None:
                 return not app.is_running
 
     assert asyncio.run(_run())
+
+
+def test_q_returns_to_home_menu() -> None:
+    """When opened from the HomeScreen, q returns to the menu, not the terminal."""
+
+    async def _run() -> tuple[bool, bool]:
+        with patch("owa_tui.screens.graph.fetch_items", side_effect=_noop_fetch):
+            import owa_tui
+            from owa_tui.screens.home import HomeScreen
+
+            app = owa_tui.OwaTuiApp(config={})  # launches HomeScreen
+            async with app.run_test() as pilot:
+                await pilot.pause(0.1)
+                app.push_tool("graph")
+                await pilot.pause(0.1)
+                await pilot.press("q")
+                await pilot.pause(0.1)
+                return app.is_running, isinstance(app.screen, HomeScreen)
+
+    running, on_home = asyncio.run(_run())
+    assert running and on_home
 
 
 # ---------------------------------------------------------------------------
