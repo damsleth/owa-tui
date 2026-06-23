@@ -5,15 +5,13 @@
 Current live release posture:
 
 - Package metadata is still `version = "0.1.0"` in `pyproject.toml`.
-- CI exists at `.github/workflows/ci.yml` and runs lint, compile, pytest with `--cov-fail-under=85`, and `uv build` on Python 3.10-3.12.
-- `.github/workflows/release.yml` does not exist yet, even though this plan describes a tag-triggered release workflow.
-- The repository has e2e fixture tests under `e2e/`, but CI currently does not run `npx tui-test`.
-- `AGENTS.md` says to run coverage with fail-under 80, while `pyproject.toml`, CI, and this release plan use 85. Resolve that mismatch before cutting a release.
+- CI exists at `.github/workflows/ci.yml` and runs lint, compile, pytest with `--cov-fail-under=85`, `npx tui-test` (fixture e2e), and `uv build` on Python 3.10-3.12.
+- `.github/workflows/release.yml` exists: tag push (`v*`) re-runs all gates then builds + publishes a GitHub Release with the wheel/sdist. PyInstaller binaries and PyPI publish are still deferred.
+- The e2e fixture tests under `e2e/` are now a required CI gate (`npx tui-test`).
+- Coverage fail-under is 85 everywhere (`AGENTS.md`, `pyproject.toml`, CI, release.yml).
 
 Release blockers to clear before tagging:
 
-- Add or deliberately defer the tag-triggered GitHub release workflow described below.
-- Decide whether e2e fixture tests are mandatory for release and, if so, add the Node/tui-test setup to CI.
 - Verify `owa-tools>=1.0.0` is published and exposes the stable APIs used by every shipped screen.
 - Run a local install smoke from a built wheel: `owa-tui --help`, `owa-tui --version`, and fixture-mode startup for at least home, cal, mail, graph, and one v2 screen.
 - Confirm Homebrew and standalone binary strategy before promising those artifacts in release notes.

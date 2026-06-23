@@ -27,5 +27,12 @@ jobs:
         run: python -m compileall -q src
       - name: Unit tests with coverage
         run: pytest -q --cov --cov-fail-under=85
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: E2E (tui-test, fixture mode)
+        run: |
+          npm ci
+          npx tui-test
       - name: Build package
         run: uv build

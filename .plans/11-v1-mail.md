@@ -568,6 +568,6 @@ All checklist items above are ticked if:
 Run before declaring done:
 
 ```bash
-.venv/bin/python -m pytest src/tests/mail/ -q --cov=owa_tui.mail --cov-fail-under=80
-.venv/bin/ruff check src/owa_tui/mail/ src/tests/mail/
+.venv/bin/python -m pytest src/tests/mail/ -q --cov=owa_tui.mail --cov=owa_tui.screens.mail --cov-fail-under=85
+.venv/bin/ruff check src/owa_tui/mail/ src/owa_tui/screens/mail.py src/tests/mail/
 ```
