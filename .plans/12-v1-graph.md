@@ -1,4 +1,22 @@
-Plan: GRAPH v1 — Textual rebuild of owa-graph TUI (flagship tui_kit adapter)
+# Plan: GRAPH v1 — Textual rebuild of owa-graph TUI (flagship tui_kit adapter)
+
+## Review update — 2026-06-23
+
+This is a shipped-behavior reference for the most complex v1 adapter. The live surface is `src/owa_tui/screens/graph.py` plus `src/owa_tui/graph/` helpers. Bookmarks and settings coercion have since been finished as part of the ponytail audit cleanup, so this plan should not be read as asking to remove that state.
+
+Current hardening checklist:
+
+- Keep per-audience token minting/refresh in `src/owa_tui/graph/auth.py`; do not collapse it into app-start auth.
+- Keep row building, next-link handling, audience metadata, and settings serialization pure enough to unit test without a terminal.
+- Preserve graceful degradation for AADSTS65002/AADSTS53003 and other scope/conditional-access errors; switching audience must not strand the UI.
+- Keep the Escape/settings-overlay regression covered. `SettingsOverlay` now consumes the shared `MenuState` shape.
+- Maintain fixture coverage for Graph default path, `/me`, continuation shapes, bookmarks, and the copy/open actions; live Graph smoke must remain explicitly gated.
+
+Done criteria for future graph changes:
+
+- `src/tests/graph/` covers auth/token expiry, fetch classification, navigation rows, settings/bookmarks, actions, and screen behavior.
+- Fixture e2e covers audience/path navigation, settings overlay, drill/back history, search or path entry, and at least one degraded auth/fetch state.
+- Full repo gates pass with the repository's chosen coverage threshold.
 
 **Status:** ✅ shipped (commit b12d1cd); auth reworked to per-call token minting in fcfa2bc.
 Implemented as `src/owa_tui/screens/graph.py` + `src/owa_tui/graph/` (auth/fetch/nav/state).

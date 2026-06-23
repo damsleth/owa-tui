@@ -1,5 +1,28 @@
 # Plan 01 — owa-tui Architecture
 
+## Review update — 2026-06-23
+
+Current live shape:
+
+- `OwaTuiApp` is in `src/owa_tui/__init__.py` and boots the tool selector or a direct tool screen from `SCREEN_REGISTRY`.
+- Tool screens live under `src/owa_tui/screens/`; the shared base layer is `src/owa_tui/screens/base/` (`OwaListScreen`, `OwaTreeScreen`, `OwaGridScreen`, `OwaThreadScreen`) plus reusable widgets in `src/owa_tui/widgets/`.
+- v1 calendar, mail, and graph are implemented; the broader v2 screens also exist for todo, planner, drive, sites, teams, sched, people, doctor, and ado.
+- Fixture mode is a first-class test seam via `src/owa_tui/fixtures.py` and the `OWA_TUI_FIXTURES` environment variable.
+
+Architecture guardrails to preserve:
+
+- Keep the one-way import boundary: `owa-tui -> owa-tools` stable APIs only. Do not import curses TUI modules, `owa_piggy`, or local broker config files.
+- Keep auth per-call or per-worker through `owa_tui.adapter.access_token_for(...)` / `owa_core.auth.get_token_for_config(...)`; do not reintroduce a single startup token that can expire while the app is open.
+- Keep diagnostics visible through the status bar or stderr. Failed auth, fetch, browser, clipboard, and config writes must not disappear silently.
+- Keep default tests offline by using monkeypatches and fixtures. Any real Microsoft 365 or broker smoke must stay behind an explicit environment gate.
+- Do not add an MCP server. The permanent integration surface remains CLI exit codes plus owa-tools library APIs.
+
+Plan drift to resolve when editing this file next:
+
+- Sections that describe `src/owa_tui/cal/`, `src/owa_tui/mail/screen.py`, or old widget-kit names are historical blueprint text. Prefer the current paths under `src/owa_tui/screens/` and `src/owa_tui/screens/base/`.
+- The top-level verification contract is inconsistent across docs: `AGENTS.md` says `--cov-fail-under=80`, while `pyproject.toml`, CI, and release notes use 85. Pick one gate before the next release; current repo behavior is 85.
+- `.github/workflows/release.yml` is referenced by release planning but does not exist in the live tree. See `.plans/90-release.md` before treating GitHub Releases as automated.
+
 **Status:** decision-record + design reference  
 **Author:** architecture subagent (June 2026)  
 **Scope:** all of `owa-tui`; sibling plans 10/11 implement individual adapters against this spec
