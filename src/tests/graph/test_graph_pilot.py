@@ -1436,3 +1436,112 @@ def test_from_config_invalid_int_uses_default() -> None:
     config = {"graph_tui_split_ratio": "not-a-number"}
     settings = GraphSettings.from_config(config)
     assert settings.split_ratio == 60  # default
+
+
+# ---------------------------------------------------------------------------
+# TP102: bookmark recall ('M') — empty, picker, jump, persistence
+# ---------------------------------------------------------------------------
+
+
+def test_action_bookmarks_empty_shows_status() -> None:
+    """TP102a: 'M' with no bookmarks sets a helpful status, no overlay."""
+    from textual.widgets import Static
+
+    async def _run() -> tuple[str, int]:
+        with patch("owa_tui.screens.graph.fetch_items", side_effect=_noop_fetch):
+            app = _make_app()
+            async with app.run_test() as pilot:
+                await pilot.pause(0.1)
+                base_depth = len(app.screen_stack)
+                await pilot.press("M")
+                await pilot.pause(0.05)
+                status = str(app.screen.query_one("#status-bar", Static).render())
+                return status, len(app.screen_stack) - base_depth
+
+    status, delta = asyncio.run(_run())
+    assert "no bookmark" in status.lower()
+    assert delta == 0  # no overlay pushed
+
+
+def test_action_bookmarks_opens_picker() -> None:
+    """TP102b: after 'm', pressing 'M' pushes a picker overlay."""
+
+    async def _run() -> int:
+        with patch("owa_tui.screens.graph.fetch_items", side_effect=_noop_fetch):
+            app = _make_app()
+            async with app.run_test() as pilot:
+                await pilot.pause(0.1)
+                base_depth = len(app.screen_stack)
+                await pilot.press("m")  # add bookmark for current location
+                await pilot.pause(0.05)
+                await pilot.press("M")  # open picker
+                await pilot.pause(0.05)
+                return len(app.screen_stack) - base_depth
+
+    assert asyncio.run(_run()) == 1  # exactly one overlay on top
+
+
+def test_on_bookmark_chosen_jumps() -> None:
+    """TP102c: choosing a bookmark updates audience/path and refetches."""
+
+    async def _run() -> tuple[str, str, list]:
+        with patch("owa_tui.screens.graph.fetch_items", side_effect=_noop_fetch):
+            app = _make_app()
+            async with app.run_test() as pilot:
+                await pilot.pause(0.1)
+                screen = app.screen
+                screen._settings.add_bookmark("azure", "subscriptions", "Subs")
+                # populate history so we can assert it is cleared on jump
+                screen._state.history = [("graph", "me", "", [], 0, 0, None)]
+                screen._on_bookmark_chosen("jump:0")
+                await pilot.pause(0.05)
+                return screen._state.audience, screen._state.path, screen._state.history
+
+    audience, path, history = asyncio.run(_run())
+    assert audience == "azure"
+    assert path == "subscriptions"
+    assert history == []
+
+
+def test_on_bookmark_chosen_ignores_non_jump() -> None:
+    """TP102d: a non-jump dismiss result (e.g. 'resume') changes nothing."""
+
+    async def _run() -> tuple[str, str]:
+        with patch("owa_tui.screens.graph.fetch_items", side_effect=_noop_fetch):
+            app = _make_app()
+            async with app.run_test() as pilot:
+                await pilot.pause(0.1)
+                screen = app.screen
+                before = (screen._state.audience, screen._state.path)
+                screen._on_bookmark_chosen("resume")
+                screen._on_bookmark_chosen("")
+                screen._on_bookmark_chosen("jump:99")  # out of range
+                await pilot.pause(0.05)
+                return before, (screen._state.audience, screen._state.path)
+
+    before, after = asyncio.run(_run())
+    assert before == after
+
+
+def test_action_bookmark_persists_to_config() -> None:
+    """TP102e: pressing 'm' writes settings (incl. bookmarks) to the config file."""
+
+    async def _run() -> dict:
+        saved: dict = {}
+
+        def _fake_save(config: dict) -> None:
+            saved.update(config)
+
+        with patch("owa_tui.screens.graph.fetch_items", side_effect=_noop_fetch), patch(
+            "owa_graph.config.load_config", return_value={}
+        ), patch("owa_graph.config.save_config", side_effect=_fake_save):
+            app = _make_app()
+            async with app.run_test() as pilot:
+                await pilot.pause(0.1)
+                await pilot.press("m")
+                await pilot.pause(0.05)
+        return saved
+
+    saved = asyncio.run(_run())
+    assert "graph_tui_bookmarks" in saved
+    assert saved["graph_tui_bookmarks"] not in ("", "[]")
