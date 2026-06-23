@@ -9,6 +9,8 @@ import dataclasses
 from dataclasses import dataclass
 from typing import Final
 
+from owa_tui.settings_cycle import cycle_value
+
 DETAIL_PANE_VALUES: Final[tuple[str, ...]] = ("right", "bottom", "off")
 SPLIT_RATIO_VALUES: Final[tuple[int, ...]] = (40, 50, 60)
 SORT_BY_VALUES: Final[tuple[str, ...]] = ("name_asc", "name_desc", "email_asc")
@@ -40,12 +42,7 @@ def cycle(settings: PeopleSettings, field: str, direction: int = 1) -> PeopleSet
     else:
         raise ValueError(f"Unknown PeopleSettings field: {field!r}")
 
-    try:
-        idx = list(vals).index(current)
-        next_val = vals[(idx + direction) % len(vals)]
-    except ValueError:
-        next_val = vals[0]
-
+    next_val = cycle_value(current, vals, direction)
     return dataclasses.replace(settings, **{field: next_val})
 
 

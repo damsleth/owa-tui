@@ -110,14 +110,17 @@ class TestCalSettingsMissing:
         assert s2 is s
 
     def test_cycle_value_not_in_allowed_falls_back(self) -> None:
-        """When current value is not in allowed, cycle starts from index 0 (line 58-59)."""
+        """A value outside the allowed set resets to the first valid value.
+
+        Shared cycle_value semantics (owa_tui.settings_cycle): an unrecognised
+        current value resets to allowed[0] rather than stepping from index 0.
+        """
         # Manufacture a settings where split_ratio has a 'bad' value by replacing directly
         import dataclasses
 
         s = dataclasses.replace(CalSettings(), split_ratio=99)  # 99 not in ('40','50','60')
         s2 = s.cycle("split_ratio")
-        # Falls back to index 0 → next is index 1 → "50"
-        assert s2.split_ratio == 50
+        assert s2.split_ratio == 40  # resets to the first valid ratio
 
     def test_from_config_split_ratio_bad_string_falls_back(self) -> None:
         """from_config with non-numeric split_ratio defaults to 50 (lines 80-81)."""

@@ -20,6 +20,8 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
+from owa_tui.settings_cycle import cycle_value
+
 # ---------------------------------------------------------------------------
 # Bookmark helpers
 # ---------------------------------------------------------------------------
@@ -129,14 +131,13 @@ class GraphSettings:
 
         current = getattr(self, field, None)
         if isinstance(current, bool):
-            return replace(self, **{field: not current})
+            return replace(self, **{field: cycle_value(current, (False, True), direction)})
         if field == "split_ratio":
-            vals = self._SPLIT_RATIO_VALUES
             try:
-                idx = vals.index(int(current))
+                cur = int(current)
             except (ValueError, TypeError):
-                idx = 0
-            return replace(self, **{field: vals[(idx + direction) % len(vals)]})
+                cur = None
+            return replace(self, **{field: cycle_value(cur, self._SPLIT_RATIO_VALUES, direction)})
         return self
 
     def to_config_dict(self) -> dict[str, Any]:
