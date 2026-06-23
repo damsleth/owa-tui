@@ -1,12 +1,11 @@
-name: CI
+name: Release
 
 on:
   push:
-    branches: [main]
-  pull_request:
+    tags: ["v*"]
 
 jobs:
-  test:
+  gates:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -34,5 +33,23 @@ jobs:
         run: |
           npm ci
           npx tui-test
-      - name: Build package
+
+  release:
+    needs: gates
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Build wheel + sdist
         run: uv build
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+
+# ponytail: PyInstaller standalone binaries deferred (OWA_TUI_PYINSTALLER_READY: false
+# in .plans/90-release.md). Add a binaries job + hidden-imports hook when that lands.
+# PyPI publish (uv publish) stays manual until a PyPI token secret is wired.

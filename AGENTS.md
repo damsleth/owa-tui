@@ -68,7 +68,7 @@ Run before committing:
 ```bash
 .venv/bin/ruff check .
 .venv/bin/python -m compileall -q src
-.venv/bin/python -m pytest -q --cov --cov-fail-under=80
+.venv/bin/python -m pytest -q --cov --cov-fail-under=85
 ```
 
 For release or packaging changes also run:
