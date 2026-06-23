@@ -325,6 +325,22 @@ test.describe("graph", () => {
     await expect(terminal.getByText("bookmarked", { strict: false })).toBeVisible();
   });
 
+  test("M opens the bookmark picker and Enter jumps to it", async ({ terminal }) => {
+    await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
+    terminal.write("m"); // bookmark current location (graph:me)
+    await expect(terminal.getByText("bookmarked", { strict: false })).toBeVisible();
+    terminal.write("M"); // open the jump-to-bookmark picker
+    await expect(terminal.getByText("jump to bookmark", { strict: false })).toBeVisible();
+    terminal.submit(); // Enter -> jump to the selected bookmark, refetches graph:me
+    await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
+  });
+
+  test("M with no bookmarks reports there are none", async ({ terminal }) => {
+    await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
+    terminal.write("M"); // no bookmarks added in this fresh session
+    await expect(terminal.getByText("no bookmark", { strict: false })).toBeVisible();
+  });
+
   test("D toggles the debug overlay", async ({ terminal }) => {
     await expect(terminal.getByText("Test User", { strict: false })).toBeVisible();
     terminal.write("c"); // seed the debug buffer with a curl line

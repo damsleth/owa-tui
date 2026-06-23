@@ -45,7 +45,7 @@ from owa_tui.graph.state import GraphState
 FOOTER_TEXT = (
     "↑↓/jk move  Enter/→/l drill  h/← back  "
     "a audience  / path  e edit query  n next  r refresh  "
-    "o Graph Explorer  y yank URL  c curl  m bookmark  D debug  Esc menu  q quit"
+    "o Graph Explorer  y yank URL  c curl  m bookmark  M jump  D debug  Esc menu  q quit"
 )
 
 HELP_LINES = [
@@ -70,6 +70,7 @@ HELP_LINES = [
     "  c              Copy curl command to debug buffer",
     "  o              Open Graph Explorer (graph audience only)",
     "  m              Bookmark current path",
+    "  M              Jump to a saved bookmark",
     "",
     "[bold]General[/bold]",
     "  Esc            Toggle menu",
@@ -157,6 +158,7 @@ class GraphScreen(Screen[None]):
         Binding("y", "yank_url", "Yank URL", show=False),
         Binding("c", "curl_command", "Curl", show=False),
         Binding("m", "bookmark", "Bookmark", show=False),
+        Binding("M", "bookmarks", "Jump to bookmark", show=False),
         Binding("D", "debug_overlay", "Debug", show=False),
         Binding("j", "cursor_down", "Down", show=False),
         Binding("k", "cursor_up", "Up", show=False),
@@ -478,7 +480,65 @@ class GraphScreen(Screen[None]):
 
     def action_bookmark(self) -> None:
         action_bookmark(self._state, self._settings)
+        self._persist_settings()
         self._refresh_status()
+
+    def action_bookmarks(self) -> None:
+        """Open a picker over saved bookmarks and jump to the chosen one."""
+        bookmarks = self._settings.get_bookmarks()
+        if not bookmarks:
+            self._state.status = "no bookmarks yet (press m to add one)"
+            self._refresh_status()
+            return
+
+        from owa_tui.widgets.settings_overlay import SettingsOverlay
+
+        top_items = [
+            (label or f"{audience}:{path}", f"jump:{i}")
+            for i, (audience, path, label) in enumerate(bookmarks)
+        ]
+        top_items.append(("Cancel", "resume"))
+        overlay = SettingsOverlay(
+            title_lines=["Graph Explorer — jump to bookmark"],
+            top_items=top_items,
+        )
+        self.app.push_screen(overlay, self._on_bookmark_chosen)
+
+    def _on_bookmark_chosen(self, result: str) -> None:
+        if not result or not result.startswith("jump:"):
+            return
+        idx = int(result.split(":", 1)[1])
+        bookmarks = self._settings.get_bookmarks()
+        if idx >= len(bookmarks):
+            return
+        audience, path, label = bookmarks[idx]
+        self._state.audience = audience
+        self._state.path = path
+        self._state.query = ""
+        self._state.next_link = None
+        self._state.history = []
+        self._state.selected = 0
+        self._state.top = 0
+        self._state.dirty = True
+        self._state.status = f"jumping to {label or f'{audience}:{path}'}…"
+        self._refresh_status()
+        self._refresh_breadcrumb()
+        self._start_fetch()
+
+    def _persist_settings(self) -> None:
+        """Write current settings (incl. bookmarks) back to the owa-graph config file."""
+        from owa_tui import fixtures
+
+        if fixtures.enabled():
+            return  # fixture mode is read-only demo data — never touch the user's config
+        try:
+            from owa_graph.config import load_config, save_config  # type: ignore[import]
+
+            config = load_config()
+            config.update(self._settings.to_config_dict())
+            save_config(config)
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # Debug overlay
