@@ -9,6 +9,8 @@ from __future__ import annotations
 import dataclasses
 from typing import ClassVar
 
+from owa_tui.settings_cycle import cycle_value
+
 _ALLOWED: dict[str, tuple[str, ...]] = {
     "reading_pane": ("right", "bottom", "off"),
     "split_ratio": ("40", "50", "60"),
@@ -53,11 +55,7 @@ class CalSettings:
             return self
         # split_ratio is stored as int but cycled as strings
         current = str(getattr(self, field))
-        try:
-            idx = allowed.index(current)
-        except ValueError:
-            idx = 0
-        next_val = allowed[(idx + direction) % len(allowed)]
+        next_val = cycle_value(current, allowed, direction)
         # Coerce back to int for split_ratio
         if field == "split_ratio":
             return dataclasses.replace(self, **{field: int(next_val)})

@@ -11,6 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
+from owa_tui.settings_cycle import cycle_value
+
 READING_PANE_VALUES: Final[tuple[str, ...]] = ("right", "bottom", "off")
 SPLIT_RATIO_VALUES: Final[tuple[int, ...]] = (40, 50, 60)
 SORT_BY_VALUES: Final[tuple[str, ...]] = (
@@ -69,12 +71,7 @@ def cycle(settings: MailSettings, field: str, direction: int = 1) -> MailSetting
     else:
         raise ValueError(f"Unknown MailSettings field: {field!r}")
 
-    try:
-        idx = list(vals).index(current)
-        next_val = vals[(idx + direction) % len(vals)]
-    except ValueError:
-        next_val = vals[0]
-
+    next_val = cycle_value(current, vals, direction)
     return dataclasses_replace(settings, **{field: next_val})
 
 
