@@ -15,7 +15,8 @@ separate from `owa-tools`.
    ```bash
    ruff check .
    python -m compileall -q src
-   pytest -q --cov --cov-fail-under=80
+   pytest -q --cov --cov-fail-under=85
+   npx tui-test
    ```
 3. `uv build` and verify the wheel installs cleanly:
    ```bash
@@ -29,9 +30,10 @@ separate from `owa-tools`.
 
 PyPI uploads happen **locally** with `uv publish`, which reads
 `UV_PUBLISH_TOKEN` from `./.env`. `.env` is gitignored — never commit it.
-The GitHub Actions workflow at `.github/workflows/release.yml` (once added)
-runs gates, rebuilds the artifacts in CI, and creates the GitHub Release at
-the tag with the wheel and sdist attached. It does **not** touch PyPI.
+The GitHub Actions workflow at `.github/workflows/release.yml` re-runs the
+gates (lint, compile, coverage, e2e) on Python 3.10–3.12, rebuilds the
+artifacts in CI, and creates the GitHub Release at the tag with the wheel and
+sdist attached. It does **not** touch PyPI.
 
 ### Cutting a release
 
@@ -73,6 +75,9 @@ Never force-push tags. A bad release is fixed by publishing a higher version.
 ## Deferred work
 
 - **Snapshot tests:** `pytest-textual-snapshot` fixtures for key screens.
-- **Live integration smoke tests:** opt-in authenticated tests against real
-  M365 data, gated by `OWA_TUI_LIVE_TESTS=1`.
 - **Generated shell completions:** once the CLI surface stabilises.
+- **PyInstaller binaries / PyPI publish:** not yet wired into `release.yml`.
+
+Done: live integration smoke tests now exist, opt-in against real M365 — unit
+token smoke (`OWA_TUI_LIVE_TESTS=1`) and full-render e2e (`OWA_TUI_LIVE_E2E=1`,
+`e2e/live.test.ts`).

@@ -74,6 +74,7 @@ Run before committing:
 For release or packaging changes also run:
 
 ```bash
+npx tui-test   # fixture e2e — required CI gate (needs Node + `owa-tui` on PATH)
 uv build
 ```
 
