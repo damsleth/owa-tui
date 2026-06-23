@@ -1,5 +1,13 @@
 # grid + teams action gaps
 
+## Review update — 2026-06-23
+
+Archived as done. Keep this note as regression context for grid screens (`sched`, `doctor`) and Teams thread/browser actions:
+
+- Shared grid behavior belongs in `src/owa_tui/screens/base/grid.py`; fixes should be covered by base grid tests plus at least one concrete grid screen.
+- Teams list-to-thread behavior depends on both `src/owa_tui/screens/teams.py` and `src/owa_tui/screens/base/thread.py`; preserve fixture e2e coverage for opening a thread and returning.
+- Browser/open actions should report status on missing links or launch failures, not crash the TUI.
+
 _Created 2026-06-21. Surfaced by the e2e "all actions" coverage work — these are
 implementation gaps (advertised/planned behaviour that the code doesn't do), not
 test gaps. Being implemented now._

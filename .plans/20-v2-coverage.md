@@ -1,5 +1,24 @@
 # owa-tui v2 coverage — Textual TUI adapters for the remaining eight tools
 
+## Review update — 2026-06-23
+
+The v2 plan has mostly moved from scaffolding to hardening. Live screen modules exist for `ado`, `doctor`, `drive`, `people`, `planner`, `sched`, `sites`, `teams`, and `todo` under `src/owa_tui/screens/`, backed by the shared list/tree/grid/thread bases. `owa-vids` remains deferred because it does not naturally fit the list/tree/grid model.
+
+Use this plan as a coverage and parity tracker from here:
+
+- For every shipped v2 screen, keep a row/detail or grid rendering test, an offline fetch/fixture test, a settings or menu test where applicable, and a fixture e2e path.
+- Each adapter must call only the stable owa-tools API surface for that tool. If a needed API is missing, add it in owa-tools first rather than importing a curses TUI module.
+- Destructive or mutating actions stay out of v2 unless the source CLI has clear confirmation semantics and tests cover cancellation, success, and failure.
+- Shared base changes must be validated against at least one list screen, one tree screen, one grid screen, and one thread screen.
+- Live Microsoft 365 checks are optional smoke tests behind explicit environment gates; the default repo gate remains fully offline.
+
+Remaining enrichment work:
+
+- Convert any "create screen" language below into "verify/harden screen" language as each card is touched.
+- Add a compact matrix mapping each screen to its API imports, fixture file, unit test directory, and e2e spec.
+- Decide whether `owa-people` should be described as v1-adjacent or v2; the code exists, but the planning status is still ambiguous.
+- Keep `owa-vids` deferred unless a concrete Textual interaction model and stable owa-tools API surface exist.
+
 _Created 2026-06-18. Prerequisite: a v1 owa-tui release must exist on PyPI before
 any v2 card ships (the `owa-tools>=1.0.0` constraint keeps the import boundary clean)._
 

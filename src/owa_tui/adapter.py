@@ -46,15 +46,16 @@ def current_identity(config: dict[str, Any]) -> tuple[str | None, str | None]:
     Never raises — returns ``None`` for either field on any failure. Blocking
     (shells out to owa-piggy and decodes a token); call from a worker thread.
     """
-    profile: str | None = None
+    profile: str | None = (config.get("owa_piggy_profile") or "").strip() or None
     upn: str | None = None
-    try:
-        from owa_core.auth import get_profiles  # type: ignore[import]  # noqa: PLC0415
+    if profile is None:
+        try:
+            from owa_core.auth import get_profiles  # type: ignore[import]  # noqa: PLC0415
 
-        profiles = get_profiles(tool_name="owa-tui")
-        profile = next((p.alias for p in profiles if p.default), None)
-    except Exception:
-        pass
+            profiles = get_profiles(tool_name="owa-tui")
+            profile = next((p.alias for p in profiles if p.default), None)
+        except Exception:
+            pass
     try:
         token = access_token_for(config, tool_name="owa-tui", audience="graph")
         upn = _upn_from_jwt(token)
