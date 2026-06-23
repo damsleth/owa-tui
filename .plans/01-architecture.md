@@ -20,8 +20,8 @@ Architecture guardrails to preserve:
 Plan drift to resolve when editing this file next:
 
 - Sections that describe `src/owa_tui/cal/`, `src/owa_tui/mail/screen.py`, or old widget-kit names are historical blueprint text. Prefer the current paths under `src/owa_tui/screens/` and `src/owa_tui/screens/base/`.
-- The top-level verification contract is inconsistent across docs: `AGENTS.md` says `--cov-fail-under=80`, while `pyproject.toml`, CI, and release notes use 85. Pick one gate before the next release; current repo behavior is 85.
-- `.github/workflows/release.yml` is referenced by release planning but does not exist in the live tree. See `.plans/90-release.md` before treating GitHub Releases as automated.
+- The top-level verification contract is now consistent at **85%** across `AGENTS.md`, `pyproject.toml`, CI, and release notes (resolved 2026-06-23).
+- `.github/workflows/release.yml` exists: a `v*` tag re-runs the gates and creates a GitHub Release with the wheel/sdist. The fixture e2e suite (`npx tui-test`) is a required gate in both `ci.yml` and `release.yml`.
 
 **Status:** decision-record + design reference  
 **Author:** architecture subagent (June 2026)  
@@ -494,8 +494,10 @@ story and keeps settings visible to the existing CLI.
 
 ### 7a. Current state
 
-CI (`ci.yml`) runs `pytest -q --cov --cov-fail-under=80`. `pyproject.toml` has
-`fail_under = 80` in `[tool.coverage.report]`. Both are consistent at **80%**.
+CI (`ci.yml`) runs `pytest -q --cov --cov-fail-under=85`. `pyproject.toml` has
+`fail_under = 85` in `[tool.coverage.report]`, and `AGENTS.md`/`RELEASING.md`
+match. The 85% gate landed 2026-06-23 (sections 7b/7c below are the original
+rationale, now historical). Live coverage is ~92%.
 
 ### 7b. Recommendation: raise to **85%** line coverage
 
@@ -522,10 +524,9 @@ owa-tui's codebase has two layers with distinct testability profiles:
 3. It is a realistic upgrade path: start at 80% (current), land at 85% once plans 10 and 11
    are complete, target 90% in v2 as the Pilot suite matures.
 
-### 7c. Change required to enforce 85%
+### 7c. Change required to enforce 85% (done 2026-06-23)
 
-Two places to update (not done yet — do this when the first tool Screen is implemented and
-coverage is measured):
+Both places were updated to `--cov-fail-under=85` / `fail_under = 85`:
 
 **`.github/workflows/ci.yml`** line:
 ```yaml
