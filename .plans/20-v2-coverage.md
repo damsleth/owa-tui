@@ -15,7 +15,7 @@ Use this plan as a coverage and parity tracker from here:
 Remaining enrichment work:
 
 - Convert any "create screen" language below into "verify/harden screen" language as each card is touched.
-- Add a compact matrix mapping each screen to its API imports, fixture file, unit test directory, and e2e spec.
+- [x] Add a compact matrix mapping each screen to its API imports, fixture file, unit test directory, and e2e spec (see **Coverage matrix** below, 2026-06-23).
 - Decide whether `owa-people` should be described as v1-adjacent or v2; the code exists, but the planning status is still ambiguous.
 - Keep `owa-vids` deferred unless a concrete Textual interaction model and stable owa-tools API surface exist.
 
@@ -38,6 +38,31 @@ any v2 card ships (the `owa-tools>=1.0.0` constraint keeps the import boundary c
 > its user actions — same pattern as `e2e/actions.test.ts`. Coverage gate is **85%** (`pyproject.toml`),
 > not 80%. Heads-up: the fixture seam currently keys on `cal`/`mail`/`mail_body`/`graph/*` — each new
 > tool needs its own `fixtures.load("<tool>")` call added at its fetch entrypoint.
+
+## Coverage matrix
+
+Each shipped v2 screen → its base class, owa-tools API surface, fixture file(s),
+Pilot test dir, e2e spec, and any mutating actions. Snapshot 2026-06-23.
+
+| Screen | Base | owa-tools API imports | Fixture file(s) | Unit tests (`src/tests/`) | e2e spec (`e2e/`) | Mutating actions |
+|--------|------|-----------------------|-----------------|---------------------------|-------------------|------------------|
+| ado | `OwaListScreen` | `owa_ado.api.ado_request`, `owa_ado.auth.org_base`, `owa_ado.config.load_config`, `owa_ado.resources` | `ado.json` | `ado/test_ado.py` | `ado.test.ts` | none (read-only) |
+| doctor | `OwaGridScreen` | `owa_doctor.probe.classify_finding`, `owa_doctor.probe.*` | `doctor.json` | `doctor/test_doctor_screen.py` | `doctor.test.ts` | none (probes only) |
+| drive | `OwaTreeScreen` | `owa_drive.api.api_request`, `owa_drive.paths`, `owa_drive.items.normalize_item` | `drive.json`, `drive_Q2_Reports.json` | `drive/test_drive.py` | `drive.test.ts` | none (browse-only) |
+| people | `OwaListScreen` (custom) | `owa_people.api.api_get`/`build_query`, `owa_people.people.normalize_person`, `owa_people.config` | `people.json` | `people/test_screen.py`, `people/test_people_pilot.py` | `people.test.ts` | none (read-only) |
+| planner | `OwaListScreen` | `owa_planner.api`, `owa_planner.plans.normalize_tasks` | `planner.json` | `planner/test_planner.py` | `planner.test.ts` | none (read-only) |
+| sched | `OwaGridScreen` | `owa_sched.api.api_post`, `owa_sched.dates.make_local_iso`, `owa_sched.schedule.normalize_attendee` | `sched.json` | `sched/test_sched_screen.py` | `sched.test.ts` | free/busy POST (query, non-mutating) |
+| sites | `OwaTreeScreen` | `owa_sites.api.paginate_sp`, `owa_sites.auth.setup_auth`, `owa_sites.config.load_config`, `owa_sites.sites` | `sites.json`, `sites_Project_Tracker.json` | `sites/test_sites.py` | `sites.test.ts` | none (browse-only) |
+| teams | `OwaListScreen` + `OwaThreadScreen` | direct Graph via `httpx` (no `owa_teams`) | `teams.json`, `teams_messages.json`, `teams_19_general_engineering_thread_v2.json` | `teams/test_teams.py` | `teams.test.ts` | none in v2 (read threads only) |
+| todo | `OwaListScreen` | `owa_todo.api.api_get`/`build_query`/`api_request`, `owa_todo.tasks.normalize_tasks` | `todo.json` | `todo/test_todo.py` | `todo.test.ts` | complete/create task (POST via `api_request`) |
+
+Notes:
+- All screens route token acquisition through `owa_tui.adapter.access_token_for`
+  and offline data through `owa_tui.fixtures` (`OWA_TUI_FIXTURES`).
+- v1 screens (cal/mail/graph) are tracked in their own plans; their e2e lives in
+  `e2e/actions.test.ts`. `e2e/smoke.test.ts` covers the home selector + `--help`.
+- `owa-vids` intentionally absent (deferred). Live smoke is `e2e/live.test.ts`,
+  gated by `OWA_TUI_LIVE_E2E=1`.
 
 ## Context & scope
 

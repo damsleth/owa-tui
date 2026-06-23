@@ -4,8 +4,18 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 from dataclasses import dataclass
 from unittest.mock import patch
+
+import pytest
+
+# CI-hostile: needs a logged-in owa-piggy broker. Off unless OWA_TUI_LIVE_TESTS=1.
+#   OWA_TUI_LIVE_TESTS=1 .venv/bin/python -m pytest src/tests/adapter/ -q
+live_only = pytest.mark.skipif(
+    os.environ.get("OWA_TUI_LIVE_TESTS") != "1",
+    reason="set OWA_TUI_LIVE_TESTS=1 to run live broker smoke",
+)
 
 # ---------------------------------------------------------------------------
 # access_token_for — the only live function in the adapter
@@ -140,3 +150,19 @@ def test_current_identity_never_raises_on_failure() -> None:
         patch("owa_tui.adapter.access_token_for", side_effect=RuntimeError("no token")),
     ):
         assert current_identity({}) == (None, None)
+
+
+# ---------------------------------------------------------------------------
+# Live broker smoke (opt-in) — mints a real token via owa-piggy
+# ---------------------------------------------------------------------------
+
+
+@live_only
+def test_live_access_token_is_usable_jwt(monkeypatch) -> None:
+    """Real broker mint returns a JWT we can decode a UPN from."""
+    monkeypatch.delenv("OWA_TUI_FIXTURES", raising=False)
+    from owa_tui.adapter import _upn_from_jwt, access_token_for
+
+    token = access_token_for({}, tool_name="owa-tui", audience="graph")
+    assert token and token.count(".") >= 2, "expected a JWT from the live broker"
+    assert _upn_from_jwt(token), "live token has no UPN/preferred_username claim"
