@@ -1,5 +1,15 @@
 # ponytail audit cleanup
 
+## Review update — 2026-06-23
+
+This cleanup note is effectively closed. The chosen path was to finish the write-only bookmark feature, keep the real shared seams (`adapter.py`, base screens, `MenuState`, `GraphState`), and avoid descriptor-table refactors that would add indirection without shrinking behavior.
+
+Carry-forward guardrails:
+
+- Do not reopen removed widget-kit ideas unless a new duplication pattern appears in at least three live screens.
+- Keep `settings_cycle.cycle_value` as the shared settings-stepper primitive.
+- Treat any future cleanup as suspect until the full gates pass: ruff, compile, pytest coverage, and fixture e2e where touched.
+
 _From a repo-wide over-engineering audit (2026-06-20). Findings only — nothing
 applied. Ranked biggest cut first. net: ~-130 src lines (-210 with the settings
 dedup), 0 deps removable._

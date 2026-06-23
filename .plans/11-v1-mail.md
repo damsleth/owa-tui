@@ -1,5 +1,23 @@
 # Plan 11 — owa-tui v1 Mail Screen
 
+## Review update — 2026-06-23
+
+This is a shipped-behavior reference. The live mail screen is the single module `src/owa_tui/screens/mail.py`, with pure mail helpers under `src/owa_tui/mail/`. Older instructions that expect `src/owa_tui/mail/screen.py`, `message_list.py`, or `reader_pane.py` are blueprint drift unless a future refactor deliberately splits the module.
+
+Current hardening checklist:
+
+- Keep list fetch and body fetch on `owa_mail.api` / `owa_mail.messages`; do not import `owa_mail.tui*`.
+- Preserve lazy body fetch caching by message id, including the failure path that leaves the list usable and reports status.
+- Keep sort/date helpers pure and separately tested. The screen should consume helper results rather than duplicate ordering or date parsing.
+- Verify read/unread toggles, browser-open failure, cancelled search, and empty folder behavior in offline tests.
+- Keep live mail smoke optional and gated; default tests must not contact Microsoft Graph or Outlook.
+
+Done criteria for future mail changes:
+
+- `src/tests/mail/` covers sort, dates, settings, list rendering, reader mode, fetch failures, search, and read/unread PATCH behavior.
+- Fixture e2e exercises list navigation, reader entry/back, settings overlay, and at least one status-bar error branch.
+- Full repo gates pass with the repository's chosen coverage threshold.
+
 **Status:** ✅ shipped (commit b12d1cd). Implemented as a single `src/owa_tui/screens/mail.py`
 (plus `src/owa_tui/mail/` helpers), not the multi-file `mail/` tree this plan sketched.
 Covered by `src/tests/mail/` (Pilot) and `e2e/actions.test.ts` (tui-test, fixture-mode).

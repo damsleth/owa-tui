@@ -147,10 +147,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Launch directly into a specific tool screen.",
     )
+    parser.add_argument(
+        "--profile",
+        default=None,
+        metavar="ALIAS",
+        help="owa-piggy profile alias to authenticate as (default: the broker's default profile).",
+    )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> None:
     """Run the owa-tui application."""
     args = build_parser().parse_args(argv)
-    OwaTuiApp(tool=args.tool, debug=args.debug).run()
+    config = {"owa_piggy_profile": args.profile} if args.profile else None
+    OwaTuiApp(config=config, tool=args.tool, debug=args.debug).run()

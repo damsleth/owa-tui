@@ -1,5 +1,23 @@
 # Plan: CAL v1 — Textual rebuild of owa-cal TUI
 
+## Review update — 2026-06-23
+
+This is now a shipped-behavior reference, not an implementation backlog. The live calendar adapter is under `src/owa_tui/screens/cal/`, with pure helpers and settings kept beside the screen. Treat older mentions of `src/owa_tui/cal/` as historical path drift.
+
+Current hardening checklist:
+
+- Keep `fetch_events` on the stable `owa_cal.api` / `owa_cal.events` surface only; no imports from `owa_cal.tui*`.
+- Preserve the two-key response flow (`y` then `a`/`t`/`d`) and verify that every patch path updates status and persists the selected response locally.
+- Maintain offline coverage for query construction, declined filtering, attendee search, response JSON, and browser-open failures.
+- Keep settings persistence best-effort but visible: a failed config write should set a status message or testable warning path, not fail silently.
+- Add any live calendar smoke only behind an explicit gate such as `OWA_TUI_LIVE_TESTS=1`; fixture-mode e2e cannot prove real PATCH semantics.
+
+Done criteria for future calendar changes:
+
+- `src/tests/cal/` still covers rendering, fetch, settings, search, respond mode, and edge/error states.
+- `e2e/actions.test.ts` or a calendar-specific e2e covers navigation, settings overlay, and the respond chord in fixture mode.
+- Full repo gates pass with the repository's chosen coverage threshold.
+
 **Status:** ✅ shipped (commit b12d1cd). Parity covered by `src/tests/cal/` (Pilot)
 and `e2e/actions.test.ts` (tui-test, fixture-mode). Code landed under
 `src/owa_tui/screens/cal/`, not the `src/owa_tui/cal/` path this plan sketched.
