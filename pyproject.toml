@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "owa-tui"
-version = "0.1.0"
+version = "0.2.0"
 description = "Textual TUI front-end for the owa-tools Microsoft 365 CLI suite"
 readme = "README.md"
 license = "MIT"
