@@ -1,0 +1,9 @@
+{
+  "value": [
+    {"Id": "Inbox", "DisplayName": "Inbox", "UnreadItemCount": 2, "TotalItemCount": 12},
+    {"Id": "SentItems", "DisplayName": "Sent Items", "UnreadItemCount": 0, "TotalItemCount": 8},
+    {"Id": "Drafts", "DisplayName": "Drafts", "UnreadItemCount": 0, "TotalItemCount": 1},
+    {"Id": "Archive", "DisplayName": "Archive", "UnreadItemCount": 0, "TotalItemCount": 40},
+    {"Id": "DeletedItems", "DisplayName": "Deleted Items", "UnreadItemCount": 1, "TotalItemCount": 3}
+  ]
+}

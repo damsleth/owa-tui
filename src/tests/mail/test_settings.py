@@ -156,6 +156,7 @@ class TestToConfigDict:
             "tui_sort_by",
             "tui_date_format",
             "tui_date_custom",
+            "tui_show_folders",
         }
 
     def test_split_ratio_serialised_as_string(self) -> None:

@@ -346,7 +346,7 @@ class PeopleScreen(Screen[None]):
         Binding("tab", "focus_pane", "Focus pane", show=False),
         Binding("r", "refresh", "Refresh"),
         Binding("/", "search", "Search"),
-        Binding("escape", "open_menu", "Menu"),
+        Binding("escape", "escape", "Back / Menu"),
         Binding("q", "quit", "Quit"),
     ]
 
@@ -597,6 +597,17 @@ class PeopleScreen(Screen[None]):
             self._show_cached_detail(person_id)
         else:
             self._fetch_detail(person_id)
+
+    def action_escape(self) -> None:
+        """Esc: back to the list when viewing a detail, else open the menu.
+
+        In 'off' mode the detail is a separate full-screen ``DetailScreen``
+        that handles its own Esc, so here Esc always opens the menu.
+        """
+        if self.settings.detail_pane != "off" and self.mode == "detail":
+            self.action_close_detail()
+        else:
+            self.action_open_menu()
 
     def action_close_detail(self) -> None:
         if self.settings.detail_pane == "off":
