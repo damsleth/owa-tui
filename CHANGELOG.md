@@ -4,6 +4,39 @@ All notable changes to `owa-tui` are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); this project uses semantic
 versioning.
 
+## [0.2.1] - 2026-06-30
+
+Post-release feature batch plus an audit of the v1 plans for genuine gaps.
+
+### Added
+- **Mail**: folder side-panel (`F`) scoping the list per folder, live settings
+  apply (reading-pane rebuild without re-entering), scroll-to-load pagination,
+  and `j`/`k`/`u`/`d` reading-pane scroll mirroring the list keys.
+- **People**: `Esc` returns to the list when viewing a person's detail.
+- Active theme persists in `~/.config/owa-tui/tui.json`; the transparency
+  toggle now round-trips its under-theme so toggling off after a restart
+  returns to the real previous theme.
+- **Graph**: `n` (next page) extends the list (appends the new page, parks the
+  cursor on the first new row, `+N rows` status) instead of replacing it.
+- `tui-test` e2e spec for the mail folder panel.
+
+### Fixed
+- **Teams**: live `fetch_messages`/`fetch_items` called `access_token_for()`
+  without the required `config` argument — a `TypeError` on the real Graph path
+  that fixture-mode e2e never exercised. Live-path tests now use `autospec` so a
+  missing argument fails loudly.
+- `__version__` synced to the package version (was stuck at `0.1.0`, so
+  `--version` underreported).
+
+### Known limitations
+- **Graph DevOps** continuation-token paging is unreachable: the stable
+  `owa_graph.api_request` returns parsed JSON only, so the
+  `x-ms-continuationtoken` response header can't be read. First page works;
+  2nd+ page of the `devops` audience does not. OData/ARM body cursors are
+  unaffected. Fixing needs a headers-returning upstream call.
+
+[0.2.1]: https://github.com/damsleth/owa-tui/releases/tag/v0.2.1
+
 ## [0.2.0] - 2026-06-24
 
 First published release: a Textual TUI front-end for the `owa-tools` Microsoft
