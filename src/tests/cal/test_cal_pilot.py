@@ -1259,3 +1259,88 @@ class TestSearchInputOverlay:
 
         asyncio.run(_run())
         assert "hello" in dismissed
+
+
+# ===========================================================================
+# Respond POST path (_do_respond) — the real mutating call, previously
+# exercised only in fixture mode (which short-circuits before api_request).
+# Covers rest_map endpoint construction + the result-None failure branch.
+# ===========================================================================
+
+
+class TestRespondPostPath:
+    @staticmethod
+    def _drive_respond(monkeypatch: pytest.MonkeyPatch, key: str, api_result: Any) -> tuple[list, str]:
+        """Arm respond mode, press `key`, return (api_request calls, status)."""
+        calls: list = []
+
+        def _fake_api_request(method, base, endpoint, token, body=None, debug=False):
+            calls.append(
+                {"method": method, "base": base, "endpoint": endpoint, "body": body}
+            )
+            return api_result
+
+        def _fake_api_get(base, endpoint, token, debug=False):
+            return {"value": [_EV1]}
+
+        # Patch the real owa_cal calls and leave asyncio.to_thread alone. (The
+        # shared _patch_fetch helper fakes to_thread *globally*, which would also
+        # swallow _do_respond's to_thread(_call) and skip api_request entirely.)
+        monkeypatch.setattr("owa_cal.api.api_request", _fake_api_request)
+        monkeypatch.setattr("owa_cal.api.api_get", _fake_api_get)
+
+        from textual.app import App, ComposeResult
+
+        class _App(App[None]):
+            def compose(self) -> ComposeResult:
+                s = CalScreen(config={}, access_token="fake", api_base="https://fake.api")
+                s._settings = CalSettings(reading_pane="right", day_range="today")
+                yield s
+
+        app = _App()
+
+        async def _run() -> str:
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                screen = app.query_one(CalScreen)
+                # Wait for the mount load_events worker to populate the agenda so
+                # _current_event() resolves (else _do_respond bails "no event").
+                for _ in range(100):
+                    await pilot.pause()
+                    if screen._current_event() is not None:
+                        break
+                screen._respond_mode = True
+                screen.action_respond_key(key)  # → _do_respond(...)
+                # Poll instead of wait_for_complete(): the success path chains an
+                # exclusive load_events() that cancels the mount worker, which
+                # would make wait_for_complete() raise WorkerCancelled.
+                for _ in range(100):
+                    await pilot.pause()
+                    if calls and screen._status:
+                        break
+                return screen._status
+
+        return calls, asyncio.run(_run())
+
+    def test_accept_posts_to_accept_endpoint(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls, status = self._drive_respond(monkeypatch, "a", {"ok": True})
+        assert len(calls) == 1
+        assert calls[0]["method"] == "POST"
+        assert calls[0]["endpoint"] == "me/events/evt-001/accept"
+        assert calls[0]["body"] == {"Comment": "", "SendResponse": True}
+        assert "accepted" in status
+
+    def test_tentative_posts_to_tentativelyaccept_endpoint(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls, status = self._drive_respond(monkeypatch, "t", {"ok": True})
+        assert calls[0]["endpoint"] == "me/events/evt-001/tentativelyaccept"
+        assert "tentatively accepted" in status
+
+    def test_decline_posts_to_decline_endpoint(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls, status = self._drive_respond(monkeypatch, "d", {"ok": True})
+        assert calls[0]["endpoint"] == "me/events/evt-001/decline"
+        assert "declined" in status
+
+    def test_respond_failure_when_api_returns_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls, status = self._drive_respond(monkeypatch, "a", None)
+        assert len(calls) == 1  # the POST was attempted
+        assert status == "respond failed"
