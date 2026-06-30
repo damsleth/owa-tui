@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from unittest.mock import MagicMock
 
 from textual.app import App, ComposeResult
@@ -64,6 +65,38 @@ def test_folder_list_populates_and_selects() -> None:
     assert n == 2
     assert folder_id == "2"
     assert folder_name == "Sent"
+
+
+def test_fetch_folders_worker_loads_from_fixture(tmp_path, monkeypatch) -> None:
+    """The live ``_fetch_folders`` worker: token mint → fixture load →
+    normalize → ``_apply_folders``. Driven end-to-end via OWA_TUI_FIXTURES
+    (e2e covers the keypress path; this covers the worker body in Python)."""
+    (tmp_path / "mail_folders.json").write_text(
+        json.dumps(
+            {
+                "value": [
+                    {"Id": "Inbox", "DisplayName": "Inbox", "UnreadItemCount": 2},
+                    {"Id": "Archive", "DisplayName": "Archive", "UnreadItemCount": 0},
+                ]
+            }
+        )
+    )
+    monkeypatch.setenv("OWA_TUI_FIXTURES", str(tmp_path))
+
+    async def _run():
+        app = _make_app(_msgs(1), show_folders=True)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause(0.1)
+            screen: MailScreen = app.screen  # type: ignore[assignment]
+            screen._fetch_folders()  # drive the live worker (fixture-backed)
+            await app.workers.wait_for_complete()  # let the thread worker finish
+            await pilot.pause(0.05)
+            fl = screen.query_one("#folder-list", FolderList)
+            return [f["name"] for f in fl._folders], [f["unread"] for f in fl._folders]
+
+    names, unread = asyncio.run(_run())
+    assert names == ["Inbox", "Archive"]
+    assert unread == [2, 0]
 
 
 # ── pagination ──────────────────────────────────────────────────────────────

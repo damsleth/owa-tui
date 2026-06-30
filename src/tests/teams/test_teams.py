@@ -602,7 +602,9 @@ def test_fetch_items_no_fixture_mocked_live() -> None:
         screen = TeamsScreen(config={})
         with (
             patch("owa_tui.fixtures.load", return_value=None),
-            patch("owa_tui.adapter.access_token_for", return_value="mock-token"),
+            # autospec enforces the real signature so a missing `config` arg
+            # (the live-path bug fixed 2026-06-30) fails loudly here.
+            patch("owa_tui.adapter.access_token_for", autospec=True, return_value="mock-token"),
             patch.dict(sys.modules, {"httpx": mock_httpx}),
         ):
             return await screen.fetch_items()
@@ -712,7 +714,9 @@ def test_fetch_messages_no_fixture_mocked_live() -> None:
         screen = TeamsThreadScreen({}, chat_id="19:live@thread.v2", chat_name="Live")
         with (
             patch("owa_tui.fixtures.load", return_value=None),
-            patch("owa_tui.adapter.access_token_for", return_value="mock-token"),
+            # autospec enforces the real signature so a missing `config` arg
+            # (the live-path bug fixed 2026-06-30) fails loudly here.
+            patch("owa_tui.adapter.access_token_for", autospec=True, return_value="mock-token"),
             patch.dict(sys.modules, {"httpx": mock_httpx}),
         ):
             return await screen.fetch_messages()
