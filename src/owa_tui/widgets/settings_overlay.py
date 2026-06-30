@@ -59,6 +59,14 @@ class SettingsOverlay(ModalScreen[str]):
     DEFAULT_CSS = """
     SettingsOverlay {
         align: center middle;
+        /* Opaque background: the default ModalScreen is 60% alpha (transparent
+           in ansi mode), which composites the list behind it. Emoji don't dim,
+           so they "punch through" the menu. A 100%-alpha background clears
+           those cells. */
+        background: $background;
+        &:ansi {
+            background: $background;
+        }
     }
 
     SettingsOverlay #overlay-box {
