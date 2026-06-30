@@ -131,6 +131,47 @@ def test_fetch_aadsts53003_graceful_degradation() -> None:
     assert state.items == []
 
 
+def test_fetch_next_page_appends_rows() -> None:
+    """A next-page fetch (state.next_link set) extends items instead of
+    replacing them, parks the cursor on the first new row, and reports +N."""
+    state = _make_state(audience="graph", path="users")
+    # Simulate an already-loaded first page.
+    state.items = ["row-a", "row-b"]
+    state.next_link = "https://graph.microsoft.com/v1.0/users?$skiptoken=PAGE2"
+
+    payload = {"value": [{"id": "u3"}, {"id": "u4"}, {"id": "u5"}]}
+    fake_token = _make_token()
+    with (
+        patch("owa_tui.graph.fetch._ensure_token", return_value=fake_token),
+        patch("owa_graph.api.api_request", return_value=payload),
+    ):
+        fetch_items(state)
+
+    assert len(state.items) == 5  # 2 existing + 3 new (appended, not replaced)
+    assert state.items[:2] == ["row-a", "row-b"]
+    assert state.selected == 2  # cursor on the first new row
+    assert state.status.startswith("graph:users — +3 rows")
+    assert "(5 total)" in state.status
+
+
+def test_fetch_fresh_replaces_rows() -> None:
+    """Without next_link, a fetch replaces items (no append) — the default."""
+    state = _make_state(audience="graph", path="users")
+    state.items = ["stale-a", "stale-b"]
+    state.next_link = None
+
+    payload = {"value": [{"id": "u1"}]}
+    fake_token = _make_token()
+    with (
+        patch("owa_tui.graph.fetch._ensure_token", return_value=fake_token),
+        patch("owa_graph.api.api_request", return_value=payload),
+    ):
+        fetch_items(state)
+
+    assert len(state.items) == 1  # replaced, not extended
+    assert "stale-a" not in state.items
+
+
 def test_fetch_unknown_audience_returns_immediately() -> None:
     """Unknown audience sets status and returns with empty items."""
     state = _make_state(audience="nonexistent", path="test")

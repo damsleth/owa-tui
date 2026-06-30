@@ -1,5 +1,22 @@
 # Plan: GRAPH v1 — Textual rebuild of owa-graph TUI (flagship tui_kit adapter)
 
+## Audit update — 2026-06-30
+
+Gap audit ("find real gaps only"). Two behavioral gaps found:
+
+- **`n` next-page now extends, not replaces.** `fetch_items` appends the new page
+  to `state.items` and parks the cursor on the first new row, status `+N rows
+  (T total)` (`graph/fetch.py`, cursor restore in `screens/graph.py
+  _apply_fetch_result`). Regression tests: `test_fetch_next_page_appends_rows`,
+  `test_fetch_fresh_replaces_rows`. The plan's "strip the dim sentinel row" step
+  was moot — no such sentinel row exists in the shipped design.
+- **DevOps continuation-token paging is unreachable — deferred, documented.**
+  `fetch.py` can't read the `x-ms-continuationtoken` response header because the
+  stable `owa_graph.api.api_request` returns parsed JSON only (no headers). First
+  page of the `devops` audience works; 2nd+ page can't. Marked with a `ponytail:`
+  comment naming the upgrade path (a headers-returning owa_graph call). OData/ARM
+  body cursors are unaffected. Not fixed: would need an upstream library change.
+
 ## Review update — 2026-06-23
 
 This is a shipped-behavior reference for the most complex v1 adapter. The live surface is `src/owa_tui/screens/graph.py` plus `src/owa_tui/graph/` helpers. Bookmarks and settings coercion have since been finished as part of the ponytail audit cleanup, so this plan should not be read as asking to remove that state.

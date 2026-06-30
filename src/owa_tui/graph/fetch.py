@@ -82,7 +82,10 @@ def fetch_items(state: GraphState) -> None:
 
     access_token = token_info.access_token
 
-    # 2/3. URL
+    # 2/3. URL. A pre-set next_link means this is a "next page" fetch (every
+    # fresh/drill/refresh path clears next_link first), so we append rather than
+    # replace and park the cursor on the first newly-loaded row.
+    paging = bool(state.next_link)
     if state.next_link:
         url = state.next_link
     else:
@@ -119,16 +122,31 @@ def fetch_items(state: GraphState) -> None:
         kind, payload = classify_response(raw_bytes)
         state.kind = kind
 
-        # 5. Build rows
+        # 5. Build rows — append on a next-page fetch, replace otherwise.
         rows = build_rows(kind, payload, audience=audience, audience_base=api_base)
-        state.items = rows
+        if paging:
+            prev_count = len(state.items)
+            state.items = state.items + rows
+            state.selected = prev_count  # land on the first new row
+        else:
+            state.items = rows
 
-        # 6. Pagination cursor
+        # 6. Pagination cursor.
+        # ponytail: response_headers is always empty — the stable owa_graph
+        # api_request returns parsed JSON only, never headers, so the DevOps
+        # x-ms-continuationtoken (read via headers in extract_next_link) can't be
+        # seen here. OData/ARM cursors live in the body and work. Upgrade path:
+        # a headers-returning owa_graph call, then populate response_headers.
         response_headers: dict[str, str] = {}
         next_link = extract_next_link(kind, payload if isinstance(payload, dict) else {}, audience, response_headers)
         state.next_link = next_link
 
-        if not state.status or state.status.startswith("Tier D"):
+        if paging:
+            # A successful append always reports its result (any fetch error
+            # returns earlier); the count guard below would otherwise be
+            # blocked by page 1's leftover status.
+            state.status = f"{audience}:{state.path} — +{len(rows)} rows ({len(state.items)} total)"
+        elif not state.status or state.status.startswith("Tier D"):
             state.status = f"{audience}:{state.path} — {len(rows)} items"
 
     except Exception as exc:
