@@ -70,7 +70,9 @@ class OwaTuiApp(App[None]):
             return
         from owa_tui import app_config  # noqa: PLC0415
 
-        saved = app_config.load().get("theme")
+        data = app_config.load()
+        self._theme_before_transparent = data.get("theme_before_transparent")
+        saved = data.get("theme")
         if saved and saved in self.available_themes:
             self.theme = saved
 
@@ -97,6 +99,17 @@ class OwaTuiApp(App[None]):
         else:
             self._theme_before_transparent = self.theme
             self.theme = self._ANSI_THEME
+        # Persist the under-theme so toggling off survives a restart (the active
+        # theme itself is already persisted by watch_theme).
+        if self._persist_app_state():
+            from owa_tui import app_config  # noqa: PLC0415
+
+            data = app_config.load()
+            if self._theme_before_transparent:
+                data["theme_before_transparent"] = self._theme_before_transparent
+            else:
+                data.pop("theme_before_transparent", None)
+            app_config.save(data)
 
     # ------------------------------------------------------------------
     # Composition — minimal shell; screens provide their own Header/Footer
