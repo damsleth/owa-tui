@@ -58,6 +58,32 @@ class OwaTuiApp(App[None]):
         self._debug = debug
         self._theme_before_transparent: str | None = None
 
+    def _persist_app_state(self) -> bool:
+        """True when theme persistence should touch ~/.config (skip tests/e2e)."""
+        from owa_tui import fixtures  # noqa: PLC0415
+
+        return not self.is_headless and not fixtures.enabled()
+
+    def _restore_theme(self) -> None:
+        """Apply the theme saved from a previous session, if any."""
+        if not self._persist_app_state():
+            return
+        from owa_tui import app_config  # noqa: PLC0415
+
+        saved = app_config.load().get("theme")
+        if saved and saved in self.available_themes:
+            self.theme = saved
+
+    def watch_theme(self, theme: str) -> None:
+        """Persist the active theme so it survives across tools and sessions."""
+        if not self._persist_app_state():
+            return
+        from owa_tui import app_config  # noqa: PLC0415
+
+        data = app_config.load()
+        data["theme"] = theme
+        app_config.save(data)
+
     def action_toggle_transparency(self) -> None:
         """Toggle a transparent (native terminal) background on and off.
 
@@ -82,6 +108,7 @@ class OwaTuiApp(App[None]):
 
     def on_mount(self) -> None:
         """Push the appropriate screen on startup."""
+        self._restore_theme()
         if self._tool:
             self.push_tool(self._tool)
         else:

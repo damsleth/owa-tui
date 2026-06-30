@@ -23,6 +23,7 @@ SORT_BY_VALUES: Final[tuple[str, ...]] = (
     "unread_first",
 )
 DATE_FORMAT_VALUES: Final[tuple[str, ...]] = ("iso8601", "ddmm", "ddmm_hhmm", "custom")
+SHOW_FOLDERS_VALUES: Final[tuple[bool, ...]] = (False, True)
 
 _CONFIG_KEYS: Final[dict[str, str]] = {
     "reading_pane": "tui_reading_pane",
@@ -30,6 +31,7 @@ _CONFIG_KEYS: Final[dict[str, str]] = {
     "sort_by": "tui_sort_by",
     "date_format": "tui_date_format",
     "date_custom": "tui_date_custom",
+    "show_folders": "tui_show_folders",
 }
 
 
@@ -42,6 +44,7 @@ class MailSettings:
     sort_by: str = "date_desc"
     date_format: str = "iso8601"
     date_custom: str = ""
+    show_folders: bool = False  # show the folder panel on the left
 
 
 DEFAULTS = MailSettings()
@@ -68,6 +71,9 @@ def cycle(settings: MailSettings, field: str, direction: int = 1) -> MailSetting
     elif field == "date_format":
         vals = DATE_FORMAT_VALUES
         current = settings.date_format
+    elif field == "show_folders":
+        vals = SHOW_FOLDERS_VALUES
+        current = settings.show_folders
     else:
         raise ValueError(f"Unknown MailSettings field: {field!r}")
 
@@ -104,12 +110,16 @@ def from_config(config: dict) -> MailSettings:
 
     date_custom = config.get("tui_date_custom", DEFAULTS.date_custom)
 
+    raw_folders = config.get("tui_show_folders", DEFAULTS.show_folders)
+    show_folders = raw_folders in (True, "true", "True", "1", 1)
+
     return MailSettings(
         reading_pane=reading_pane,
         split_ratio=split_ratio,
         sort_by=sort_by,
         date_format=date_format,
         date_custom=date_custom,
+        show_folders=show_folders,
     )
 
 
@@ -121,6 +131,7 @@ def to_config_dict(settings: MailSettings) -> dict[str, str]:
         "tui_sort_by": settings.sort_by,
         "tui_date_format": settings.date_format,
         "tui_date_custom": settings.date_custom,
+        "tui_show_folders": "true" if settings.show_folders else "false",
     }
 
 

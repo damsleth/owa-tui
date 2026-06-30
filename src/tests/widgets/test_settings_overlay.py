@@ -56,6 +56,21 @@ def test_settings_overlay_mounts_and_shows_title() -> None:
     assert any("Test Overlay" in lbl for lbl in labels)
 
 
+def test_settings_overlay_background_is_opaque() -> None:
+    """Background must be fully opaque so the list behind (incl. emoji) can't
+    show through the menu — the default ModalScreen is 60% alpha."""
+
+    async def run() -> float:
+        app = _OverlayApp()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app.show_overlay()
+            await pilot.pause()
+            return app.screen.styles.background.a
+
+    assert asyncio.run(run()) == 1.0
+
+
 def test_settings_overlay_escape_dismisses_with_resume() -> None:
     """Pressing Escape should dismiss the overlay with 'resume'."""
 
