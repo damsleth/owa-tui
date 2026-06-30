@@ -278,11 +278,12 @@ class GraphScreen(Screen[None]):
     def _apply_fetch_result(self) -> None:
         """Called on the main event loop after fetch completes."""
         self._refresh_list()
-        # Restore the cursor (e.g. first new row after a next-page append);
-        # _refresh_list rebuilds the ListView, which otherwise resets to top.
-        lv = self.query_one("#graph-list", ListView)
-        if self._state.items and 0 <= self._state.selected < len(self._state.items):
-            lv.index = self._state.selected
+        # Restore the cursor when it isn't already at the top (next-page append,
+        # back-nav). _refresh_list rebuilds the ListView, which resets to index 0,
+        # so selected==0 needs no action — and skipping it avoids a redundant
+        # Highlighted event on every fresh/drill fetch.
+        if 0 < self._state.selected < len(self._state.items):
+            self.query_one("#graph-list", ListView).index = self._state.selected
         self._refresh_breadcrumb()
         self._refresh_status()
         self._refresh_detail(None)

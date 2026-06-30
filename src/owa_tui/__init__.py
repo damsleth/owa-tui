@@ -10,7 +10,7 @@ from textual import work
 from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header
 
-__version__ = "0.1.0"
+__version__ = "0.2.1"
 
 
 class OwaTuiApp(App[None]):
