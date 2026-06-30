@@ -160,7 +160,9 @@ class TeamsThreadScreen(OwaThreadScreen):
         if raw is None:
             from owa_tui.adapter import access_token_for  # noqa: PLC0415
 
-            token = access_token_for(tool_name=self._tool_name, audience=self._audience)
+            token = access_token_for(
+                self._config, tool_name=self._tool_name, audience=self._audience
+            )
             import httpx  # noqa: PLC0415
 
             headers = {"Authorization": f"Bearer {token}"}
@@ -238,7 +240,9 @@ class TeamsScreen(OwaListScreen):
         if raw is None:
             from owa_tui.adapter import access_token_for  # noqa: PLC0415
 
-            token = access_token_for(tool_name=self._tool_name, audience=self._audience)
+            token = access_token_for(
+                self._config, tool_name=self._tool_name, audience=self._audience
+            )
             import httpx  # noqa: PLC0415
 
             headers = {"Authorization": f"Bearer {token}"}
