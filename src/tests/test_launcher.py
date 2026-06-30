@@ -133,6 +133,42 @@ def test_toggle_transparency_round_trips() -> None:
     assert off == start               # restored the original theme
 
 
+def test_transparency_under_theme_persists_across_sessions(tmp_path, monkeypatch) -> None:
+    """Toggling transparency off after a restart returns to the real previous
+    theme, not the hardcoded fallback — the under-theme round-trips via tui.json."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    # run_test() is headless, which normally skips persistence; force it on.
+    monkeypatch.setattr(owa_tui.OwaTuiApp, "_persist_app_state", lambda self: True)
+
+    async def _session_one() -> None:
+        app = owa_tui.OwaTuiApp(config={})
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app.theme = "gruvbox"            # a real, non-default under-theme
+            await pilot.pause()
+            app.action_toggle_transparency()  # transparent ON
+            await pilot.pause()
+
+    asyncio.run(_session_one())
+
+    from owa_tui import app_config
+
+    data = app_config.load()
+    assert data["theme"] == "ansi-dark"                    # transparent persisted
+    assert data["theme_before_transparent"] == "gruvbox"  # under-theme persisted
+
+    async def _session_two() -> str:
+        app = owa_tui.OwaTuiApp(config={})
+        async with app.run_test() as pilot:
+            await pilot.pause()               # on_mount restores ansi-dark + under-theme
+            assert app.theme == "ansi-dark"
+            app.action_toggle_transparency()  # transparent OFF
+            await pilot.pause()
+            return app.theme
+
+    assert asyncio.run(_session_two()) == "gruvbox"
+
+
 def test_load_identity_sets_header_subtitle() -> None:
     """The identity worker writes 'profile · upn' into the header subtitle."""
     from unittest.mock import patch
