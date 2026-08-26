@@ -24,14 +24,18 @@ _RESPONSE_LABEL: dict[str, str] = {
 
 
 def _weekday_date(start: str) -> str:
-    """Return a 9-char weekday+date prefix like ``'Thu 06-05'``."""
-    try:
-        from datetime import datetime
+    """Return a 9-char weekday+date prefix like ``'Thu 06-05'``.
 
-        dt = datetime.fromisoformat(start)
-        return dt.strftime("%a %m-%d")
-    except Exception:
+    Parses through owa_tui.mail.dates.parse_iso rather than
+    datetime.fromisoformat directly: a Graph start with a trailing ``Z``
+    raises on 3.10 and would render as nine blanks.
+    """
+    from owa_tui.mail.dates import parse_iso
+
+    dt = parse_iso(start)
+    if dt is None:
         return "         "
+    return dt.strftime("%a %m-%d")
 
 
 def render_row(event: dict[str, Any], width: int, *, show_date: bool = False) -> str:
