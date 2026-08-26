@@ -152,10 +152,8 @@ class PlannerScreen(OwaListScreen):
 
         if raw is None:
             # Live fetch
-            from owa_planner.api import (  # type: ignore[import]  # noqa: PLC0415
-                api_get,
-                build_query,
-            )
+            from owa_core.query import build_query  # type: ignore[import]  # noqa: PLC0415
+            from owa_planner.api import api_get  # type: ignore[import]  # noqa: PLC0415
 
             endpoint = f"me/planner/tasks?{build_query({'$top': 50})}"
             raw = api_get(GRAPH_BASE, endpoint, token, debug=self._debug)
