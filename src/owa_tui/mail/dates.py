@@ -4,6 +4,9 @@ Ported from owa_tools/src/owa_mail/tui_dates.py — zero I/O, framework-agnostic
 
 Public API
 ----------
+parse_iso(iso) -> datetime | None
+    Parse a Graph ISO 8601 timestamp, tolerating the trailing ``Z``.
+
 format_received(iso, fmt, custom="") -> str
     Format an ISO 8601 received timestamp for display.
 
@@ -18,14 +21,17 @@ from datetime import datetime
 _SAMPLE = datetime(2000, 1, 2, 3, 4, 5)
 
 
-def _parse_iso(iso: str) -> datetime | None:
+def parse_iso(iso: str) -> datetime | None:
     """Parse an ISO 8601 string to datetime; return None on failure.
 
-    Graph stamps every received time with a trailing ``Z``, which
+    Graph stamps its timestamps with a trailing ``Z``, which
     ``datetime.fromisoformat`` only accepts on 3.11+ - on the 3.10 this
-    package still supports it raises, and every date in the mail list
-    renders empty. Rewriting it to ``+00:00`` first parses identically on
-    both (3.11 also returns a UTC-aware datetime for ``Z``).
+    package still supports it raises, and the date renders empty.
+    Rewriting it to ``+00:00`` first parses identically on both (3.11 also
+    returns a UTC-aware datetime for ``Z``).
+
+    Shared with the calendar agenda: the same Graph timestamps reach both
+    screens, so the workaround lives in one place.
     """
     if not iso:
         return None
@@ -53,7 +59,7 @@ def format_received(iso: str, fmt: str, custom: str = "") -> str:
 
     Returns empty string on unparseable input or strftime errors.
     """
-    dt = _parse_iso(iso)
+    dt = parse_iso(iso)
     if dt is None:
         return ""
 
