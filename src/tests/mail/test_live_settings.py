@@ -31,6 +31,18 @@ def _make_app(reading_pane="right", split_ratio=50):
     return _TestApp()
 
 
+async def _settle(app, pilot) -> None:
+    """Wait for a live layout change to finish instead of guessing at a sleep.
+
+    _rebuild_layout does its swap in a worker and then defers the selection
+    restore to call_after_refresh, so a fixed pause is a race: fast enough on a
+    laptop, not on a loaded CI runner, where it showed up as selection == 0.
+    """
+    await app.workers.wait_for_complete()
+    await pilot.pause()
+    await pilot.pause()
+
+
 def test_reading_pane_change_rebuilds_layout_and_keeps_selection() -> None:
     async def _run():
         app = _make_app(reading_pane="right")
@@ -42,12 +54,12 @@ def test_reading_pane_change_rebuilds_layout_and_keeps_selection() -> None:
             has_reader_right = bool(list(screen.query(ReaderPane)))
 
             screen._apply_settings(dataclasses.replace(screen.settings, reading_pane="off"))
-            await pilot.pause(0.1)
+            await _settle(app, pilot)
             has_reader_off = bool(list(screen.query(ReaderPane)))
             sel_after_off = screen.selected
 
             screen._apply_settings(dataclasses.replace(screen.settings, reading_pane="bottom"))
-            await pilot.pause(0.1)
+            await _settle(app, pilot)
             has_reader_bottom = bool(list(screen.query(ReaderPane)))
             return has_reader_right, has_reader_off, has_reader_bottom, sel_after_off
 
@@ -65,7 +77,7 @@ def test_split_ratio_applies_in_place() -> None:
             await pilot.pause(0.1)
             screen: MailScreen = app.screen  # type: ignore[assignment]
             screen._apply_settings(dataclasses.replace(screen.settings, split_ratio=60))
-            await pilot.pause(0.05)
+            await _settle(app, pilot)
             ml = screen._message_list()
             return str(ml.styles.width)
 
