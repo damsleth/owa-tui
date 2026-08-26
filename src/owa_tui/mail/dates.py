@@ -21,13 +21,19 @@ _SAMPLE = datetime(2000, 1, 2, 3, 4, 5)
 def _parse_iso(iso: str) -> datetime | None:
     """Parse an ISO 8601 string to datetime; return None on failure.
 
-    ``datetime.fromisoformat`` (3.11+) handles bare dates, missing seconds,
-    and trailing ``Z`` / ``±HH:MM`` offsets directly.
+    Graph stamps every received time with a trailing ``Z``, which
+    ``datetime.fromisoformat`` only accepts on 3.11+ - on the 3.10 this
+    package still supports it raises, and every date in the mail list
+    renders empty. Rewriting it to ``+00:00`` first parses identically on
+    both (3.11 also returns a UTC-aware datetime for ``Z``).
     """
     if not iso:
         return None
+    text = iso.strip()
+    if text.endswith(("Z", "z")):
+        text = f"{text[:-1]}+00:00"
     try:
-        return datetime.fromisoformat(iso.strip())
+        return datetime.fromisoformat(text)
     except ValueError:
         return None
 
