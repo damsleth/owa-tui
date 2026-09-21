@@ -359,6 +359,41 @@ def test_open_browser_fires_webbrowser(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "example.com" in result[0]
 
 
+def test_open_browser_failure_sets_status(monkeypatch: pytest.MonkeyPatch) -> None:
+    """webbrowser.open raising is surfaced as a status message, not a crash."""
+    _patch_api_get(monkeypatch, [_RAW_EVENT_1])
+
+    def _boom(url: str) -> None:
+        raise OSError("no browser")
+
+    async def _run() -> str:
+        from textual.app import App, ComposeResult
+
+        import owa_tui.screens.cal.screen as screen_mod
+
+        monkeypatch.setattr(screen_mod.webbrowser, "open", _boom)
+
+        class _App(App[None]):
+            def compose(self) -> ComposeResult:
+                yield CalScreen(config={}, access_token="fake", api_base="https://fake.api")
+
+        app = _App()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            await pilot.pause()
+            screen = app.query_one(CalScreen)
+            ev = {"id": "evt-x", "subject": "Test", "start": "2026-06-18T09:00:00",
+                  "end": "2026-06-18T10:00:00", "isAllDay": False,
+                  "webLink": "https://example.com/event"}
+            screen._events = [ev]
+            screen._agenda().update_rows([ev])
+            await pilot.pause()
+            screen.action_open_browser()
+            return screen._status
+
+    assert asyncio.run(_run()) == "could not open browser"
+
+
 # ---------------------------------------------------------------------------
 # T12: open browser no link
 # ---------------------------------------------------------------------------

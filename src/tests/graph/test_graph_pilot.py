@@ -723,6 +723,29 @@ def test_action_back_restores_state() -> None:
     assert path == "me"
 
 
+def test_action_back_issues_no_fetch() -> None:
+    """Going back restores the cached frame; fetch_items is not called again."""
+
+    rows = [_drillable_row("Alice", "users/alice")]
+
+    async def _run() -> tuple[int, int, bool]:
+        with patch("owa_tui.screens.graph.fetch_items", side_effect=_noop_fetch) as fetch:
+            app = _make_app()
+            async with app.run_test() as pilot:
+                await pilot.pause(0.4)
+                screen = app.screen
+                screen._state.history.append(("graph", "me", "", 0, 0, rows, None))
+                screen._state.path = "users/alice"
+                before = fetch.call_count
+                await pilot.press("h")
+                await pilot.pause(0.1)
+                return before, fetch.call_count, screen._state.dirty
+
+    before, after, dirty = asyncio.run(_run())
+    assert after == before
+    assert dirty is False
+
+
 # ---------------------------------------------------------------------------
 # TP84: action_back with empty history → noop
 # ---------------------------------------------------------------------------

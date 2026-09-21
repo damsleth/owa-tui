@@ -1270,7 +1270,9 @@ class TestSearchInputOverlay:
 
 class TestRespondPostPath:
     @staticmethod
-    def _drive_respond(monkeypatch: pytest.MonkeyPatch, key: str, api_result: Any) -> tuple[list, str]:
+    def _drive_respond(
+        monkeypatch: pytest.MonkeyPatch, key: str, api_result: Any, raw_events: list | None = None
+    ) -> tuple[list, str]:
         """Arm respond mode, press `key`, return (api_request calls, status)."""
         calls: list = []
 
@@ -1278,10 +1280,12 @@ class TestRespondPostPath:
             calls.append(
                 {"method": method, "base": base, "endpoint": endpoint, "body": body}
             )
+            if isinstance(api_result, BaseException):
+                raise api_result
             return api_result
 
         def _fake_api_get(base, endpoint, token, debug=False):
-            return {"value": [_EV1]}
+            return {"value": raw_events if raw_events is not None else [_EV1]}
 
         # Patch the real owa_cal calls and leave asyncio.to_thread alone. (The
         # shared _patch_fetch helper fakes to_thread *globally*, which would also
@@ -1344,3 +1348,31 @@ class TestRespondPostPath:
         calls, status = self._drive_respond(monkeypatch, "a", None)
         assert len(calls) == 1  # the POST was attempted
         assert status == "respond failed"
+
+    def test_respond_owa_error_surfaces_message(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from owa_cal.api import OwaError
+
+        calls, status = self._drive_respond(monkeypatch, "a", OwaError("boom"))
+        assert len(calls) == 1
+        assert status.startswith("respond failed:")
+        assert "boom" in status
+
+    def test_respond_event_without_id_skips_post(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls, status = self._drive_respond(
+            monkeypatch, "a", {"ok": True}, raw_events=[{**_EV1, "Id": ""}]
+        )
+        assert calls == []
+        assert status == "event has no id"
+
+    def test_respond_success_refetches_events(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        loads: list[int] = []
+        original = CalScreen.load_events
+
+        def _counting_load(self):
+            loads.append(1)
+            return original(self)
+
+        monkeypatch.setattr(CalScreen, "load_events", _counting_load)
+        calls, status = self._drive_respond(monkeypatch, "a", {"ok": True})
+        assert len(calls) == 1 and "accepted" in status
+        assert len(loads) == 2  # mount load + post-respond re-fetch
