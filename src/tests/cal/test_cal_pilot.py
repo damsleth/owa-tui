@@ -1417,3 +1417,93 @@ class TestDetailPaneScroll:
         assert r["index"] == 0  # keys went to the pane, not the agenda list
         assert r["respond_mode"] is False
         assert "declin" not in r["status"]
+
+
+
+# ===========================================================================
+# Live settings — reading_pane / split_ratio apply without re-entering
+# ===========================================================================
+
+
+async def _settle(app: Any, pilot: Any) -> None:
+    """Wait for the relayout worker and its deferred restore (no fixed sleep)."""
+    await app.workers.wait_for_complete()
+    await pilot.pause()
+    await pilot.pause()
+
+
+class TestLiveSettings:
+    def test_reading_pane_change_rebuilds_layout_and_keeps_selection(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import dataclasses
+
+        from textual.containers import Vertical
+        from textual.widgets import Static
+
+        async def _run() -> dict[str, Any]:
+            app = _push_cal_app(monkeypatch, [_EV1, _EV2], reading_pane="right")
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                await pilot.pause()
+                screen = app.screen
+                assert isinstance(screen, CalScreen)
+                screen._agenda()._lv().index = 1
+                await pilot.pause()
+                out: dict[str, Any] = {}
+
+                screen._on_setting_changed(
+                    "reading_pane", dataclasses.replace(screen._settings, reading_pane="bottom")
+                )
+                await _settle(app, pilot)
+                out["bottom_is_vertical"] = isinstance(
+                    screen.query_one("#main-container"), Vertical
+                )
+                out["bottom_event"] = (screen._current_event() or {}).get("subject")
+                detail = screen._detail()
+                assert detail is not None
+                out["bottom_detail"] = str(detail.query_one("#cal-detail-content", Static).content)
+
+                screen._on_setting_changed(
+                    "reading_pane", dataclasses.replace(screen._settings, reading_pane="off")
+                )
+                await _settle(app, pilot)
+                out["off_detail"] = screen._detail()
+                out["off_event"] = (screen._current_event() or {}).get("subject")
+                return out
+
+        r = asyncio.run(_run())
+        assert r["bottom_is_vertical"]
+        assert r["bottom_event"] == "Lunch review"  # selection survived the rebuild
+        assert "Lunch review" in r["bottom_detail"]  # detail re-rendered for it
+        assert r["off_detail"] is None  # pane removed live
+        assert r["off_event"] == "Lunch review"
+
+    def test_split_ratio_applies_in_place(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import dataclasses
+
+        async def _run() -> tuple[str, str, str]:
+            app = _push_cal_app(monkeypatch, [_EV1, _EV2], reading_pane="right", split_ratio=50)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                await pilot.pause()
+                screen = app.screen
+                assert isinstance(screen, CalScreen)
+                screen._agenda()._lv().index = 1
+                await pilot.pause()
+                screen._on_setting_changed(
+                    "split_ratio", dataclasses.replace(screen._settings, split_ratio=60)
+                )
+                await _settle(app, pilot)
+                detail = screen._detail()
+                assert detail is not None
+                return (
+                    str(screen._agenda().styles.width),
+                    str(detail.styles.width),
+                    (screen._current_event() or {}).get("subject") or "",
+                )
+
+        agenda_w, detail_w, subject = asyncio.run(_run())
+        assert "60" in agenda_w
+        assert "40" in detail_w
+        assert subject == "Lunch review"  # no rebuild → selection untouched
