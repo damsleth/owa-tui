@@ -28,3 +28,6 @@
 - [x] Harden owa-tui screens/people.py Pilot coverage (64% → 89%): fetch worker (success/no-data/error), detail worker (success/no-token/error/cached), k/up nav, close-detail + focus-pane, _show_cached_detail pane/missing, overlay handlers, token mint (2026-06-23)
 - [x] owa-todo e2e gaps: k/up nav + search-returning-results added to e2e/todo.test.ts; live complete-toggle PATCH path unit-tested (todo.py 99%) since fixture-mode e2e can't reach it (2026-06-23)
 - [x] ~/.config/owa-tui/tui.json should save config about whether background is transparent or not (2026-06-30)
+- [x] owa-tui main(): refuse to start when stdout is not a tty (exit 2 usage error) instead of letting Textual misrender (2026-09-21)
+- [x] cal tui: reading_pane / split_ratio settings apply live like mail does (_make_layout only runs in compose) (2026-09-21)
+- [x] cal tui: j/k (and u/d) scroll the detail pane when it has focus, mirroring mail (CalDetailPane has no BINDINGS) (2026-09-21)
