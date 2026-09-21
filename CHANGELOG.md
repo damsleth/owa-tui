@@ -4,6 +4,26 @@ All notable changes to `owa-tui` are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); this project uses semantic
 versioning.
 
+## [0.2.2] - 2026-09-21
+
+Compatibility and Python 3.10 fixes; release channel clarified.
+
+### Fixed
+- **Planner**: `build_query` import followed its move to `owa_core.query` in
+  owa-tools 1.2.0; the planner screen failed to import against any current
+  owa-tools. Lower bound is now `owa-tools>=1.2.0`.
+- **Mail / Cal**: dates rendered blank on Python 3.10 — Graph's trailing `Z`
+  is rejected by `datetime.fromisoformat` there. One shared `parse_iso` handles it.
+- Regression tests for cal respond error paths (`OwaError`, empty id, re-fetch
+  after POST), browser-open failure, and graph back-never-fetches.
+
+### Changed
+- `owa-tui` refuses to start when stdout is not a terminal (exit 2); `--help`
+  and `--version` still work non-interactively.
+- Release channel is GitHub Releases only; PyPI/Homebrew/PyInstaller are
+  deferred, not planned. README/RELEASING/AGENTS updated accordingly.
+- Added MIT `LICENSE`.
+
 ## [0.2.1] - 2026-06-30
 
 Post-release feature batch plus an audit of the v1 plans for genuine gaps.
