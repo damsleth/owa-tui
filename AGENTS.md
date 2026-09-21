@@ -80,15 +80,16 @@ uv build
 
 ## Workflow Rules
 
-- Check `.plans/` before non-trivial work. It is intentionally gitignored and
-  may contain current operator context.
+- Check `.plans/` before non-trivial work; it is tracked in git and carries
+  current operator context. Use the `todo` script (`todo`, `todo add`,
+  `todo done <n>`) to change it rather than editing by hand where possible.
 - Keep changes scoped. One domain per commit is preferred.
-- Do not commit build artifacts, virtualenvs, caches, local config, or `.plans/`.
+- Do not commit build artifacts, virtualenvs, caches, or local config.
 
 ## Cutting a release (only when the user asks)
 
-`owa-tui` ships as a separate distribution on PyPI alongside `owa-tools`.
-Follow the same tag-driven release flow as `owa-tools` (see `RELEASING.md`).
-The key difference: `owa-tui` has a runtime dependency on a published
-`owa-tools>=1.0.0`; coordinate version compatibility across the two packages
-before tagging.
+`owa-tui` ships as a separate distribution via GitHub Releases (not PyPI —
+deferred, not planned). Follow the tag-driven flow in `RELEASING.md`. It has a
+runtime dependency on a published `owa-tools` (lower bound in `pyproject.toml`);
+upgrade the venv to the latest `owa-tools` and rerun the gates before tagging.
+`__version__` in `src/owa_tui/__init__.py` must match `pyproject.toml`.
