@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from collections.abc import Sequence
 from typing import Any
 
@@ -196,8 +197,11 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> None:
+def main(argv: Sequence[str] | None = None) -> int | None:
     """Run the owa-tui application."""
     args = build_parser().parse_args(argv)
+    if not sys.stdout.isatty():
+        print("owa-tui: stdout is not a terminal; refusing to start the TUI.", file=sys.stderr)
+        return 2
     config = {"owa_piggy_profile": args.profile} if args.profile else None
     OwaTuiApp(config=config, tool=args.tool, debug=args.debug).run()
