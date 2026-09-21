@@ -1344,3 +1344,76 @@ class TestRespondPostPath:
         calls, status = self._drive_respond(monkeypatch, "a", None)
         assert len(calls) == 1  # the POST was attempted
         assert status == "respond failed"
+
+
+# ===========================================================================
+# CalDetailPane — j/k/u/d scroll the focused detail pane (not the list)
+# ===========================================================================
+
+
+def _push_cal_app(monkeypatch: pytest.MonkeyPatch, raw_events: list, **settings: Any):
+    """App that *pushes* a CalScreen so focus/keys route to it like at runtime.
+
+    ``_make_cal_app`` yields the CalScreen inside the default screen; focus set
+    on that nested screen never receives keys, so pane-focus tests need this.
+    """
+    _patch_fetch(monkeypatch, raw_events)
+
+    from textual.app import App
+
+    class _App(App[None]):
+        def on_mount(self) -> None:
+            s = CalScreen(config={}, access_token="fake", api_base="https://fake.api")
+            s._settings = CalSettings(**settings)
+            s._persist_settings = lambda: None  # type: ignore[method-assign]
+            self.push_screen(s)
+
+    return _App()
+
+
+class TestDetailPaneScroll:
+    def test_jkud_scroll_detail_pane_when_focused(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """j/k/u/d scroll the detail pane after Enter focuses it; the list and
+        respond mode are untouched (``d`` must not read as decline here)."""
+        long_ev = {**_EV1, "BodyPreview": "\n".join(f"line {i}" for i in range(80))}
+
+        async def _run() -> dict[str, Any]:
+            app = _push_cal_app(monkeypatch, [long_ev, _EV2])
+            async with app.run_test(size=(80, 16)) as pilot:
+                await pilot.pause()
+                await pilot.pause()
+                screen = app.screen
+                assert isinstance(screen, CalScreen)
+                detail = screen._detail()
+                assert detail is not None
+                await pilot.press("enter")  # drill → focus detail pane
+                await pilot.pause()
+                await pilot.pause()
+                out: dict[str, Any] = {"focused": detail.has_focus, "max": detail.max_scroll_y}
+                await pilot.press("j")
+                await pilot.pause()
+                out["after_j"] = detail.scroll_y
+                await pilot.press("d")
+                await pilot.pause()
+                out["after_d"] = detail.scroll_y
+                await pilot.press("k")
+                await pilot.pause()
+                out["after_k"] = detail.scroll_y
+                await pilot.press("u")
+                await pilot.pause()
+                out["after_u"] = detail.scroll_y
+                out["index"] = screen._agenda()._lv().index
+                out["respond_mode"] = screen._respond_mode
+                out["status"] = screen._status
+                return out
+
+        r = asyncio.run(_run())
+        assert r["focused"]
+        assert r["max"] > 0  # body long enough to overflow the pane
+        assert r["after_j"] == 1
+        assert r["after_d"] > r["after_j"]
+        assert r["after_k"] == r["after_d"] - 1
+        assert r["after_u"] < r["after_k"]
+        assert r["index"] == 0  # keys went to the pane, not the agenda list
+        assert r["respond_mode"] is False
+        assert "declin" not in r["status"]

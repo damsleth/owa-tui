@@ -6,6 +6,7 @@ import textwrap
 from typing import Any
 
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.containers import ScrollableContainer
 from textual.widgets import Static
 
@@ -147,6 +148,11 @@ class CalDetailPane(ScrollableContainer):
     """Scrollable event detail pane for the cal screen.
 
     Content is refreshed via :meth:`update_event`.
+
+    When focused (Enter from the agenda), j/k and u/d scroll this pane with
+    the same keys that move/page the list — they bind on the focused widget
+    so they intercept before the screen-level bindings (notably ``d``, which
+    is the respond-mode decline chord on the list).
     """
 
     DEFAULT_CSS = """
@@ -156,8 +162,40 @@ class CalDetailPane(ScrollableContainer):
     }
     """
 
+    BINDINGS = [
+        Binding("j", "scroll_line_down", "Down", show=False),
+        Binding("down", "scroll_line_down", "Down", show=False),
+        Binding("k", "scroll_line_up", "Up", show=False),
+        Binding("up", "scroll_line_up", "Up", show=False),
+        Binding("d", "scroll_half_down", "Half page down", show=False),
+        Binding("u", "scroll_half_up", "Half page up", show=False),
+        Binding("g", "scroll_to_top", "Top", show=False),
+        Binding("G", "scroll_to_bottom", "Bottom", show=False),
+    ]
+
     def compose(self) -> ComposeResult:
         yield Static("", id="cal-detail-content")
+
+    def _half(self) -> int:
+        return max(1, (self.size.height or 10) // 2)
+
+    def action_scroll_line_down(self) -> None:
+        self.scroll_down(animate=False)
+
+    def action_scroll_line_up(self) -> None:
+        self.scroll_up(animate=False)
+
+    def action_scroll_half_down(self) -> None:
+        self.scroll_relative(y=self._half(), animate=False)
+
+    def action_scroll_half_up(self) -> None:
+        self.scroll_relative(y=-self._half(), animate=False)
+
+    def action_scroll_to_top(self) -> None:
+        self.scroll_home(animate=False)
+
+    def action_scroll_to_bottom(self) -> None:
+        self.scroll_end(animate=False)
 
     def update_event(self, event: dict[str, Any] | None, detail_level: str = "full") -> None:
         """Re-render the pane for *event* at *detail_level*."""
