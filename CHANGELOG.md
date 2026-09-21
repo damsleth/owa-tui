@@ -4,6 +4,13 @@ All notable changes to `owa-tui` are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); this project uses semantic
 versioning.
 
+## [Unreleased]
+
+### Added
+- **Cal**: `j`/`k`/`u`/`d` (and `g`/`G`) scroll the detail pane when it has
+  focus, mirroring mail; `reading_pane` and `split_ratio` settings now apply
+  live without re-entering the screen.
+
 ## [0.2.2] - 2026-09-21
 
 Compatibility and Python 3.10 fixes; release channel clarified.
