@@ -1,10 +1,22 @@
 # owa-tui release process
 
-## Review update — 2026-06-23
+## Review update — 2026-09-21
 
 Current live release posture:
 
-- Package metadata is still `version = "0.1.0"` in `pyproject.toml`.
+- Released: v0.2.0, v0.2.1 (GitHub Releases via tag). **Never published to PyPI** —
+  `pypi.org/pypi/owa-tui` is empty; the only install path today is the GitHub wheel or an
+  editable checkout. No `UV_PUBLISH_TOKEN`/`.env` in this checkout.
+- Unreleased on main since v0.2.1: owa-tools 1.2.0 `build_query` move, two Python 3.10
+  date-rendering fixes, MIT LICENSE.
+- `pyproject.toml` pins `owa-tools>=1.2.0`; PyPI has 1.5.2, venv has 1.5.1. Bump the venv
+  and re-run gates before tagging (this repo has been bitten by owa-tools API drift twice).
+- Homebrew formula and PyInstaller binaries: **deferred, not planned.** Sections below are kept
+  as reference only; nothing in `release.yml` depends on them.
+
+Historical posture (2026-06-23):
+
+- Package metadata was `version = "0.1.0"` in `pyproject.toml` (now 0.2.1).
 - CI exists at `.github/workflows/ci.yml` and runs lint, compile, pytest with `--cov-fail-under=85`, `npx tui-test` (fixture e2e), and `uv build` on Python 3.10-3.12.
 - `.github/workflows/release.yml` exists: tag push (`v*`) re-runs all gates then builds + publishes a GitHub Release with the wheel/sdist. PyInstaller binaries and PyPI publish are still deferred.
 - The e2e fixture tests under `e2e/` are now a required CI gate (`npx tui-test`).
@@ -12,7 +24,7 @@ Current live release posture:
 
 Release blockers to clear before tagging:
 
-- Verify `owa-tools>=1.0.0` is published and exposes the stable APIs used by every shipped screen.
+- Verify the `owa-tools` lower bound in `pyproject.toml` is published and exposes the stable APIs used by every shipped screen.
 - Run a local install smoke from a built wheel: `owa-tui --help`, `owa-tui --version`, and fixture-mode startup for at least home, cal, mail, graph, and one v2 screen.
 - Confirm Homebrew and standalone binary strategy before promising those artifacts in release notes.
 
@@ -121,8 +133,7 @@ If `uv publish` reports "File already exists" on a retry but
 
 - Add an `owa-tui` formula to the same Homebrew tap that carries `owa-tools`.
 - The formula installs the `owa-tui` console script (single binary entry point).
-- A draft formula skeleton lives at `src/packaging/homebrew/owa-tui.rb` (to be
-  created at first release). Update `url`, `sha256`, and `version` to match the
+- No formula skeleton exists yet; create one at first Homebrew release. Update `url`, `sha256`, and `version` to match the
   published sdist on PyPI. `owa-tools` must be listed as a dependency or both
   formulas must be installed; confirm the tap's dependency strategy before the
   first Homebrew release.
@@ -236,3 +247,7 @@ Never force-push tags. Never delete published versions.
   as they are added.
 - **PyInstaller binaries:** blocked on the Textual+Rich hook issue documented
   above. Track as a milestone issue in the owa-tui repo.
+
+## Retired 2026-09-21
+
+Superseded by `RELEASING.md` (canonical). Decision: GitHub Releases only; PyPI, Homebrew and PyInstaller are deferred, not planned. The sections above are kept as reference for if that changes.

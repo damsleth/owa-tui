@@ -724,3 +724,7 @@ Add `# pragma: no cover` only for:
    owa-tui screens will coexist. This is intentional — the delete-from-owa-tools step is Phase B
    (post-v1 release of owa-tui). No compatibility shims needed; the two code paths simply
    exist in parallel until Phase B is merged and owa-tools cuts a major release.
+
+## Retired 2026-09-21
+
+Decision record only. All four §11 open questions are resolved in practice: graph shipped (plan 12); settings cycling shared via `owa_tui/settings_cycle.py`; snapshot tests never adopted (Pilot + tui-test are the gate); Phase B is owa-tools' call. Reference text, no work tracked here.

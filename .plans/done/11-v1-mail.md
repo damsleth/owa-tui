@@ -417,62 +417,62 @@ Load settings on `MailScreen` construction via `from_config(load_config())`.
 
 ### Reader-pane modes (3 items)
 
-- [ ] `reading_pane = 'right'` — list left, reader pane right; TAB switches focus; pane shows body of selected message; scroll indicator shown when content overflows
-- [ ] `reading_pane = 'bottom'` — list top, reader pane bottom; same focus/scroll behaviour
-- [ ] `reading_pane = 'off'` — pane widget absent; Enter/`l` pushes full-screen `ReaderScreen`; `q`/Escape/left pops back to list
+- [x] `reading_pane = 'right'` — list left, reader pane right; TAB switches focus; pane shows body of selected message; scroll indicator shown when content overflows <!-- src/tests/mail/test_mail_pilot.py::test_action_open_message_uses_cache -->
+- [x] `reading_pane = 'bottom'` — list top, reader pane bottom; same focus/scroll behaviour <!-- src/tests/mail/test_screen.py::test_screen_reading_pane_bottom_shows_body -->
+- [x] `reading_pane = 'off'` — pane widget absent; Enter/`l` pushes full-screen `ReaderScreen`; `q`/Escape/left pops back to list <!-- src/tests/mail/test_screen.py::test_screen_open_message_sets_reader_mode, src/tests/mail/test_mail_pilot.py::test_reader_screen_q_pops/_escape_pops/_left_pops -->
 
 ### Sort orders (5 items)
 
-- [ ] `date_desc` — newest first by `received`; messages with missing/None `received` sort last
-- [ ] `date_asc` — oldest first by `received`; missing `received` still sorts last (not first)
-- [ ] `sender` — A-Z by `from` casefold; missing/None `from` sorts last
-- [ ] `subject` — A-Z by `subject` casefold; missing/None `subject` sorts last
-- [ ] `unread_first` — unread (is_read=False or None) group before read; newest-first within each group; `_Desc` wrapper inverts ISO string comparison
+- [x] `date_desc` — newest first by `received`; messages with missing/None `received` sort last <!-- src/tests/mail/test_sort.py::test_sort_date_desc_newest_first, test_sort_date_desc_missing_sorts_last -->
+- [x] `date_asc` — oldest first by `received`; missing `received` still sorts last (not first) <!-- src/tests/mail/test_sort.py::test_sort_date_asc_oldest_first, test_sort_date_asc_missing_still_sorts_last -->
+- [x] `sender` — A-Z by `from` casefold; missing/None `from` sorts last <!-- src/tests/mail/test_sort.py::test_sort_sender_alphabetical, test_sort_sender_missing_last -->
+- [x] `subject` — A-Z by `subject` casefold; missing/None `subject` sorts last <!-- src/tests/mail/test_sort.py::test_sort_subject_alphabetical, test_sort_subject_missing_last -->
+- [x] `unread_first` — unread (is_read=False or None) group before read; newest-first within each group; `_Desc` wrapper inverts ISO string comparison <!-- src/tests/mail/test_sort.py::test_sort_unread_first_group, test_sort_unread_first_newest_within_group, test_sort_unread_first_none_is_read_treated_as_unread, test_desc_inverts_comparison -->
 
 ### Date formats (4 items)
 
-- [ ] `iso8601` — `YYYY-MM-DD` (10 chars); date column width = 10; unread marker at index 11
-- [ ] `ddmm` — `DD.MM` (5 chars); date column width = 5; unread marker at index 6
-- [ ] `ddmm_hhmm` — `DD.MM HH:MM` (11 chars); date column width = 11; unread marker at index 12
-- [ ] `custom` — user strftime string; width = 10 (fixed budget); validates via `validate_custom_format`; falls back to `YYYY-MM-DD` if custom string is empty; returns `""` on strftime error; `%Z` on naive datetime → `""` → validate returns `False`
+- [x] `iso8601` — `YYYY-MM-DD` (10 chars); date column width = 10; unread marker at index 11 <!-- src/tests/mail/test_dates.py::TestFormatReceived::test_iso8601, src/tests/mail/test_list_row.py::TestListRow::test_read_no_unread_marker -->
+- [x] `ddmm` — `DD.MM` (5 chars); date column width = 5; unread marker at index 6 <!-- src/tests/mail/test_dates.py::TestFormatReceived::test_ddmm, src/tests/mail/test_list_row.py::TestListRow::test_contains_date_ddmm -->
+- [x] `ddmm_hhmm` — `DD.MM HH:MM` (11 chars); date column width = 11; unread marker at index 12 <!-- src/tests/mail/test_dates.py::TestFormatReceived::test_ddmm_hhmm, src/tests/mail/test_list_row.py::TestListRow::test_contains_date_ddmm_hhmm -->
+- [x] `custom` — user strftime string; width = 10 (fixed budget); validates via `validate_custom_format`; falls back to `YYYY-MM-DD` if custom string is empty; returns `""` on strftime error; `%Z` on naive datetime → `""` → validate returns `False` <!-- src/tests/mail/test_dates.py::TestFormatReceived::test_custom_format, test_custom_empty_falls_back_to_iso, TestValidateCustomFormat::test_percent_z_on_naive_returns_false -->
 
 ### Keyboard / navigation (12 items)
 
-- [ ] `j`/down moves selection down; `k`/up moves up; viewport scrolls to keep selection visible
-- [ ] `g` jumps to first message; `G` jumps to last message
+- [x] `j`/down moves selection down; `k`/up moves up; viewport scrolls to keep selection visible <!-- src/tests/mail/test_screen.py::test_screen_j_moves_selection_down -->
+- [x] `g` jumps to first message; `G` jumps to last message <!-- src/tests/mail/test_mail_pilot.py::test_action_go_top_after_moving, src/tests/mail/test_screen.py::test_screen_G_jumps_to_last -->
 - [ ] `d` half-page down; `u` half-page up (both clamped at list bounds)
-- [ ] `Enter`/`l` opens message in reader (inline pane when visible, full screen when `off`)
-- [ ] `h`/left returns focus to list from pane (or pops `ReaderScreen`)
+- [x] `Enter`/`l` opens message in reader (inline pane when visible, full screen when `off`) <!-- src/tests/mail/test_screen.py::test_screen_open_message_sets_reader_mode, src/tests/mail/test_mail_pilot.py::test_action_open_message_uses_cache, e2e/actions.test.ts:138 -->
+- [x] `h`/left returns focus to list from pane (or pops `ReaderScreen`) <!-- src/tests/mail/test_mail_pilot.py::test_action_close_reader_with_pane, test_reader_screen_left_pops, e2e/actions.test.ts:138 -->
 - [ ] `tab` toggles focus between list and reading pane (no-op when pane is `off`)
-- [ ] `r` toggles is_read; status bar updated; PATCH issued; pane_top reset if selection unchanged
-- [ ] `o` opens `web_link` in browser via `webbrowser.open`; status bar shows "no web link" if absent
-- [ ] `/` prompts for KQL search; re-fetches; resets selection + cache; `None`/empty cancels
-- [ ] `Escape` opens settings overlay; second Escape or "Resume" closes it
-- [ ] `q` quits (returns to previous screen or exits app)
+- [x] `r` toggles is_read; status bar updated; PATCH issued; pane_top reset if selection unchanged <!-- src/tests/mail/test_mail_pilot.py::test_patch_read_called_on_toggle -->
+- [x] `o` opens `web_link` in browser via `webbrowser.open`; status bar shows "no web link" if absent <!-- src/tests/mail/test_screen.py::test_screen_browser_open, test_screen_browser_no_link -->
+- [x] `/` prompts for KQL search; re-fetches; resets selection + cache; `None`/empty cancels <!-- src/tests/mail/test_mail_pilot.py::test_action_search_non_empty_triggers_fetch_list, test_apply_messages_updates_state, test_search_modal_empty_submit_dismisses_none, src/tests/mail/test_screen.py::test_screen_search_cancelled -->
+- [x] `Escape` opens settings overlay; second Escape or "Resume" closes it <!-- src/tests/mail/test_screen.py::test_screen_escape_opens_menu, e2e/actions.test.ts:163 -->
+- [x] `q` quits (returns to previous screen or exits app) <!-- src/tests/mail/test_mail_pilot.py::test_action_quit_pops_screen, e2e/actions.test.ts:172 -->
 - [ ] In full reader: `j`/`k` scroll line; Space/PgDn page down; PgUp/`k` page up; `g` top; `G` bottom
 
 ### Settings & persistence (5 items)
 
 - [ ] Settings loaded from `owa_mail.config.load_config()` on screen construction
-- [ ] Each cycle action immediately persists via `save_config`
-- [ ] Reset-to-defaults restores all five fields to `MailSettings()` defaults and persists
+- [x] Each cycle action immediately persists via `save_config` <!-- src/tests/mail/test_mail_pilot.py::test_persist_settings_calls_save_config -->
+- [x] Reset-to-defaults restores all five fields to `MailSettings()` defaults and persists <!-- src/tests/mail/test_mail_pilot.py::test_handle_overlay_reset -->
 - [ ] Custom date format validated with `validate_custom_format` before applying; invalid → status "invalid strftime format: …"
-- [ ] `from_config` coerces `split_ratio` to int; invalid string or out-of-range value falls back to `50`
+- [x] `from_config` coerces `split_ratio` to int; invalid string or out-of-range value falls back to `50` <!-- src/tests/mail/test_settings.py::TestFromConfig::test_reads_split_ratio_int, test_invalid_split_ratio_string_falls_back, test_out_of_range_split_ratio_falls_back -->
 
 ### Data / fetch (4 items)
 
-- [ ] Initial fetch uses `build_list_query` + `api_get`; returns `None` on failure (screen shows error in status bar)
-- [ ] Body fetch is lazy and cached by message `id`; second open does not re-fetch
+- [x] Initial fetch uses `build_list_query` + `api_get`; returns `None` on failure (screen shows error in status bar) <!-- src/tests/mail/test_mail_pilot.py::test_fetch_list_api_none_no_search_sets_failed_status -->
+- [x] Body fetch is lazy and cached by message `id`; second open does not re-fetch <!-- src/tests/mail/test_mail_pilot.py::test_action_open_message_no_cache_triggers_fetch, test_action_open_message_uses_cache -->
 - [ ] Date-range filter (`since`/`until`) passed to `build_list_query`; surfaced in search modal
 - [ ] `normalize_messages(data, keep_body=False)` used for list; `normalize_message(raw)` for full body
 
 ### Error / edge cases (5 items)
 
-- [ ] Empty message list renders placeholder "(no messages)" in list area
-- [ ] Body fetch failure shows "failed to load message" in status bar; mode stays `list`
-- [ ] Search failure (api returns None) shows "search failed" in status bar; existing messages preserved
-- [ ] Search cancelled (empty/Escape prompt) leaves messages and search term unchanged
-- [ ] Browser open with no `web_link` sets status "no web link" without crashing
+- [x] Empty message list renders placeholder "(no messages)" in list area <!-- src/tests/mail/test_screen.py::test_screen_empty_list_shows_placeholder -->
+- [x] Body fetch failure shows "failed to load message" in status bar; mode stays `list` <!-- src/tests/mail/test_screen.py::test_screen_body_fetch_failure_stays_list, src/tests/mail/test_mail_pilot.py::test_on_body_failed_sets_mode_list -->
+- [x] Search failure (api returns None) shows "search failed" in status bar; existing messages preserved <!-- src/tests/mail/test_mail_pilot.py::test_on_search_failed_sets_status -->
+- [x] Search cancelled (empty/Escape prompt) leaves messages and search term unchanged <!-- src/tests/mail/test_screen.py::test_screen_search_cancelled -->
+- [x] Browser open with no `web_link` sets status "no web link" without crashing <!-- src/tests/mail/test_screen.py::test_screen_browser_no_link, e2e/actions.test.ts:201 -->
 
 ---
 
@@ -571,3 +571,36 @@ Run before declaring done:
 .venv/bin/python -m pytest src/tests/mail/ -q --cov=owa_tui.mail --cov=owa_tui.screens.mail --cov-fail-under=85
 .venv/bin/ruff check src/owa_tui/mail/ src/owa_tui/screens/mail.py src/tests/mail/
 ```
+
+## Disposition (2026-09-21)
+
+Audit: 31/38 verified; 7 untested, 2 behaviour-missing. Kept → repo todos: `date_format=custom`
+has no entry path / no validation; since/until unreachable from the search modal. The rest are
+weak-assert items on present behaviour — dropped. Plan retired.
+
+## Gaps (2026-09-21)
+
+Audit of the parity checklist against `src/tests/mail/` and `e2e/`. Ticked items cite the test that
+asserts the headline behaviour. Items below have no real assertion (name-only or `>= 0`/no-op tests do not count).
+
+- `d` half-page down; `u` half-page up (both clamped at list bounds)
+  - behaviour: present (`action_page_down`/`action_page_up` loop `ListView.action_cursor_down/up`, clamped by ListView). Only `>= 0` asserted in test_mail_pilot::test_action_page_down_moves_selection / test_action_page_up_does_not_go_negative; e2e/actions.test.ts:185 asserts visibility only.
+- `tab` toggles focus between list and reading pane (no-op when pane is `off`)
+  - behaviour: present (`action_focus_pane`). test_mail_pilot::test_action_focus_pane_right_focuses_pane / _off_is_noop / _toggle_back_to_list compute focus but assert nothing; e2e/actions.test.ts:193 asserts visibility only.
+- In full reader: `j`/`k` scroll line; Space/PgDn page down; PgUp/`k` page up; `g` top; `G` bottom
+  - behaviour: present (`ReaderScreen.BINDINGS`; note source binds `k` to line-up, not page-up). test_mail_pilot::test_reader_screen_scroll_actions / test_reader_screen_pageup_calls_scroll_up_page assert only that the screen survives; e2e/actions.test.ts:208 asserts visibility only.
+- Settings loaded from `owa_mail.config.load_config()` on screen construction
+  - behaviour: present (screens/mail.py:459-461). test_mail_pilot::test_init_with_owa_mail_config_success asserts only `isinstance(str)` and its mock uses non-`tui_` keys; only the except-branch fallback is asserted (test_init_without_initial_settings_falls_back_to_defaults).
+- Custom date format validated with `validate_custom_format` before applying; invalid → status "invalid strftime format: …"
+  - behaviour: missing. No call to `validate_custom_format` and no "invalid strftime format" status anywhere in screens/mail.py or widgets/settings_overlay.py; `date_custom` is free text with no UI entry path (cycle is a no-op).
+- Date-range filter (`since`/`until`) passed to `build_list_query`; surfaced in search modal
+  - behaviour: missing (partial plumbing). `_fetch_list(since=, until=)` forwards to `build_list_query`, but `action_search` passes only `search=` and `SearchModal` has a single KQL Input; since/until are never set from the UI. No test.
+- `normalize_messages(data, keep_body=False)` used for list; `normalize_message(raw)` for full body
+  - behaviour: present (screens/mail.py:586, 713). No test asserts either call: test_fetch_list_success_path mocks the module but calls `_apply_messages` directly; the `*_simulated*` tests bypass the worker.
+
+Partial (ticked on the headline clause; sub-clause has no assertion): `right` (TAB focus switch, scroll indicator);
+`bottom` (only pane presence asserted, no bottom-mode body test); `ddmm`/`ddmm_hhmm` (format string asserted, column width /
+marker index not - only iso8601's `row[11]` is checked); `custom` (strftime-error -> `""` path; test_custom_strftime_error_returns_empty
+admits it does not exercise it); `j`/`k` (`k` only asserted `>= 0`; viewport scroll unasserted); `r` (status text unasserted;
+`pane_top` has no equivalent in the Textual port - source uses `_reselect`); "each cycle persists" (save_config asserted in
+isolation, cycle tests patch `_persist_settings` out); `/` (body-cache reset on re-fetch unasserted).

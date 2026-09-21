@@ -16,8 +16,8 @@ Remaining enrichment work:
 
 - Convert any "create screen" language below into "verify/harden screen" language as each card is touched.
 - [x] Add a compact matrix mapping each screen to its API imports, fixture file, unit test directory, and e2e spec (see **Coverage matrix** below, 2026-06-23).
-- Decide whether `owa-people` should be described as v1-adjacent or v2; the code exists, but the planning status is still ambiguous.
-- Keep `owa-vids` deferred unless a concrete Textual interaction model and stable owa-tools API surface exist.
+- [x] `owa-people` is a **v2** card: it sits on `OwaListScreen` and in the coverage matrix below. (2026-09-21)
+- [x] `owa-vids` stays deferred — no list/tree/grid model, URL-driven; revisit only if owa-tools grows a stable listing API. (2026-09-21)
 
 _Created 2026-06-18. Prerequisite: a v1 owa-tui release must exist on PyPI before
 any v2 card ships (the `owa-tools>=1.0.0` constraint keeps the import boundary clean)._
@@ -554,3 +554,7 @@ by the snapshot test runner, same discipline as owa-mail.
 - `owa_core/tty.py` `is_interactive` guard — owa-tui's `__main__.py` should guard
   non-TTY invocations via `sys.stdout.isatty()` and print a clear error; no
   `--agent` flag needed (owa-tui has no `--agent` mode).
+
+## Retired 2026-09-21
+
+All eight v2 cards shipped with the matrix above as the coverage record; people = v2, vids deferred. No open work.

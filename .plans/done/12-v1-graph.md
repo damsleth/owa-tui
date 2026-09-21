@@ -1010,19 +1010,52 @@ Do NOT import from `owa_graph.tui` (the curses module being deleted).
 
 Before marking this plan complete:
 
-- [ ] All 56 Pilot test cases pass (`pytest src/tests/graph/`)
-- [ ] 90% coverage gate still green (run `pytest --cov` before declaring a new widget done)
+- [x] All 56 Pilot test cases pass (`pytest src/tests/graph/`) <!-- 155 passed, src/tests/graph/ (2026-09-21); TP18–TP24 have no test — see Gaps -->
+- [x] 90% coverage gate still green (run `pytest --cov` before declaring a new widget done) <!-- 91.9% repo-wide, verified 2026-09-21 -->
 - [ ] `render_detail` — all 5 branch paths covered (opaque/scalar/graph-collection/non-graph-collection/tier-d)
-- [ ] `_ensure_token` — cache-hit / miss / failure / expires_at=None all covered
+- [x] `_ensure_token` — cache-hit / miss / failure / expires_at=None all covered <!-- src/tests/graph/test_graph_auth.py::test_cache_hit_no_remint, ::test_miss_mints_and_populates, ::test_failure_returns_none_evicts, ::test_no_expires_fields_uses_default_ttl -->
 - [ ] Audience set: `set(AUDIENCE_API_BASE.keys())` == frozen 17-name set (TP coverage)
-- [ ] All 8 action keys `o/y/c/a/m/D/n/e` have at least one Pilot test
+- [x] All 8 action keys `o/y/c/a/m/D/n/e` have at least one Pilot test <!-- src/tests/graph/test_graph_pilot.py::test_action_open_browser_non_graph_audience (o), ::test_action_yank_url_updates_status (y), ::test_action_curl_command_updates_status (c), ::test_action_switch_audience_shows_input_bar (a), ::test_action_bookmark_updates_status (m), ::test_debug_overlay_double_toggle (D), ::test_action_next_page_with_link_triggers_fetch (n), ::test_action_edit_query_shows_input_bar (e) -->
 - [ ] `format_pretty` strictly gated to `audience == 'graph'` (TP19, TP20 guard it)
-- [ ] `next_path` 3-shape coverage (absolute URL / absolute path replace / relative append)
-- [ ] DevOps header lookup case-insensitive confirmed by TP36
+- [x] `next_path` 3-shape coverage (absolute URL / absolute path replace / relative append) <!-- src/tests/graph/test_graph_nav.py::test_next_path_absolute_url_returned_verbatim, ::test_next_path_absolute_path_replaces_current, ::test_next_path_relative_segment_appended -->
+- [x] DevOps header lookup case-insensitive confirmed by TP36 <!-- src/tests/graph/test_graph_nav.py::test_devops_continuation_case_insensitive, ::test_devops_continuation_lowercase_header, ::test_header_get_case_insensitive -->
 - [ ] `run()` refuses non-interactive (mirrors cal/mail CLI guard)
 - [ ] `silence_os_fds()` used in `o` action (TP40 asserts it)
-- [ ] `capture_output=True` in `y` action (TP37 asserts it)
+- [x] `capture_output=True` in `y` action (TP37 asserts it) <!-- src/tests/graph/test_graph_actions.py::test_yank_capture_output -->
 - [ ] Breadcrumb `on_back` never triggers network (TP52 asserts count)
 
 Total parity items: 72 discrete behaviors mapped from `owa_graph/tui.py`, `tui_nav.py`,
 `tui_settings.py`, `tui_menu.py`, and the curses-explorer spec.
+
+## Disposition (2026-09-21)
+
+Audit: 7/13 verified (155 graph tests pass). `render_detail` / `format_pretty` were never built —
+the earlier `[x]` ticks around line 751 are stale; the shipped detail is `_refresh_detail`. Non-tty
+guard → repo todo (shared with cal). Back-never-fetches got a regression test. Audience-count and
+`silence_os_fds` assertions dropped as trivial. Plan retired.
+
+## Gaps (2026-09-21)
+
+Unchecked items from the final gating check, audited against `src/tests/graph/`:
+
+- `render_detail` — all 5 branch paths covered (opaque/scalar/graph-collection/non-graph-collection/tier-d)
+  — behaviour: missing. No `render_detail` exists anywhere in `src/owa_tui/`; `GraphScreen._refresh_detail`
+  (`src/owa_tui/screens/graph.py`) renders only label/target/drillable. `build_rows` handles opaque/scalar
+  as list rows (`test_graph_nav.py::test_build_rows_opaque/_scalar`) and Tier D is a status notice in
+  `fetch.py` (`test_graph_pilot.py::test_fetch_tier_d_audience_sets_notice`), not a detail footer.
+  Note: the earlier "`render_detail` gating (5)" block is ticked `[x]` but describes code that does not exist.
+- Audience set: `set(AUDIENCE_API_BASE.keys())` == frozen 17-name set — behaviour: present
+  (`src/owa_tui/graph/fetch.py` has exactly the 17 names). No test asserts the key set.
+- `format_pretty` strictly gated to `audience == 'graph'` (TP19, TP20) — behaviour: missing.
+  `format_pretty` is not referenced in source or tests; TP18–TP24 (`TestRenderDetail`) were never written.
+- `run()` refuses non-interactive — behaviour: missing. `owa_tui.main()` (`src/owa_tui/__init__.py`)
+  calls `OwaTuiApp(...).run()` directly; no `isatty`/`is_interactive` check anywhere in `src/owa_tui/`.
+- `silence_os_fds()` used in `o` action (TP40 asserts it) — behaviour: present
+  (`src/owa_tui/graph/actions.py::action_open_browser` wraps `webbrowser.open` in `_silence_os_fds()`).
+  `test_graph_actions.py::test_open_browser_graph_silences_fds` only asserts the Graph Explorer URL;
+  it does not patch or assert `_silence_os_fds`.
+- Breadcrumb `on_back` never triggers network (TP52 asserts count) — behaviour: present
+  (`nav.py::on_back` sets `dirty=False`; `GraphScreen.action_back` never calls `_start_fetch`).
+  No test counts fetch calls across a back: `test_graph_nav.py::test_back_restores_without_network`
+  asserts `dirty is False` only; `test_graph_pilot.py::test_action_back_restores_state` patches
+  `fetch_items` with a no-op but does not count it.

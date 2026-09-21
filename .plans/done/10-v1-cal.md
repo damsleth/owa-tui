@@ -431,111 +431,111 @@ Every item below maps directly to an interaction in `owa_cal/tui.py`.
 
 ### Agenda list rendering
 - [ ] Row shows `HH:MM-HH:MM` time range extracted from ISO datetime
-- [ ] All-day event shows `all-day` in time column
-- [ ] Row truncated to terminal width (never overflows)
-- [ ] Location shown as `  [loc]` suffix, capped at 20 chars
-- [ ] Empty subject renders without crashing
-- [ ] Width=1 extreme case renders without crashing
-- [ ] `show_date=False` (day view): no date prefix in rows
-- [ ] `show_date=True` (week/month view): `_weekday_date` prefix shown (`'Thu 06-05'` format, locale-aware)
-- [ ] Unparseable `start` date with `show_date=True` degrades gracefully (no crash)
+- [x] All-day event shows `all-day` in time column <!-- src/tests/cal/test_cal_screen.py::test_render_row_all_day -->
+- [x] Row truncated to terminal width (never overflows) <!-- src/tests/cal/test_cal_screen.py::test_render_row_width_one -->
+- [x] Location shown as `  [loc]` suffix, capped at 20 chars <!-- src/tests/cal/test_cal_screen.py::test_render_row_location_suffix, src/tests/cal/test_cal_screen.py::test_render_row_location_capped_at_20 -->
+- [x] Empty subject renders without crashing <!-- src/tests/cal/test_cal_screen.py::test_render_row_empty_subject -->
+- [x] Width=1 extreme case renders without crashing <!-- src/tests/cal/test_cal_screen.py::test_render_row_width_one -->
+- [x] `show_date=False` (day view): no date prefix in rows <!-- src/tests/cal/test_cal_screen.py::test_render_row_day_view_no_date -->
+- [x] `show_date=True` (week/month view): `_weekday_date` prefix shown (`'Thu 06-05'` format, locale-aware) <!-- src/tests/cal/test_agenda_dates.py::test_render_row_shows_the_date_for_a_z_suffixed_start, src/tests/cal/test_agenda_dates.py::test_weekday_date_accepts_a_z_suffixed_start -->
+- [x] Unparseable `start` date with `show_date=True` degrades gracefully (no crash) <!-- src/tests/cal/test_cal_screen.py::test_render_row_bad_date_with_show_date -->
 
 ### Detail pane rendering (`detail='full'`)
-- [ ] Subject shown as first line
-- [ ] Underline (`─`) under subject
+- [x] Subject shown as first line <!-- src/tests/cal/test_cal_detail.py::test_subject_in_detail -->
+- [x] Underline (`─`) under subject <!-- src/tests/cal/test_cal_detail.py::test_underline_under_subject -->
 - [ ] All-day event shows `all-day` + date in `When:` line
-- [ ] Time range shown in `When:` line for timed events
-- [ ] `Location:` shown when present
+- [x] Time range shown in `When:` line for timed events <!-- src/tests/cal/test_cal_detail.py::test_time_range_shown -->
+- [x] `Location:` shown when present <!-- src/tests/cal/test_cal_detail.py::test_location_shown -->
 - [ ] `Status:` (showAs) shown when present
 - [ ] `Category:` joined from categories list
-- [ ] `Response: organizer` shown when `isOrganizer=True`
-- [ ] Own response shown normalized (e.g. `tentativelyAccepted` -> `'tentative'`)
-- [ ] `Organizer:` line shown when present
+- [x] `Response: organizer` shown when `isOrganizer=True` <!-- src/tests/cal/test_cal_detail.py::test_organizer_response_shown_for_organizer -->
+- [x] Own response shown normalized (e.g. `tentativelyAccepted` -> `'tentative'`) <!-- src/tests/cal/test_cal_detail.py::test_response_label_all_values, src/tests/cal/test_cal_detail.py::test_full_shows_attendees_organizer_body_response -->
+- [x] `Organizer:` line shown when present <!-- src/tests/cal/test_cal_detail.py::test_organizer_shown -->
 - [ ] `Attendees (N):` heading with count
-- [ ] Each attendee: name + response label
-- [ ] Optional attendees flagged with `(optional)`
-- [ ] At most 12 attendees shown; overflow shown as `  … +N more`
+- [x] Each attendee: name + response label <!-- src/tests/cal/test_cal_detail.py::test_attendee_line_dict_shape -->
+- [x] Optional attendees flagged with `(optional)` <!-- src/tests/cal/test_cal_detail.py::test_attendee_optional_flagged -->
+- [x] At most 12 attendees shown; overflow shown as `  … +N more` <!-- src/tests/cal/test_cal_detail.py::test_attendee_overflow_shown -->
 - [ ] `Note:` section with body text, wrapped to `width-2`
 - [ ] `Note:` body preserves blank lines
-- [ ] No `ID:` line (regression: was removed from curses version)
-- [ ] Width=1/2/3 extreme cases do not raise `ValueError` (textwrap floor)
+- [x] No `ID:` line (regression: was removed from curses version) <!-- src/tests/cal/test_cal_detail.py::test_no_id_line -->
+- [x] Width=1/2/3 extreme cases do not raise `ValueError` (textwrap floor) <!-- src/tests/cal/test_cal_detail.py::test_narrow_width_does_not_raise -->
 
 ### Detail pane rendering (`detail='basic'`)
 - [ ] Shows: subject, time, location, status, category
-- [ ] Omits: attendees, organizer, body, own response
+- [x] Omits: attendees, organizer, body, own response <!-- src/tests/cal/test_cal_detail.py::test_basic_omits_rich_fields -->
 
 ### Date range filtering
-- [ ] `day_range='today'` -> query from today 00:00:00 to today 23:59:59
-- [ ] `day_range='week'`  -> query from Monday to Sunday of current ISO week
-- [ ] `day_range='month'` -> query from first to last day of current calendar month
-- [ ] Unknown `day_range` falls back to `'today'`
+- [x] `day_range='today'` -> query from today 00:00:00 to today 23:59:59 <!-- src/tests/cal/test_cal_fetch.py::test_today_range -->
+- [x] `day_range='week'`  -> query from Monday to Sunday of current ISO week <!-- src/tests/cal/test_cal_fetch.py::test_week_range_monday_sunday -->
+- [x] `day_range='month'` -> query from first to last day of current calendar month <!-- src/tests/cal/test_cal_fetch.py::test_month_range_first_last -->
+- [x] Unknown `day_range` falls back to `'today'` <!-- src/tests/cal/test_cal_fetch.py::test_unknown_day_range_falls_back_to_today -->
 
 ### Fetch / data layer
-- [ ] `fetch_events` returns `(list, None)` on success
-- [ ] `fetch_events` returns `([], 'fetch failed')` when `api_get` returns `None`
-- [ ] `fetch_events` does not raise on `OwaError` (returns error string)
-- [ ] `fetch_events` does not raise on unexpected exception (returns error string)
-- [ ] Status title shows `f'owa-cal  {from_date}'` (no suffix if single-day)
-- [ ] Status title shows `f'owa-cal  {from_date} – {to_date}'` for multi-day ranges
+- [x] `fetch_events` returns `(list, None)` on success <!-- src/tests/cal/test_cal_fetch.py::test_returns_events_on_success -->
+- [x] `fetch_events` returns `([], 'fetch failed')` when `api_get` returns `None` <!-- src/tests/cal/test_cal_fetch.py::test_returns_empty_on_api_none -->
+- [x] `fetch_events` does not raise on `OwaError` (returns error string) <!-- src/tests/cal/test_cal_fetch.py::test_owa_error_caught -->
+- [x] `fetch_events` does not raise on unexpected exception (returns error string) <!-- src/tests/cal/test_cal_fetch.py::test_unexpected_exception_caught -->
+- [x] Status title shows `f'owa-cal  {from_date}'` (no suffix if single-day) <!-- src/tests/cal/test_cal_fetch.py::test_title_single_day -->
+- [x] Status title shows `f'owa-cal  {from_date} – {to_date}'` for multi-day ranges <!-- src/tests/cal/test_cal_fetch.py::test_title_multi_day -->
 
 ### Search (client-side filter)
 - [ ] Setting search query re-filters the current event list
-- [ ] Search matches against `subject` (case-insensitive)
-- [ ] Search matches against attendee `name` + `address` (dict shape)
+- [x] Search matches against `subject` (case-insensitive) <!-- src/tests/cal/test_cal_fetch.py::test_search_filter_subject -->
+- [x] Search matches against attendee `name` + `address` (dict shape) <!-- src/tests/cal/test_cal_fetch.py::test_search_filter_attendee -->
 - [ ] Empty search string clears filter and shows all events
 - [ ] Search filter triggers re-render (no extra network call)
 
 ### Show declined filter
-- [ ] `show_declined='no'` removes events where `showAs.lower() == 'free'` AND no categories
-- [ ] `show_declined='yes'` shows all events regardless of showAs
+- [x] `show_declined='no'` removes events where `showAs.lower() == 'free'` AND no categories <!-- src/tests/cal/test_cal_fetch.py::test_show_declined_filter -->
+- [x] `show_declined='yes'` shows all events regardless of showAs <!-- src/tests/cal/test_cal_fetch.py::test_show_declined_yes_shows_all -->
 - [ ] Changing `show_declined` triggers re-fetch
 
 ### Navigation
-- [ ] `j`/`k` and arrow keys move selection
-- [ ] `g` jumps to first item
-- [ ] `G` jumps to last item
-- [ ] `u` scrolls half-page up
+- [x] `j`/`k` and arrow keys move selection <!-- src/tests/cal/test_cal_pilot.py::TestAgendaListPilot::test_action_move_down, src/tests/cal/test_cal_pilot.py::TestAgendaListPilot::test_on_key_down_arrow, e2e/actions.test.ts:50 -->
+- [x] `g` jumps to first item <!-- src/tests/cal/test_cal_pilot.py::TestAgendaListPilot::test_action_move_top -->
+- [x] `G` jumps to last item <!-- src/tests/cal/test_cal_pilot.py::TestAgendaListPilot::test_action_move_bottom -->
+- [x] `u` scrolls half-page up <!-- src/tests/cal/test_cal_pilot.py::TestAgendaListPilot::test_action_page_up_half -->
 - [ ] `d` (no respond mode) scrolls half-page down
-- [ ] `PgUp` / `PgDn` / `Space` page navigation
-- [ ] `Enter` / `→` / `l` drills into detail (focus transferred to pane)
-- [ ] When `reading_pane='off'`, `Enter` sets status hint instead of focusing pane
+- [x] `PgUp` / `PgDn` / `Space` page navigation <!-- src/tests/cal/test_cal_pilot.py::TestAgendaListPilot::test_on_key_pageup, test_on_key_pagedown, test_on_key_space -->
+- [x] `Enter` / `→` / `l` drills into detail (focus transferred to pane) <!-- e2e/actions.test.ts:110, src/tests/cal/test_cal_pilot.py::TestAgendaListPilot::test_on_key_enter_fires_drill, test_on_key_right_fires_drill, test_action_drill_posts_message -->
+- [x] When `reading_pane='off'`, `Enter` sets status hint instead of focusing pane <!-- src/tests/cal/test_cal_screen.py::test_drill_pane_off_shows_hint -->
 - [ ] Detail pane focus: `j`/`k` scroll pane
 - [ ] Detail pane focus: `h`/`←`/`Backspace` returns focus to list with status hint
 
 ### Respond chord
-- [ ] `y` arms respond mode; status bar shows chord hint
-- [ ] `y` with no event selected: `_respond_mode` stays `False`, status = `'no event selected'`
-- [ ] `a` in respond mode sends `accept` action (POST `.../accept`)
-- [ ] `t` in respond mode sends `tentative` action (POST `.../tentativelyaccept`)
-- [ ] `d` in respond mode sends `decline` action (POST `.../decline`)
-- [ ] Any other key in respond mode cancels with status `'respond cancelled'`
-- [ ] Respond POST body: `{'Comment': '', 'SendResponse': True}`
+- [x] `y` arms respond mode; status bar shows chord hint <!-- src/tests/cal/test_cal_pilot.py::TestCalScreenPilot::test_action_respond_arm_with_event, e2e/actions.test.ts:63 -->
+- [x] `y` with no event selected: `_respond_mode` stays `False`, status = `'no event selected'` <!-- src/tests/cal/test_cal_screen.py::test_respond_no_event -->
+- [x] `a` in respond mode sends `accept` action (POST `.../accept`) <!-- src/tests/cal/test_cal_pilot.py::TestRespondPostPath::test_accept_posts_to_accept_endpoint -->
+- [x] `t` in respond mode sends `tentative` action (POST `.../tentativelyaccept`) <!-- src/tests/cal/test_cal_pilot.py::TestRespondPostPath::test_tentative_posts_to_tentativelyaccept_endpoint -->
+- [x] `d` in respond mode sends `decline` action (POST `.../decline`) <!-- src/tests/cal/test_cal_pilot.py::TestRespondPostPath::test_decline_posts_to_decline_endpoint -->
+- [x] Any other key in respond mode cancels with status `'respond cancelled'` <!-- src/tests/cal/test_cal_pilot.py::TestCalScreenPilot::test_action_respond_key_invalid_cancels -->
+- [x] Respond POST body: `{'Comment': '', 'SendResponse': True}` <!-- src/tests/cal/test_cal_pilot.py::TestRespondPostPath::test_accept_posts_to_accept_endpoint -->
 - [ ] On success: status = `f'{action}ed: {subject[:30]}'` and re-fetch triggered
-- [ ] On `api_request` returning `None`: status = `'respond failed'`
+- [x] On `api_request` returning `None`: status = `'respond failed'` <!-- src/tests/cal/test_cal_pilot.py::TestRespondPostPath::test_respond_failure_when_api_returns_none -->
 - [ ] On `OwaError`: status = `f'respond failed: {exc}'`
 - [ ] Event with empty `id`: status = `'event has no id'`, no POST sent
 
 ### Browser open (`o`)
-- [ ] `o` with event selected: calls `webbrowser.open(event['webLink'])`
+- [x] `o` with event selected: calls `webbrowser.open(event['webLink'])` <!-- src/tests/cal/test_cal_screen.py::test_open_browser_fires_webbrowser -->
 - [ ] Status = `'opened in browser'` on success
 - [ ] Status = `'could not open browser'` if `webbrowser.open` raises
-- [ ] `o` with no `webLink` / empty link: status = `'no web link for this event'`
-- [ ] `o` with no event selected: status = `'no event selected'`
+- [x] `o` with no `webLink` / empty link: status = `'no web link for this event'` <!-- src/tests/cal/test_cal_screen.py::test_open_browser_no_link, e2e/actions.test.ts:119 -->
+- [x] `o` with no event selected: status = `'no event selected'` <!-- src/tests/cal/test_cal_screen.py::test_open_browser_no_event -->
 
 ### Settings menu
-- [ ] `Escape` opens settings overlay
-- [ ] Menu has: Resume, Settings, Help, Quit
-- [ ] Help closes menu and sets status = `HELP_LINE`
+- [x] `Escape` opens settings overlay <!-- e2e/actions.test.ts:87, src/tests/cal/test_cal_pilot.py::TestCalScreenPilot::test_action_open_menu_resume -->
+- [x] Menu has: Resume, Settings, Help, Quit <!-- e2e/actions.test.ts:87 (Resume, Quit), src/tests/cal/test_cal_pilot.py::TestCalScreenPilot::test_action_open_menu_help (Help), test_action_open_menu_reset (Settings) -->
+- [x] Help closes menu and sets status = `HELP_LINE` <!-- src/tests/cal/test_cal_pilot.py::TestCalScreenPilot::test_action_open_menu_help -->
 - [ ] Settings sub-menu shows all five fields with current values
-- [ ] Each field cycles on `Enter` (wraps around allowed values)
+- [x] Each field cycles on `Enter` (wraps around allowed values) <!-- src/tests/cal/test_cal_screen.py::test_cal_settings_cycle_reading_pane, src/tests/cal/test_cal_screen.py::test_cal_settings_cycle_split_ratio -->
 - [ ] Reset to defaults restores `Settings()` and persists
 - [ ] Setting `reading_pane` changes pane layout immediately
 - [ ] Setting `split_ratio` changes pane split immediately
-- [ ] Setting `day_range` triggers re-fetch
+- [x] Setting `day_range` triggers re-fetch <!-- src/tests/cal/test_cal_pilot.py::TestCalScreenPilot::test_action_open_menu_cycle_day_range -->
 - [ ] Setting `show_declined` triggers re-fetch
 - [ ] Setting `event_detail` changes detail render level immediately
 - [ ] Settings persisted via `owa_cal.config.save_config` on every change
-- [ ] Persist failure is silently swallowed (best-effort, never crashes TUI)
+- [x] Persist failure is silently swallowed (best-effort, never crashes TUI) <!-- src/tests/cal/test_cal_pilot.py::TestCalScreenPilot::test_persist_settings_no_crash -->
 
 ### CLI entrypoint
 - [ ] Refused when `OWA_AGENT=1` (not an interactive terminal)
@@ -550,7 +550,7 @@ Every item below maps directly to an interaction in `owa_cal/tui.py`.
 ### Resize / edge cases
 - [ ] Terminal resize (`SIGWINCH`) handled without crashing
 - [ ] Empty event list shows `'(no events)'` placeholder
-- [ ] Narrow terminal (width=1) does not crash render
+- [x] Narrow terminal (width=1) does not crash render <!-- src/tests/cal/test_cal_screen.py::test_render_row_width_one -->
 
 ---
 
@@ -728,3 +728,53 @@ Use this as the final gating check before marking the plan complete.
 - [x] Settings: all five fields cycle; reset; persist; layout-affecting fields re-layout immediately
 
 Total parity items: 55 discrete interactions mapped.
+
+## Disposition (2026-09-21)
+
+Audit: 60/97 acceptance items verified against tests; 37 untested. Policy: drop trivial,
+keep branchy. Kept → repo todos: detail-pane j/k scroll, live reading_pane/split_ratio apply,
+non-tty guard. Branchy error paths (respond OwaError / empty id / re-fetch, browser-open
+failure) got regression tests. Everything else in the gap list below is either weak-assert
+noise or describes the owa-tools `tui` subcommand schema, not owa-tui — dropped. Plan retired.
+
+## Gaps (2026-09-21)
+
+Unchecked acceptance criteria above with no covering assertion in `src/tests/cal/` or `e2e/actions.test.ts`.
+
+- L433 Row shows `HH:MM-HH:MM` time range extracted from ISO datetime — behaviour: present — no render_row test asserts an `HH:MM-HH:MM` string (tests assert date/all-day/location only)
+- L446 All-day event shows `all-day` + date in `When:` line — behaviour: present — test_cal_detail.py::test_all_day_label asserts `all-day` only; the date in `When:` is not asserted
+- L449 `Status:` (showAs) shown when present — behaviour: present (detail.py `Status:` line) — no test asserts it
+- L450 `Category:` joined from categories list — behaviour: present (detail.py `Category:` join) — no test asserts it
+- L454 `Attendees (N):` heading with count — behaviour: present — test_full_shows_attendees_organizer_body_response asserts `Attendees` only, not the `(N)` count
+- L458 `Note:` section with body text, wrapped to `width-2` — behaviour: present — test_body_shown asserts body text only; wrap width `width-2` is not asserted
+- L459 `Note:` body preserves blank lines — behaviour: present (blank-line branch in render_detail) — no test
+- L464 Shows: subject, time, location, status, category — behaviour: present — only the omit side is tested (test_basic_omits_rich_fields); no positive assertion for basic fields
+- L482 Setting search query re-filters the current event list — behaviour: present (action_search → load_events with search) — test_cal_screen.py::test_search_filters_events filters inside the test body via update_rows, never exercises action_search; fetch-level filter covered by test_cal_fetch.py::test_search_filter_*
+- L485 Empty search string clears filter and shows all events — behaviour: present (`if search:` guard; _SearchInput cancel dismisses '') — no test clears a non-empty filter and asserts all events return
+- L486 Search filter triggers re-render (no extra network call) — behaviour: missing — action_search calls load_events(), which re-fetches via api_get; search is not a render-only refilter (spec/impl divergence)
+- L491 Changing `show_declined` triggers re-fetch — behaviour: present (_on_setting_changed re-fetches for show_declined) — no test cycles show_declined; same as line 535
+- L498 `d` (no respond mode) scrolls half-page down — behaviour: missing — AgendaList.BINDINGS has no `d`; screen binds `d` to respond_key('d') which returns early when unarmed; action_page_down_half exists but is unbound (test_action_page_down_half asserts only idx >= 0)
+- L502 Detail pane focus: `j`/`k` scroll pane — behaviour: missing — CalDetailPane declares no BINDINGS; nothing binds j/k while the pane has focus
+- L503 Detail pane focus: `h`/`←`/`Backspace` returns focus to list with status hint — behaviour: present for h/← (test_cal_pilot.py::TestCalScreenPilot::test_action_back_to_list, e2e/actions.test.ts:115); missing for Backspace (not bound in cal); status is cleared to '' rather than a hint
+- L513 On success: status = `f'{action}ed: {subject[:30]}'` and re-fetch triggered — behaviour: present (verb map: accepted / tentatively accepted / declined) — status asserted by TestRespondPostPath; the follow-up re-fetch is not asserted
+- L515 On `OwaError`: status = `f'respond failed: {exc}'` — behaviour: present (`respond failed: {exc}` branch) — no test raises OwaError from api_request
+- L516 Event with empty `id`: status = `'event has no id'`, no POST sent — behaviour: present (`event has no id` guard in _do_respond) — no test
+- L520 Status = `'opened in browser'` on success — behaviour: present — test_open_browser_fires_webbrowser asserts the webbrowser.open call, not the `opened in browser` status
+- L521 Status = `'could not open browser'` if `webbrowser.open` raises — behaviour: present (`could not open browser` except branch) — no test makes webbrowser.open raise
+- L529 Settings sub-menu shows all five fields with current values — behaviour: present — no cal test asserts the five labels/values; generic overlay coverage only in src/tests/widgets/test_settings_overlay.py::test_settings_overlay_shows_value_next_to_label
+- L531 Reset to defaults restores `Settings()` and persists — behaviour: present — test_action_open_menu_reset asserts defaults restored; persistence (save_config) not asserted
+- L532 Setting `reading_pane` changes pane layout immediately — behaviour: missing — _make_layout is only called from compose(); _on_setting_changed only calls _refresh_detail, no recompose (test_action_open_menu_cycle_reading_pane proves _refresh_detail ran, not a re-layout)
+- L533 Setting `split_ratio` changes pane split immediately — behaviour: missing — same as 532; split_ratio is applied only at compose time
+- L535 Setting `show_declined` triggers re-fetch — behaviour: present — duplicate of line 491; no test cycles show_declined
+- L536 Setting `event_detail` changes detail render level immediately — behaviour: present (_refresh_detail passes settings.event_detail) — no test cycles event_detail and asserts the pane
+- L537 Settings persisted via `owa_cal.config.save_config` on every change — behaviour: present (_persist_settings → owa_cal.config.save_config) — no test asserts save_config is called on change
+- L541 Refused when `OWA_AGENT=1` (not an interactive terminal) — behaviour: missing — owa_tui/__init__.py has no OWA_AGENT check (these CLI items describe owa-cal's `tui` subcommand schema, not owa-tui)
+- L542 Refused when `is_interactive()` returns `False` (no tty) — behaviour: missing — no is_interactive()/isatty guard in owa-tui's main()
+- L543 `--day-range` flag accepted; overrides persisted setting — behaviour: missing — parser has --version/--debug/--tool/--profile only; CalScreen(day_range=) exists (test_cal_screen.py::test_cal_settings_day_range_override) but no CLI flag
+- L544 Auth (`outlook` audience) obtained before entering TUI — behaviour: missing — token is minted lazily per fetch in CalScreen._token(), not before entering the TUI
+- L545 Auth failure exits cleanly before TUI is launched — behaviour: missing — auth failure surfaces as a fetch error string inside the TUI, not a pre-launch exit
+- L546 Unknown flags produce a `UsageError` — behaviour: present via argparse (exit 2 on unknown flag) — no test in src/tests/test_launcher.py asserts it
+- L547 `tui` command marked `interactive: True` in schema — behaviour: missing — owa-tui has no command schema (owa-tools concern)
+- L548 `tui` command schema includes `auth.audience = 'outlook'` — behaviour: missing — owa-tui has no command schema (owa-tools concern)
+- L551 Terminal resize (`SIGWINCH`) handled without crashing — behaviour: present (CalScreen.on_resize → refresh(layout=True)) — no test resizes
+- L552 Empty event list shows `'(no events)'` placeholder — behaviour: present (agenda.PLACEHOLDER '(no events)') — test_empty_list_shows_placeholder asserts item_count == 0, never the placeholder text
