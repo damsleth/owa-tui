@@ -1376,3 +1376,166 @@ class TestRespondPostPath:
         calls, status = self._drive_respond(monkeypatch, "a", {"ok": True})
         assert len(calls) == 1 and "accepted" in status
         assert len(loads) == 2  # mount load + post-respond re-fetch
+
+
+# ===========================================================================
+# CalDetailPane — j/k/u/d scroll the focused detail pane (not the list)
+# ===========================================================================
+
+
+def _push_cal_app(monkeypatch: pytest.MonkeyPatch, raw_events: list, **settings: Any):
+    """App that *pushes* a CalScreen so focus/keys route to it like at runtime.
+
+    ``_make_cal_app`` yields the CalScreen inside the default screen; focus set
+    on that nested screen never receives keys, so pane-focus tests need this.
+    """
+    _patch_fetch(monkeypatch, raw_events)
+
+    from textual.app import App
+
+    class _App(App[None]):
+        def on_mount(self) -> None:
+            s = CalScreen(config={}, access_token="fake", api_base="https://fake.api")
+            s._settings = CalSettings(**settings)
+            s._persist_settings = lambda: None  # type: ignore[method-assign]
+            self.push_screen(s)
+
+    return _App()
+
+
+class TestDetailPaneScroll:
+    def test_jkud_scroll_detail_pane_when_focused(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """j/k/u/d scroll the detail pane after Enter focuses it; the list and
+        respond mode are untouched (``d`` must not read as decline here)."""
+        long_ev = {**_EV1, "BodyPreview": "\n".join(f"line {i}" for i in range(80))}
+
+        async def _run() -> dict[str, Any]:
+            app = _push_cal_app(monkeypatch, [long_ev, _EV2])
+            async with app.run_test(size=(80, 16)) as pilot:
+                await pilot.pause()
+                await pilot.pause()
+                screen = app.screen
+                assert isinstance(screen, CalScreen)
+                detail = screen._detail()
+                assert detail is not None
+                await pilot.press("enter")  # drill → focus detail pane
+                await pilot.pause()
+                await pilot.pause()
+                out: dict[str, Any] = {"focused": detail.has_focus, "max": detail.max_scroll_y}
+                await pilot.press("j")
+                await pilot.pause()
+                out["after_j"] = detail.scroll_y
+                await pilot.press("d")
+                await pilot.pause()
+                out["after_d"] = detail.scroll_y
+                await pilot.press("k")
+                await pilot.pause()
+                out["after_k"] = detail.scroll_y
+                await pilot.press("u")
+                await pilot.pause()
+                out["after_u"] = detail.scroll_y
+                out["index"] = screen._agenda()._lv().index
+                out["respond_mode"] = screen._respond_mode
+                out["status"] = screen._status
+                return out
+
+        r = asyncio.run(_run())
+        assert r["focused"]
+        assert r["max"] > 0  # body long enough to overflow the pane
+        assert r["after_j"] == 1
+        assert r["after_d"] > r["after_j"]
+        assert r["after_k"] == r["after_d"] - 1
+        assert r["after_u"] < r["after_k"]
+        assert r["index"] == 0  # keys went to the pane, not the agenda list
+        assert r["respond_mode"] is False
+        assert "declin" not in r["status"]
+
+
+
+# ===========================================================================
+# Live settings — reading_pane / split_ratio apply without re-entering
+# ===========================================================================
+
+
+async def _settle(app: Any, pilot: Any) -> None:
+    """Wait for the relayout worker and its deferred restore (no fixed sleep)."""
+    await app.workers.wait_for_complete()
+    await pilot.pause()
+    await pilot.pause()
+
+
+class TestLiveSettings:
+    def test_reading_pane_change_rebuilds_layout_and_keeps_selection(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import dataclasses
+
+        from textual.containers import Vertical
+        from textual.widgets import Static
+
+        async def _run() -> dict[str, Any]:
+            app = _push_cal_app(monkeypatch, [_EV1, _EV2], reading_pane="right")
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                await pilot.pause()
+                screen = app.screen
+                assert isinstance(screen, CalScreen)
+                screen._agenda()._lv().index = 1
+                await pilot.pause()
+                out: dict[str, Any] = {}
+
+                screen._on_setting_changed(
+                    "reading_pane", dataclasses.replace(screen._settings, reading_pane="bottom")
+                )
+                await _settle(app, pilot)
+                out["bottom_is_vertical"] = isinstance(
+                    screen.query_one("#main-container"), Vertical
+                )
+                out["bottom_event"] = (screen._current_event() or {}).get("subject")
+                detail = screen._detail()
+                assert detail is not None
+                out["bottom_detail"] = str(detail.query_one("#cal-detail-content", Static).content)
+
+                screen._on_setting_changed(
+                    "reading_pane", dataclasses.replace(screen._settings, reading_pane="off")
+                )
+                await _settle(app, pilot)
+                out["off_detail"] = screen._detail()
+                out["off_event"] = (screen._current_event() or {}).get("subject")
+                return out
+
+        r = asyncio.run(_run())
+        assert r["bottom_is_vertical"]
+        assert r["bottom_event"] == "Lunch review"  # selection survived the rebuild
+        assert "Lunch review" in r["bottom_detail"]  # detail re-rendered for it
+        assert r["off_detail"] is None  # pane removed live
+        assert r["off_event"] == "Lunch review"
+
+    def test_split_ratio_applies_in_place(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import dataclasses
+
+        async def _run() -> tuple[str, str, str]:
+            app = _push_cal_app(monkeypatch, [_EV1, _EV2], reading_pane="right", split_ratio=50)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                await pilot.pause()
+                screen = app.screen
+                assert isinstance(screen, CalScreen)
+                screen._agenda()._lv().index = 1
+                await pilot.pause()
+                screen._on_setting_changed(
+                    "split_ratio", dataclasses.replace(screen._settings, split_ratio=60)
+                )
+                await _settle(app, pilot)
+                detail = screen._detail()
+                assert detail is not None
+                return (
+                    str(screen._agenda().styles.width),
+                    str(detail.styles.width),
+                    (screen._current_event() or {}).get("subject") or "",
+                )
+
+        agenda_w, detail_w, subject = asyncio.run(_run())
+        assert "60" in agenda_w
+        assert "40" in detail_w
+        assert subject == "Lunch review"  # no rebuild → selection untouched

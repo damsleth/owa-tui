@@ -454,13 +454,58 @@ class CalScreen(Screen):
 
     def _on_setting_changed(self, field: str, new_settings: CalSettings) -> None:
         """Live callback from the overlay each time a field is cycled."""
+        old = self._settings
         self._settings = new_settings
         self._persist_settings()
         self._update_header()
+        # Apply layout-affecting settings live, without re-entering the screen.
+        if new_settings.reading_pane != old.reading_pane:
+            self._rebuild_layout()
+        elif new_settings.split_ratio != old.split_ratio:
+            self._resize_panes()
         if field in ("day_range", "show_declined"):
             self.load_events()
         else:
             self._refresh_detail()
+
+    def _resize_panes(self) -> None:
+        """Update split sizes in place (no rebuild → keeps selection + detail)."""
+        rp = self._settings.reading_pane
+        detail = self._detail()
+        if rp == "off" or detail is None:
+            return
+        agenda = self._agenda()
+        ratio = self._settings.split_ratio
+        if rp == "right":
+            agenda.styles.width = f"{ratio}%"
+            detail.styles.width = f"{100 - ratio}%"
+        else:  # bottom
+            agenda.styles.height = f"{ratio}%"
+            detail.styles.height = f"{100 - ratio}%"
+
+    def _rebuild_layout(self) -> None:
+        """Swap #main-container when the reading-pane mode changes."""
+        idx = self._agenda()._lv().index
+
+        async def _swap() -> None:
+            try:
+                old = self.query_one("#main-container")
+            except Exception:
+                return
+            await old.remove()  # await first so we never have two #main-container
+            await self.mount(self._make_layout(), before="#cal-footer")
+            # Defer: rows render at self.size.width and ListView resets its
+            # index during its own mount tick, so restore after the screen settles.
+            self.call_after_refresh(self._restore_after_relayout, idx)
+
+        self.run_worker(_swap(), exclusive=True)
+
+    def _restore_after_relayout(self, idx: int | None) -> None:
+        agenda = self._agenda()
+        agenda.update_rows(self._events, show_date=self._settings.day_range != "today")
+        if idx is not None and 0 <= idx < len(self._events):
+            agenda._lv().index = idx
+        self._refresh_detail()
 
     def action_back_to_list(self) -> None:
         """h / ← — return focus to the agenda list from the detail pane."""
