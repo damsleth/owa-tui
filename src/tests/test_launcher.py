@@ -29,6 +29,27 @@ def test_help_option_reports_usage(capsys: pytest.CaptureFixture[str]) -> None:
     assert "Textual TUI front-end" in capsys.readouterr().out
 
 
+def test_main_refuses_when_stdout_not_a_tty(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(owa_tui.sys.stdout, "isatty", lambda: False)
+    monkeypatch.setattr(owa_tui.OwaTuiApp, "run", lambda self: pytest.fail("TUI started"))
+
+    assert owa_tui.main([]) == 2
+    assert "not a terminal" in capsys.readouterr().err
+
+
+def test_version_works_when_stdout_not_a_tty(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(owa_tui.sys.stdout, "isatty", lambda: False)
+    with pytest.raises(SystemExit) as exc_info:
+        owa_tui.main(["--version"])
+
+    assert exc_info.value.code == 0
+    assert capsys.readouterr().out == f"owa-tui {owa_tui.__version__}\n"
+
+
 def test_main_runs_textual_app(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[owa_tui.OwaTuiApp] = []
 
@@ -36,6 +57,7 @@ def test_main_runs_textual_app(monkeypatch: pytest.MonkeyPatch) -> None:
         calls.append(self)
 
     monkeypatch.setattr(owa_tui.OwaTuiApp, "run", fake_run)
+    monkeypatch.setattr(owa_tui.sys.stdout, "isatty", lambda: True)
 
     owa_tui.main([])
 
@@ -50,6 +72,7 @@ def test_main_passes_tool_arg(monkeypatch: pytest.MonkeyPatch) -> None:
         calls.append(self)
 
     monkeypatch.setattr(owa_tui.OwaTuiApp, "run", fake_run)
+    monkeypatch.setattr(owa_tui.sys.stdout, "isatty", lambda: True)
     owa_tui.main(["--tool", "cal"])
 
     assert len(calls) == 1
