@@ -1,15 +1,1 @@
 # TODO
-- [ ] mail tui: date_format=custom has no UI entry path and never calls validate_custom_format — either wire it (prompt + validate, status 'invalid strftime format: …') or drop 'custom' from the cycle
-- [ ] mail tui (low): search modal only takes KQL; since/until are plumbed to build_list_query but unreachable from the UI
-- [ ] scheduling only returns 403
-- [ ] people: people details should show in a right pane by default, similar to email
-- [ ] show errors/warnings/messages at the top instead of the bottom, e.g. overlaying the top profile + email row
-- [ ] implement automated TUI design testing
-- [ ] onedrive tui: make files in onedrive viewable
-- [ ] onedrive tui: make files downloadable
-- [ ] onedrive add column view to file tree, like lf
-- [ ] the diagnostics tool should clear the list of tools before rendering the diagnostics table. now the previous page is still visible behind the table
-- [ ] the owa tui must honor disabled owa-piggy profiles. e.g. doing owa-tui --tool doctor should return disabled profiles as disabled instead of fail on all tools
-- [ ] the owa-tui diagnostics view should show all tools, not just graph, mail, cal
-- [ ] the owa-tui diagnostics view shows fail for both mail and cal for all profiles, even though both mail and calendar work fine for the enabled profiles. when focusing e.g. on the cal column for the dno profile, it shows cal fail ERROR unknown audience cal. Run owa-piggy audiences for the list of known names. which is a bug, since the column names dont correspond to audiences. create proper mappings from tool names to the corresponding audiences (for example mail, cal, people, drive and several other tools are all under the graph audience, while sites is the sharepoint audience, teams is teams audience).
-- [ ] owa-tui with an argument directly after should be treated as owa-tui --tool TOOLNAME. e.g. owa-tui cal should be interpreted as owa-tui --tool cal
