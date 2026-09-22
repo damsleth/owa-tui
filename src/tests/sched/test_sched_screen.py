@@ -32,7 +32,6 @@ from textual.widgets import DataTable, Header
 
 from owa_tui.screens.sched import (
     _CELL_STYLE,
-    _DEMO_ATTENDEES,
     _DIGIT_STATUS,
     SchedScreen,
     _next_workday,
@@ -232,9 +231,9 @@ class TestSchedScreenInit:
     def test_defaults(self) -> None:
         screen = SchedScreen()
         assert screen._tool_name == "sched"
-        assert screen._audience == "graph"
+        assert screen._audience == "outlook"
         assert screen._screen_title == "Scheduling"
-        assert screen._attendees == _DEMO_ATTENDEES
+        assert screen._attendees == []  # live path falls back to the signed-in user
         assert screen._work_start == "08:00"
         assert screen._work_end == "17:00"
 
@@ -559,3 +558,12 @@ def test_a_cancel_does_not_append() -> None:
     with patch("owa_tui.fixtures.load", return_value=_FIXTURE_VALUE):
         n0, attendees = asyncio.run(_run())
     assert len(attendees) == n0
+
+
+def test_camel_lowercases_keys_recursively_and_is_idempotent() -> None:
+    from owa_tui.screens.sched import _camel
+
+    raw = {"value": [{"ScheduleId": "a@x", "Error": {"Message": "m"}, "ScheduleItems": [{"Status": "Busy"}]}]}
+    out = _camel(raw)
+    assert out == {"value": [{"scheduleId": "a@x", "error": {"message": "m"}, "scheduleItems": [{"status": "busy".title()}]}]}
+    assert _camel(out) == out
