@@ -32,8 +32,8 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import MagicMock, patch
 
+from owa_tui.mail.settings import DATE_FORMAT_VALUES, MailSettings
 from owa_tui.mail.settings import DEFAULTS as SETTINGS_DEFAULTS
-from owa_tui.mail.settings import MailSettings
 from owa_tui.screens.mail import (
     MessageList,
     ReaderPane,
@@ -959,7 +959,7 @@ def test_handle_overlay_cycle_date_format() -> None:
             return screen.settings.date_format, before
 
     result, before = asyncio.run(_run())
-    assert result in ("iso8601", "ddmm", "ddmm_hhmm", "custom") and result != before
+    assert result in DATE_FORMAT_VALUES and result != before
 
 
 def test_handle_overlay_reset() -> None:
