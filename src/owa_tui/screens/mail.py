@@ -3,7 +3,7 @@
 Architecture
 ------------
 MailScreen(Screen)
-  ├── Header
+  ├── AppHeader
   ├── Horizontal / Vertical  (depends on settings.reading_pane)
   │   ├── MessageList(ListView)   — left/top pane
   │   └── ReaderPane(ScrollableContainer) — right/bottom (hidden when 'off')
@@ -32,7 +32,7 @@ from textual.containers import Horizontal, ScrollableContainer, Vertical
 from textual.message import Message
 from textual.reactive import reactive
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, Static
+from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 
 from owa_tui.mail.list_row import list_row
 from owa_tui.mail.settings import (
@@ -45,6 +45,7 @@ from owa_tui.mail.settings import (
     to_config_dict,
 )
 from owa_tui.mail.sort import sort_messages
+from owa_tui.widgets.app_header import AppHeader
 from owa_tui.widgets.settings_overlay import SettingsOverlay
 from owa_tui.widgets.status_bar import StatusBar
 
@@ -359,7 +360,7 @@ class ReaderScreen(Screen[None]):
         self._msg = msg
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield AppHeader()
         yield ReaderPane(id="full-reader-pane")
         yield Footer()
 
@@ -474,7 +475,7 @@ class MailScreen(Screen[None]):
     # ------------------------------------------------------------------
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield AppHeader()
         yield self._build_root()
         yield StatusBar(self.status, id="status-bar")
         yield Footer()

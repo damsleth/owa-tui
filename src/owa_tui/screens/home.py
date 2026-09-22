@@ -5,7 +5,9 @@ from __future__ import annotations
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
-from textual.widgets import Footer, Header, Label, ListItem, ListView, Static
+from textual.widgets import Footer, Label, ListItem, ListView, Static
+
+from owa_tui.widgets.app_header import AppHeader
 
 
 class HomeScreen(Screen[str]):
@@ -29,9 +31,7 @@ class HomeScreen(Screen[str]):
     def compose(self) -> ComposeResult:
         from owa_tui.screens import registered_tools
 
-        yield Header()
-        yield Label("owa-tui — Microsoft 365 terminal UI", id="home-title")
-        yield Label("Select a tool to open:", id="home-subtitle")
+        yield AppHeader()
 
         tools = registered_tools()
         if tools:

@@ -11,6 +11,17 @@ versioning.
   focus, mirroring mail; `reading_pane` and `split_ratio` settings now apply
   live without re-entering the screen.
 
+### Changed
+- **Header**: every screen now shows a permanent block-glyph `owa-tui` banner
+  with version, screen title and `profile · upn`, replacing Textual's
+  one-line `Header`. The home screen's title/"Select a tool" labels and the
+  palette's Maximize/Minimize commands are gone.
+
+### Fixed
+- **Menu**: the Esc settings overlay now follows the active theme and the
+  `ctrl+t` transparent background; `base.tcss` had pinned it to
+  `rgba(0,0,0,0.6)`, shadowing the theme-aware default CSS.
+
 ## [0.2.2] - 2026-09-21
 
 Compatibility and Python 3.10 fixes; release channel clarified.

@@ -57,8 +57,9 @@ from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
-from textual.widgets import Footer, Header, Label, RichLog
+from textual.widgets import Footer, Label, RichLog
 
+from owa_tui.widgets.app_header import AppHeader
 from owa_tui.widgets.status_bar import StatusBar
 
 # ---------------------------------------------------------------------------
@@ -182,7 +183,7 @@ class OwaThreadScreen(Screen[None]):
     # -------------------------------------------------------------------------
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield AppHeader()
         yield Label(self._breadcrumb or self._screen_title, id="thread-breadcrumb")
         yield RichLog(id="thread-log", highlight=True, markup=True, wrap=True)
         yield StatusBar(self._status, id="owa-status-bar")

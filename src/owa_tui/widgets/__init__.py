@@ -5,8 +5,9 @@ detail widgets; if a reusable ListBrowser/DetailPane is wanted for v2, rebuild
 from the spec in plan 01 §5a/§5b.
 """
 
+from owa_tui.widgets.app_header import AppHeader
 from owa_tui.widgets.menu_state import MenuState
 from owa_tui.widgets.settings_overlay import SettingsOverlay
 from owa_tui.widgets.status_bar import StatusBar
 
-__all__ = ["MenuState", "SettingsOverlay", "StatusBar"]
+__all__ = ["AppHeader", "MenuState", "SettingsOverlay", "StatusBar"]

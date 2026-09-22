@@ -53,6 +53,7 @@ from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import DataTable, Label
 
+from owa_tui.widgets.app_header import AppHeader
 from owa_tui.widgets.status_bar import StatusBar
 
 # Type alias: (column_labels, [(row_label, [cell_text, ...]), ...])
@@ -205,6 +206,7 @@ class OwaGridScreen(Screen):
     # -------------------------------------------------------------------------
 
     def compose(self) -> ComposeResult:
+        yield AppHeader()
         yield Label(self._screen_title, id="owa-grid-breadcrumb")
         tbl: DataTable[str] = DataTable(
             id="owa-grid-table",

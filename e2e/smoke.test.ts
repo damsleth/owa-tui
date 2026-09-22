@@ -15,6 +15,6 @@ test.describe("owa-tui home screen", () => {
   test.use({ program: { file: "owa-tui" } });
 
   test("launches to the tool selector", async ({ terminal }) => {
-    await expect(terminal.getByText("Select a tool to open:")).toBeVisible();
+    await expect(terminal.getByText("Graph Explorer")).toBeVisible();
   });
 });

@@ -11,12 +11,8 @@ Screen {
     color: $text;
 }
 
-Header {
-    color: $primary;
-}
-
 /* ── Content breathing room ───────────────────────────────────────────────
- * Header/Footer/StatusBar dock flush to the screen edges; only the body
+ * AppHeader/Footer/StatusBar dock flush to the screen edges; only the body
  * content is indented. Type selectors match subclasses, so this one rule
  * covers _OwaList / MessageList / PeopleList (ListView) and grid DataTables.
  * Tune the values to taste. */
