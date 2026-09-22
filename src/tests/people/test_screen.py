@@ -106,7 +106,7 @@ def test_settings_defaults() -> None:
 
 
 def test_settings_default_detail_pane() -> None:
-    assert PeopleSettings().detail_pane == "off"
+    assert PeopleSettings().detail_pane == "right"
 
 
 def test_cycle_detail_pane() -> None:
