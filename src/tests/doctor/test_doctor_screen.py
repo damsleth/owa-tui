@@ -9,7 +9,9 @@ Covers:
   - DoctorScreen.menu_config returns ("Diagnostics — settings", [])
   - fetch_grid fixture short-circuit: grid populates from doctor.json findings
   - fetch_grid empty findings path: status = "(no data)"
-  - fetch_grid live path: list_piggy_profiles + probe_profile_token mocked
+  - fetch_grid live path: get_profiles + probe_profile_token mocked; columns
+    are the registered tools, one probe per (profile, audience), disabled
+    (unregistered) profiles render "disabled" without a probe
   - Cursor movement (j/k/h/l) does not crash
   - r refresh re-runs fetch_grid (call count increases)
   - Esc opens SettingsOverlay (Resume visible)
@@ -22,6 +24,7 @@ All async helpers are wrapped in asyncio.run() — no pytest-asyncio needed
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import patch
 
@@ -30,6 +33,7 @@ from textual.widgets import DataTable, Header
 
 from owa_tui.screens.doctor import (
     _RESULT_STYLE,
+    _TOOL_AUDIENCE,
     DoctorScreen,
     _parse_grid,
 )
@@ -158,6 +162,28 @@ class TestResultStyleMapping:
 
     def test_fail_is_bold_red(self) -> None:
         assert _RESULT_STYLE["fail"] == "bold red"
+
+    def test_disabled_is_dim(self) -> None:
+        assert _RESULT_STYLE["disabled"] == "dim"
+
+
+class TestParseGridColumns:
+    def test_tool_columns_share_one_audience_finding(self) -> None:
+        findings = [
+            {"alias": "w", "audience": "outlook", "token_ok": True, "minutes_remaining": 30, "error": None},
+            {"alias": "w", "audience": "graph", "token_ok": False, "minutes_remaining": None, "error": "x"},
+        ]
+        cols, rows = _parse_grid(findings, [("mail", "outlook"), ("cal", "outlook"), ("people", "graph")])
+        assert cols == ["mail", "cal", "people"]
+        assert rows == [("w", ["ok", "ok", "fail"])]
+
+    def test_disabled_finding_classifies_as_disabled(self) -> None:
+        findings = [{"alias": "off", "audience": "graph", "token_ok": False, "disabled": True, "error": "e"}]
+        _, rows = _parse_grid(findings, [("people", "graph")])
+        assert rows == [("off", ["disabled"])]
+
+    def test_tool_audience_map_uses_known_broker_audiences(self) -> None:
+        assert set(_TOOL_AUDIENCE.values()) == {"outlook", "graph", "devops"}
 
 
 # ---------------------------------------------------------------------------
@@ -386,54 +412,79 @@ def test_status_bar_mounted() -> None:
     assert count == 1
 
 
-def test_live_path_via_mocked_probes() -> None:
-    """Live path: list_piggy_profiles + probe_profile_token mocked → grid populated."""
+def _profile(alias: str, registered: bool = True) -> SimpleNamespace:
+    return SimpleNamespace(alias=alias, default=False, registered=registered, has_config=True)
 
-    async def _run() -> tuple[int, int]:
-        fake_profiles = (["alice", "bob"], "alice")
 
-        def fake_probe(alias: str, audience: str = "graph") -> dict:
-            return {
-                "alias": alias,
-                "audience": audience,
-                "token_ok": True,
-                "minutes_remaining": 30,
-                "token_audience": "https://graph.microsoft.com",
-                "error": None,
-            }
+def _fake_probe(alias: str, audience: str = "graph") -> dict:
+    return {
+        "alias": alias,
+        "audience": audience,
+        "token_ok": True,
+        "minutes_remaining": 30,
+        "token_audience": "https://graph.microsoft.com",
+        "error": None,
+    }
 
+
+def _run_live(profiles: list[SimpleNamespace]) -> tuple[Any, list[tuple[str, str]]]:
+    """Run the live path with mocked broker; return (screen, probe calls)."""
+    calls: list[tuple[str, str]] = []
+
+    def probe(alias: str, audience: str = "graph") -> dict:
+        calls.append((alias, audience))
+        return _fake_probe(alias, audience)
+
+    async def _run() -> Any:
         app = _make_app()
         with (
             patch("owa_tui.fixtures.load", return_value=None),
-            patch("owa_doctor.probe.list_piggy_profiles", return_value=fake_profiles),
-            patch("owa_doctor.probe.probe_profile_token", side_effect=fake_probe),
+            patch("owa_core.auth.get_profiles", return_value=profiles),
+            patch("owa_doctor.probe.probe_profile_token", side_effect=probe),
         ):
             async with app.run_test(size=(120, 40)) as pilot:
                 await pilot.pause(0.5)
-                tbl = app.screen.query_one("#owa-grid-table", DataTable)
-                return tbl.row_count, len(list(tbl.columns))
+                return app.screen
 
-    rows, cols = asyncio.run(_run())
-    # 2 profiles × 3 default audiences → 2 rows, 3 data cols + 1 row-label = 4 cols
-    assert rows == 2
-    assert cols == 4
+    return asyncio.run(_run()), calls
+
+
+def test_live_path_columns_are_registered_tools() -> None:
+    """Live path: columns = every registered tool with an audience mapping."""
+    from owa_tui.screens import registered_tools
+
+    screen, _ = _run_live([_profile("alice"), _profile("bob")])
+    expected = [k for k, _ in registered_tools() if k in _TOOL_AUDIENCE]
+    assert screen._col_labels == expected
+    assert "doctor" not in screen._col_labels
+    assert [r[0] for r in screen._rows] == ["alice", "bob"]
+    assert screen._status == f"2 rows × {len(expected)} columns"
+
+
+def test_live_path_mints_once_per_profile_audience() -> None:
+    """Tools sharing an audience share one probe (no N-fold minting)."""
+    _, calls = _run_live([_profile("alice")])
+    audiences = sorted(set(_TOOL_AUDIENCE.values()))
+    assert sorted(calls) == [("alice", a) for a in audiences]
+
+
+def test_live_path_disabled_profile_not_probed() -> None:
+    """An unregistered (disabled) profile renders 'disabled' and mints nothing."""
+    screen, calls = _run_live([_profile("on"), _profile("off", registered=False)])
+    assert all(alias == "on" for alias, _ in calls)
+    rows = dict(screen._rows)
+    assert set(rows["off"]) == {"disabled"}
+    assert set(rows["on"]) == {"ok"}
+    assert screen.cell_detail("off", "mail", "disabled") == (
+        "off · mail: disabled — profile not registered in owa-piggy"
+    )
 
 
 def test_live_path_empty_profiles_returns_no_data() -> None:
-    """When list_piggy_profiles returns empty list, status shows '(no data)'."""
-
-    async def _run() -> str:
-        app = _make_app()
-        with (
-            patch("owa_tui.fixtures.load", return_value=None),
-            patch("owa_doctor.probe.list_piggy_profiles", return_value=([], None)),
-        ):
-            async with app.run_test(size=(120, 40)) as pilot:
-                await pilot.pause(0.5)
-                return app.screen._status
-
-    status = asyncio.run(_run())
-    assert "(no data)" in status or "error" in status
+    """When get_profiles returns no profiles, status shows '(no data)'."""
+    screen, calls = _run_live([])
+    assert screen._status == "(no data)"
+    assert calls == []
 
 
 # ---------------------------------------------------------------------------
@@ -455,6 +506,13 @@ def test_cell_detail_appends_minutes_remaining() -> None:
     assert screen.cell_detail("work", "graph", "warn") == (
         "work · graph: warn — 55 min left"
     )
+
+
+def test_cell_detail_resolves_tool_column_to_audience() -> None:
+    screen = DoctorScreen()
+    screen._col_audience = {"mail": "outlook", "cal": "outlook"}
+    screen._findings = {("work", "outlook"): {"error": "token expired"}}
+    assert screen.cell_detail("work", "cal", "fail") == "work · cal: fail — token expired"
 
 
 def test_cell_detail_base_when_no_finding_or_extra() -> None:

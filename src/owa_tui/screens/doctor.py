@@ -6,15 +6,18 @@ pair as reported by the local owa-piggy auth broker.
 
 Grid shape
 ----------
-  rows    = profiles (aliases) returned by list_piggy_profiles()
-  columns = fixed audience set: graph, mail, cal  (or wider if configured)
-  cells   = classify_finding() result: "ok" | "warn" | "fail"
+  rows    = profiles (aliases) from owa_core.auth.get_profiles()
+  columns = registered tools (SCREEN_REGISTRY order); each maps to the
+            owa-piggy audience its screen mints via _TOOL_AUDIENCE
+  cells   = classify_finding() result: "ok" | "warn" | "fail", or
+            "disabled" for a profile owa-piggy reports as not registered
 
 Cell styles
 -----------
-  ok   → green
-  warn → yellow
-  fail → bold red
+  ok       → green
+  warn     → yellow
+  fail     → bold red
+  disabled → dim
 
 Fixture seam
 ------------
@@ -25,11 +28,12 @@ to fixture data so the classify logic is exercised.
 
 Live path
 ---------
-Calls ``owa_doctor.probe.list_piggy_profiles()`` to enumerate profiles, then
-``probe_profile_token(alias, audience)`` for each (alias, audience) pair and
-``classify_finding(finding)`` to bucket the result.  All probes run in the
-executor thread (they are blocking subprocess/socket calls) so the event loop
-is never blocked.
+Calls ``owa_core.auth.get_profiles()`` to enumerate profiles (keeping the
+``registered`` flag so disabled profiles are shown as such, not probed), then
+``probe_profile_token(alias, audience)`` ONCE per distinct (alias, audience)
+pair and fans the classified result out to every tool column sharing that
+audience.  All probes run in the executor thread (they are blocking
+subprocess/socket calls) so the event loop is never blocked.
 """
 
 from __future__ import annotations
@@ -43,15 +47,33 @@ from owa_tui.screens.base.grid import GridData, OwaGridScreen
 # Constants
 # ---------------------------------------------------------------------------
 
-# Audiences checked by default — matches the columns visible in fixture data.
-_DEFAULT_AUDIENCES: list[str] = ["graph", "mail", "cal"]
+# Tool key (SCREEN_REGISTRY) -> owa-piggy audience the screen mints tokens for.
+# Mirrors the ``audience=`` each screen passes to access_token_for; keep in sync.
+_TOOL_AUDIENCE: dict[str, str] = {
+    "cal": "outlook",
+    "mail": "outlook",
+    "people": "graph",
+    "todo": "outlook",
+    "planner": "graph",
+    "ado": "devops",
+    "drive": "graph",
+    "sites": "graph",
+    "sched": "graph",
+    "teams": "graph",
+    "graph": "graph",
+}
 
 # Rich markup styles for probe result cells.
 _RESULT_STYLE: dict[str, str] = {
     "ok": "green",
     "warn": "yellow",
     "fail": "bold red",
+    "disabled": "dim",
 }
+
+# Cell value / finding error for a profile owa-piggy reports as not registered.
+_DISABLED = "disabled"
+_DISABLED_ERROR = "profile not registered in owa-piggy"
 
 
 # ---------------------------------------------------------------------------
@@ -59,8 +81,20 @@ _RESULT_STYLE: dict[str, str] = {
 # ---------------------------------------------------------------------------
 
 
-def _parse_grid(findings: list[dict]) -> GridData:
-    """Pivot a flat list of probe findings into a profiles x audiences GridData.
+def _classify(finding: dict) -> str:
+    """classify_finding, with a "disabled" short-circuit for unregistered profiles."""
+    from owa_doctor.probe import classify_finding  # noqa: PLC0415
+
+    if finding.get(_DISABLED):
+        return _DISABLED
+    return classify_finding(finding)
+
+
+def _parse_grid(
+    findings: list[dict],
+    columns: list[tuple[str, str]] | None = None,
+) -> GridData:
+    """Pivot a flat list of probe findings into a profiles x columns GridData.
 
     Parameters
     ----------
@@ -68,6 +102,10 @@ def _parse_grid(findings: list[dict]) -> GridData:
         List of finding dicts as returned by ``probe_profile_token`` (or loaded
         from ``doctor.json``).  Expected keys: ``alias``, ``audience``,
         ``token_ok``, ``minutes_remaining``.
+    columns:
+        Optional ``[(label, audience), ...]``.  When given, one column per
+        entry (tools sharing an audience share the finding).  When omitted,
+        columns are the distinct audiences in insertion order (fixture mode).
 
     Returns
     -------
@@ -76,8 +114,6 @@ def _parse_grid(findings: list[dict]) -> GridData:
     The REAL ``classify_finding`` is applied to each finding so the classify
     logic is exercised even in fixture mode.
     """
-    from owa_doctor.probe import classify_finding  # noqa: PLC0415
-
     if not findings:
         return [], []
 
@@ -101,14 +137,17 @@ def _parse_grid(findings: list[dict]) -> GridData:
     lookup: dict[tuple[str, str], str] = {}
     for f in findings:
         key = (f.get("alias", "?"), f.get("audience", "?"))
-        lookup[key] = classify_finding(f)
+        lookup[key] = _classify(f)
+
+    if columns is None:
+        columns = [(aud, aud) for aud in audiences]
 
     rows: list[tuple[str, list[str]]] = []
     for alias in profiles:
-        cells = [lookup.get((alias, aud), "fail") for aud in audiences]
+        cells = [lookup.get((alias, aud), "fail") for _label, aud in columns]
         rows.append((alias, cells))
 
-    return audiences, rows
+    return [label for label, _aud in columns], rows
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +185,8 @@ class DoctorScreen(OwaGridScreen):
         )
         # (alias, audience) -> finding dict, for cell_detail. Filled by fetch_grid.
         self._findings: dict[tuple[str, str], dict] = {}
+        # column label (tool) -> audience, so cell_detail can find the finding.
+        self._col_audience: dict[str, str] = {}
 
     # -------------------------------------------------------------------------
     # Abstract hook: fetch_grid
@@ -166,19 +207,30 @@ class DoctorScreen(OwaGridScreen):
             self._index_findings(raw)
             return _parse_grid(raw)
 
-        # --- live path: local probes via owa-piggy, no network/token ---
-        from owa_doctor.probe import (  # noqa: PLC0415
-            list_piggy_profiles,
-            probe_profile_token,
-        )
+        # --- live path: one token probe per (profile, audience) via owa-piggy ---
+        from owa_core.auth import get_profiles  # noqa: PLC0415
+        from owa_doctor.probe import probe_profile_token  # noqa: PLC0415
+
+        from owa_tui.screens import registered_tools  # noqa: PLC0415
+
+        columns = [(k, _TOOL_AUDIENCE[k]) for k, _ in registered_tools() if k in _TOOL_AUDIENCE]
+        audiences = list(dict.fromkeys(aud for _k, aud in columns))
+        self._col_audience = dict(columns)
 
         def _run_probes() -> list[dict]:
-            aliases, _default = list_piggy_profiles()
             results: list[dict] = []
-            for alias in aliases:
-                for audience in _DEFAULT_AUDIENCES:
-                    finding = probe_profile_token(alias, audience=audience)
-                    results.append(finding)
+            for profile in get_profiles(tool_name="owa-doctor"):
+                for audience in audiences:
+                    if profile.registered:
+                        results.append(probe_profile_token(profile.alias, audience=audience))
+                    else:
+                        results.append({
+                            "alias": profile.alias,
+                            "audience": audience,
+                            "token_ok": False,
+                            _DISABLED: True,
+                            "error": _DISABLED_ERROR,
+                        })
             return results
 
         findings = await asyncio.get_event_loop().run_in_executor(None, _run_probes)
@@ -187,7 +239,7 @@ class DoctorScreen(OwaGridScreen):
             return [], []
 
         self._index_findings(findings)
-        return _parse_grid(findings)
+        return _parse_grid(findings, columns)
 
     def _index_findings(self, findings: list[dict]) -> None:
         """Build the (alias, audience) -> finding lookup for cell_detail."""
@@ -206,7 +258,7 @@ class DoctorScreen(OwaGridScreen):
     def cell_detail(self, row_label: str, col_label: str, value: str) -> str:
         """Append the probe error / token lifetime to the base cell detail."""
         base = super().cell_detail(row_label, col_label, value)
-        f = self._findings.get((row_label, col_label))
+        f = self._findings.get((row_label, self._col_audience.get(col_label, col_label)))
         if not f:
             return base
         err = f.get("error")
