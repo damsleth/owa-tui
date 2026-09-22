@@ -70,7 +70,7 @@ class SettingsOverlay(ModalScreen[str]):
     }
 
     SettingsOverlay #overlay-box {
-        width: 50;
+        width: 52;
         height: auto;
         border: solid $border;
         background: $surface;
