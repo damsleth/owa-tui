@@ -124,6 +124,10 @@ class ReaderPane(ScrollableContainer):
         padding: 0 1;
         border-left: solid $border;
     }
+    /* Active pane: j/k scroll here, not the list. */
+    ReaderPane:focus {
+        border-left: thick $primary;
+    }
     """
 
     BINDINGS = [
@@ -721,8 +725,12 @@ class MailScreen(Screen[None]):
             )
             self.app.call_from_thread(lambda: setattr(self, "mode", "list"))
 
-    def _show_cached_body(self, msg_id: str) -> None:
-        """Display cached body in reading pane or push ReaderScreen."""
+    def _show_cached_body(self, msg_id: str, *, focus: bool = True) -> None:
+        """Display cached body in reading pane or push ReaderScreen.
+
+        ``focus`` moves keyboard focus into the pane (Enter/l); the list's
+        cursor-follow preview passes ``focus=False`` so j/k keep moving the list.
+        """
         full_msg = self._body_cache.get(msg_id)
         if full_msg is None:
             self._on_body_failed()
@@ -735,6 +743,8 @@ class MailScreen(Screen[None]):
                 pane = self.query_one("#reader-pane", ReaderPane)
                 pane.show_message(full_msg)
                 self.mode = "reader"
+                if focus:
+                    pane.focus()
             except Exception:
                 self.app.push_screen(ReaderScreen(full_msg))
 
@@ -1041,7 +1051,7 @@ class MailScreen(Screen[None]):
         if self.settings.reading_pane != "off":
             msg_id = event.msg.get("id") or ""
             if msg_id and msg_id in self._body_cache:
-                self._show_cached_body(msg_id)
+                self._show_cached_body(msg_id, focus=False)
 
     def on_message_list_item_activated(self, event: MessageList.ItemActivated) -> None:
         self._selected_msg = event.msg

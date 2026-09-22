@@ -18,6 +18,10 @@ versioning.
   palette's Maximize/Minimize commands are gone.
 
 ### Fixed
+- **Mail**: Enter/`l` now move focus into the reading pane (highlighted
+  with a primary border), so `j`/`k`/`u`/`d`/`g`/`G` scroll the message
+  instead of the list; `h` hands focus back. Cursor-follow preview no longer
+  steals focus.
 - **Menu**: the Esc settings overlay now follows the active theme and the
   `ctrl+t` transparent background; `base.tcss` had pinned it to
   `rgba(0,0,0,0.6)`, shadowing the theme-aware default CSS.
