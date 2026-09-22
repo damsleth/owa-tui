@@ -26,6 +26,7 @@ from owa_tui.screens.cal.agenda import AgendaItemDrilled, AgendaItemSelected, Ag
 from owa_tui.screens.cal.detail import CalDetailPane
 from owa_tui.screens.cal.fetch import fetch_events, range_title
 from owa_tui.screens.cal.settings import CalSettings
+from owa_tui.widgets.app_header import AppHeader
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -194,6 +195,7 @@ class CalScreen(Screen):
     # ------------------------------------------------------------------
 
     def compose(self) -> ComposeResult:
+        yield AppHeader()
         yield Label(range_title(self._settings.day_range), id="cal-header")
         yield self._make_layout()
         yield Label(HELP_LINE, id="cal-footer")

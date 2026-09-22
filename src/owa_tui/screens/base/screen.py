@@ -77,9 +77,10 @@ from textual.binding import Binding
 from textual.containers import Horizontal, ScrollableContainer, Vertical
 from textual.reactive import reactive
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, Static
+from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 
 from owa_tui.screens.base.keys import LIST_BINDINGS
+from owa_tui.widgets.app_header import AppHeader
 from owa_tui.widgets.status_bar import StatusBar
 
 # ---------------------------------------------------------------------------
@@ -154,7 +155,7 @@ class _FullDetailScreen(Screen[None]):
         self._title = title
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield AppHeader()
         with ScrollableContainer(id="full-detail-scroll"):
             yield Static(self._content, id="full-detail-content")
         yield Footer()
@@ -473,7 +474,7 @@ class OwaListScreen(Screen[None]):
     # -------------------------------------------------------------------------
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield AppHeader()
         yield self._build_layout()
         yield StatusBar(self._status, id="owa-status-bar")
         yield Footer()

@@ -98,23 +98,6 @@ def test_app_starts_with_home_screen() -> None:
     assert "HomeScreen" in screen_names
 
 
-def test_home_screen_contains_title() -> None:
-    """HomeScreen should render the owa-tui title label."""
-
-    async def run_home() -> list[str]:
-        app = owa_tui.OwaTuiApp()
-        async with app.run_test() as pilot:
-            await pilot.pause()
-            from textual.widgets import Label
-
-            # Labels live on the active screen, not directly on the app
-            return [str(label.render()) for label in app.screen.query(Label)]
-
-    labels = asyncio.run(run_home())
-    # At least one label should contain the app title text
-    assert any("owa-tui" in lbl for lbl in labels)
-
-
 def test_push_tool_unknown_key_notifies(monkeypatch: pytest.MonkeyPatch) -> None:
     """push_tool with an unknown key should call notify (not crash)."""
     notifications: list[str] = []
@@ -210,3 +193,24 @@ def test_load_identity_sets_header_subtitle() -> None:
             return app.sub_title
 
     assert asyncio.run(_run()) == "crayon  ·  me@crayon.no"
+
+
+def test_app_header_and_no_maximize_command() -> None:
+    """Every screen carries the AppHeader; Maximize/Minimize are not offered."""
+    from owa_tui.widgets.app_header import AppHeader
+
+    async def _run() -> tuple[str, set[str]]:
+        app = owa_tui.OwaTuiApp(config={})
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            header = app.screen.query_one(AppHeader)
+            app.sub_title = "crayon  ·  me@crayon.no"
+            await pilot.pause()
+            titles = {c.title for c in app.get_system_commands(app.screen)}
+            return header.render().plain, titles
+
+    plain, titles = asyncio.run(_run())
+    assert f"v{owa_tui.__version__}" in plain
+    assert "me@crayon.no" in plain
+    assert not titles & {"Maximize", "Minimize"}
+    assert "Theme" in titles

@@ -25,7 +25,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, ScrollableContainer
 from textual.screen import Screen
-from textual.widgets import Footer, Header, Input, ListItem, ListView, Static
+from textual.widgets import Footer, Input, ListItem, ListView, Static
 
 from owa_tui.graph.actions import (
     action_bookmark,
@@ -37,6 +37,7 @@ from owa_tui.graph.fetch import AUDIENCE_API_BASE, fetch_items
 from owa_tui.graph.nav import Row, on_back, on_drill
 from owa_tui.graph.settings import GraphSettings
 from owa_tui.graph.state import GraphState
+from owa_tui.widgets.app_header import AppHeader
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -247,7 +248,7 @@ class GraphScreen(Screen[None]):
     # ------------------------------------------------------------------
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield AppHeader()
         yield Static("", id="breadcrumb")
         with Horizontal(id="main-area"):
             with ScrollableContainer(id="list-pane"):

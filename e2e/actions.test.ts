@@ -17,22 +17,22 @@ test.describe("home", () => {
   test.use({ program: { file: "owa-tui" }, env, ...size });
 
   test("lists the registered tools", async ({ terminal }) => {
-    await expect(terminal.getByText("Select a tool to open:")).toBeVisible();
+    await expect(terminal.getByText("Graph Explorer")).toBeVisible();
     await expect(terminal.getByText("Calendar")).toBeVisible();
     await expect(terminal.getByText("Mail")).toBeVisible();
     await expect(terminal.getByText("Graph Explorer")).toBeVisible();
   });
 
   test("j/k move the cursor and Enter opens a tool", async ({ terminal }) => {
-    await expect(terminal.getByText("Select a tool to open:")).toBeVisible();
+    await expect(terminal.getByText("Graph Explorer")).toBeVisible();
     terminal.submit(); // Enter -> open first tool (Calendar)
     await expect(terminal.getByText("owa-cal")).toBeVisible();
   });
 
   test("q quits", async ({ terminal }) => {
-    await expect(terminal.getByText("Select a tool to open:")).toBeVisible();
+    await expect(terminal.getByText("Graph Explorer")).toBeVisible();
     terminal.write("q");
-    await expect(terminal.getByText("Select a tool to open:")).not.toBeVisible();
+    await expect(terminal.getByText("Graph Explorer")).not.toBeVisible();
   });
 });
 

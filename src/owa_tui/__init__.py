@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import argparse
 import sys
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from typing import Any
 
 from textual import work
-from textual.app import App, ComposeResult
-from textual.widgets import Footer, Header
+from textual.app import App, ComposeResult, SystemCommand
+from textual.screen import Screen
+from textual.widgets import Footer
+
+from owa_tui.widgets.app_header import AppHeader
 
 __version__ = "0.2.2"
 
@@ -87,6 +90,13 @@ class OwaTuiApp(App[None]):
         data["theme"] = theme
         app_config.save(data)
 
+    def get_system_commands(self, screen: Screen) -> Iterable[SystemCommand]:
+        """Palette without Maximize/Minimize: with a permanent header they only
+        hid per-tool chrome inconsistently and served no purpose."""
+        for cmd in super().get_system_commands(screen):
+            if cmd.title not in ("Maximize", "Minimize"):
+                yield cmd
+
     def action_toggle_transparency(self) -> None:
         """Toggle a transparent (native terminal) background on and off.
 
@@ -113,11 +123,11 @@ class OwaTuiApp(App[None]):
             app_config.save(data)
 
     # ------------------------------------------------------------------
-    # Composition — minimal shell; screens provide their own Header/Footer
+    # Composition — minimal shell; screens provide their own AppHeader/Footer
     # ------------------------------------------------------------------
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield AppHeader()
         yield Footer()
 
     def on_mount(self) -> None:

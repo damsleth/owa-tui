@@ -3,7 +3,7 @@
 Architecture
 ------------
 PeopleScreen(Screen)
-  ├── Header
+  ├── AppHeader
   ├── Horizontal / Vertical  (depends on settings.detail_pane)
   │   ├── PeopleList(ListView)   — left/top pane
   │   └── DetailPane(ScrollableContainer) — right/bottom (hidden when 'off')
@@ -31,7 +31,7 @@ from textual.containers import Horizontal, ScrollableContainer, Vertical
 from textual.message import Message
 from textual.reactive import reactive
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, Static
+from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 
 from owa_tui.people.settings import (
     DEFAULTS as SETTINGS_DEFAULTS,
@@ -42,6 +42,7 @@ from owa_tui.people.settings import (
     from_config,
     to_config_dict,
 )
+from owa_tui.widgets.app_header import AppHeader
 from owa_tui.widgets.settings_overlay import SettingsOverlay
 from owa_tui.widgets.status_bar import StatusBar
 
@@ -293,7 +294,7 @@ class DetailScreen(Screen[None]):
         self._person = person
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield AppHeader()
         yield DetailPane(id="full-detail-pane")
         yield Footer()
 
@@ -397,7 +398,7 @@ class PeopleScreen(Screen[None]):
     # ------------------------------------------------------------------
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield AppHeader()
         yield self._build_layout()
         yield StatusBar(self.status, id="status-bar")
         yield Footer()
