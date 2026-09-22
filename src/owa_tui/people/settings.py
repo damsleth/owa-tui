@@ -20,7 +20,7 @@ SORT_BY_VALUES: Final[tuple[str, ...]] = ("name_asc", "name_desc", "email_asc")
 class PeopleSettings:
     """Immutable people screen settings."""
 
-    detail_pane: str = "off"   # 'right' | 'bottom' | 'off'
+    detail_pane: str = "right"  # 'right' | 'bottom' | 'off'
     split_ratio: int = 50      # 40 | 50 | 60  (% for the list pane)
     sort_by: str = "name_asc"
 
