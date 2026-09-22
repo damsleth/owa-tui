@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from owa_tui.mail.settings import (
+    DATE_FORMAT_VALUES,
     DEFAULTS,
     MailSettings,
     cycle,
@@ -119,6 +120,13 @@ class TestFromConfig:
     def test_reads_date_format(self) -> None:
         s = from_config({"tui_date_format": "ddmm"})
         assert s.date_format == "ddmm"
+
+    def test_custom_date_format_is_config_only(self) -> None:
+        """tui_date_format=custom still loads from config but is never cycled to."""
+        assert "custom" not in DATE_FORMAT_VALUES
+        s = from_config({"tui_date_format": "custom", "tui_date_custom": "%d.%m"})
+        assert (s.date_format, s.date_custom) == ("custom", "%d.%m")
+        assert cycle(s, "date_format").date_format in DATE_FORMAT_VALUES
 
     def test_reads_date_custom(self) -> None:
         s = from_config({"tui_date_custom": "%Y/%m/%d"})

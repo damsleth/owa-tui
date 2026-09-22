@@ -22,7 +22,9 @@ SORT_BY_VALUES: Final[tuple[str, ...]] = (
     "subject",
     "unread_first",
 )
-DATE_FORMAT_VALUES: Final[tuple[str, ...]] = ("iso8601", "ddmm", "ddmm_hhmm", "custom")
+DATE_FORMAT_VALUES: Final[tuple[str, ...]] = ("iso8601", "ddmm", "ddmm_hhmm")
+# "custom" (+ tui_date_custom strftime) is config-file only; not offered in the overlay.
+_DATE_FORMAT_CONFIG_VALUES: Final[tuple[str, ...]] = (*DATE_FORMAT_VALUES, "custom")
 SHOW_FOLDERS_VALUES: Final[tuple[bool, ...]] = (False, True)
 
 _CONFIG_KEYS: Final[dict[str, str]] = {
@@ -105,7 +107,7 @@ def from_config(config: dict) -> MailSettings:
         sort_by = DEFAULTS.sort_by
 
     date_format = config.get("tui_date_format", DEFAULTS.date_format)
-    if date_format not in DATE_FORMAT_VALUES:
+    if date_format not in _DATE_FORMAT_CONFIG_VALUES:
         date_format = DEFAULTS.date_format
 
     date_custom = config.get("tui_date_custom", DEFAULTS.date_custom)

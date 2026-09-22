@@ -538,8 +538,6 @@ class MailScreen(Screen[None]):
     def _fetch_list(
         self,
         search: str = "",
-        since: str = "",
-        until: str = "",
         skip: int = 0,
         append: bool = False,
     ) -> None:
@@ -566,8 +564,6 @@ class MailScreen(Screen[None]):
 
             params = build_list_query(
                 search=search,
-                since=since,
-                until=until,
                 limit=PAGE_SIZE,
             )
             if skip:
