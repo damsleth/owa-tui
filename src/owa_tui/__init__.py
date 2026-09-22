@@ -199,6 +199,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Launch directly into a specific tool screen.",
     )
     parser.add_argument(
+        "tool_positional",
+        nargs="?",
+        choices=tool_choices,
+        default=None,
+        metavar="TOOL",
+        help="Shorthand for --tool TOOL.",
+    )
+    parser.add_argument(
         "--profile",
         default=None,
         metavar="ALIAS",
@@ -209,9 +217,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int | None:
     """Run the owa-tui application."""
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.tool and args.tool_positional and args.tool != args.tool_positional:
+        parser.error(f"conflicting tools: {args.tool_positional!r} and --tool {args.tool!r}")
+    tool = args.tool_positional or args.tool
     if not sys.stdout.isatty():
         print("owa-tui: stdout is not a terminal; refusing to start the TUI.", file=sys.stderr)
         return 2
     config = {"owa_piggy_profile": args.profile} if args.profile else None
-    OwaTuiApp(config=config, tool=args.tool, debug=args.debug).run()
+    OwaTuiApp(config=config, tool=tool, debug=args.debug).run()

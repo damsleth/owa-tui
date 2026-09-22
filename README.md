@@ -24,6 +24,7 @@ pip install git+https://github.com/damsleth/owa-tui
 owa-tui --help
 owa-tui --version
 owa-tui
+owa-tui cal          # or: owa-tui --tool cal
 ```
 
 Running `owa-tui` starts the Textual shell. No Microsoft Graph or broker calls
