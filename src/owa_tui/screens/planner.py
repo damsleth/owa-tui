@@ -141,7 +141,7 @@ class PlannerScreen(OwaListScreen):
     async def fetch_items(self, search: str = "") -> list[dict]:
         """Fetch tasks from Microsoft Graph Planner; returns normalized list."""
         from owa_tui import fixtures  # noqa: PLC0415
-        from owa_tui.adapter import access_token_for  # noqa: PLC0415
+        from owa_tui.adapter import access_token_for, retrying  # noqa: PLC0415
 
         token = access_token_for(
             self._config, tool_name=self._tool_name, audience=self._audience
@@ -156,7 +156,7 @@ class PlannerScreen(OwaListScreen):
             from owa_planner.api import api_get  # type: ignore[import]  # noqa: PLC0415
 
             endpoint = f"me/planner/tasks?{build_query({'$top': 50})}"
-            raw = api_get(GRAPH_BASE, endpoint, token, debug=self._debug)
+            raw = retrying(lambda: api_get(GRAPH_BASE, endpoint, token, debug=self._debug))
 
         if raw is None:
             return []

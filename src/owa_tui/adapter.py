@@ -1,13 +1,56 @@
 """Adapter layer: the single sanctioned seam onto the owa-tools stable library.
 
-Only token minting lives here. Per-tool data fetching lives in each screen's
+Token minting and the shared 429 retry wrapper live here. Per-tool data fetching lives in each screen's
 own fetch module (``screens/cal/fetch.py``, mail inline, ``graph/fetch.py``,
 people inline) — see plan 20: v2 tools each get their own ``adapter.py``.
 """
 
 from __future__ import annotations
 
-from typing import Any
+import time
+from collections.abc import Callable
+from typing import Any, TypeVar
+
+T = TypeVar("T")
+
+# Graph's per-mailbox concurrency budget (4 in-flight requests) is shared by
+# every client using the same app id — and owa-piggy's token carries the
+# "One Outlook Web" app id, i.e. the same one as Outlook web in the browser.
+RATE_LIMIT_HINT = (
+    "rate limited (429): this mailbox's request budget is shared with Outlook "
+    "web in the browser — close it or retry in a few seconds"
+)
+
+
+def retrying(
+    fn: Callable[[], T],
+    *,
+    on_wait: Callable[[str], None] | None = None,
+    attempts: int = 3,
+    sleep: Callable[[float], None] = time.sleep,
+) -> T:
+    """Call *fn*; on ``RateLimitedError`` wait and retry, up to *attempts* tries.
+
+    Blocking — call from a worker thread. After the last attempt re-raises a
+    ``RateLimitedError`` carrying :data:`RATE_LIMIT_HINT` so the status bar
+    explains the cause instead of a bare "rate limited (429)".
+    """
+    from owa_core.errors import RateLimitedError  # type: ignore[import]  # noqa: PLC0415
+
+    # ponytail: the owa_core exception drops the Retry-After header; Graph
+    # sends 5s for MailboxConcurrency. Upgrade path: owa_core attaches
+    # retry_after to RateLimitedError, read it here.
+    wait = 5
+    for i in range(1, attempts + 1):
+        try:
+            return fn()
+        except RateLimitedError as exc:
+            if i == attempts:
+                raise RateLimitedError(RATE_LIMIT_HINT) from exc
+            if on_wait is not None:
+                on_wait(f"rate limited — retrying in {wait}s ({i}/{attempts - 1})")
+            sleep(wait)
+    raise AssertionError("unreachable")
 
 
 def access_token_for(config: dict[str, Any], *, tool_name: str, audience: str) -> str:

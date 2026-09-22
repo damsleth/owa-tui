@@ -10,6 +10,7 @@ No Textual imports — fully unit-testable without a running app.
 
 from __future__ import annotations
 
+from owa_tui.adapter import retrying
 from owa_tui.graph.auth import _ensure_token
 from owa_tui.graph.nav import build_rows, classify_response, extract_next_link
 from owa_tui.graph.state import GraphState
@@ -99,12 +100,15 @@ def fetch_items(state: GraphState) -> None:
         if result is None:
             from owa_graph.api import api_request  # type: ignore[import]
 
-            result = api_request(
-                "GET",
-                api_base,
-                url.replace(api_base, "").lstrip("/") if url.startswith(api_base) else url,
-                access_token,
-                debug=state.debug,
+            result = retrying(
+                lambda: api_request(
+                    "GET",
+                    api_base,
+                    url.replace(api_base, "").lstrip("/") if url.startswith(api_base) else url,
+                    access_token,
+                    debug=state.debug,
+                ),
+                on_wait=lambda m: setattr(state, "status", m),
             )
         # api_request may return the parsed dict/list or raise on HTTP error
         state.response = result

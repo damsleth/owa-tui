@@ -34,6 +34,7 @@ from textual.reactive import reactive
 from textual.screen import ModalScreen, Screen
 from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 
+from owa_tui.adapter import access_token_for, retrying
 from owa_tui.mail.list_row import list_row
 from owa_tui.mail.settings import (
     DEFAULTS as SETTINGS_DEFAULTS,
@@ -576,7 +577,10 @@ class MailScreen(Screen[None]):
 
             raw = fixtures.load("mail")
             if raw is None:
-                raw = api_get(self._api_base, path, token, debug=self._debug)
+                raw = retrying(
+                    lambda: api_get(self._api_base, path, token, debug=self._debug),
+                    on_wait=self._wait_status,
+                )
             if raw is None:
                 if append:
                     self.app.call_from_thread(self._finish_more)
@@ -631,7 +635,9 @@ class MailScreen(Screen[None]):
 
             raw = fixtures.load("mail_folders")
             if raw is None:
-                raw = api_get(self._api_base, f"me/MailFolders?{q}", token, debug=self._debug)
+                raw = retrying(
+                    lambda: api_get(self._api_base, f"me/MailFolders?{q}", token, debug=self._debug)
+                )
             if raw is None:
                 return
             folders = normalize_folders(raw)
@@ -648,9 +654,11 @@ class MailScreen(Screen[None]):
 
     def _get_token_sync(self) -> str:
         """Mint a fresh auth token via owa-piggy (runs in worker thread)."""
-        from owa_tui.adapter import access_token_for  # noqa: PLC0415
-
         return access_token_for(self._config, tool_name="owa-mail", audience="outlook")
+
+    def _wait_status(self, msg: str) -> None:
+        """Status-bar callback for ``retrying`` (worker thread → main thread)."""
+        self.app.call_from_thread(setattr, self, "status", msg)
 
     def _apply_messages(self, msgs: list[dict], search: str) -> None:
         """Called on main thread after a fresh (non-append) list fetch."""
@@ -710,7 +718,10 @@ class MailScreen(Screen[None]):
 
             raw = fixtures.load("mail_body")
             if raw is None:
-                raw = api_get(self._api_base, path, token, debug=self._debug)
+                raw = retrying(
+                    lambda: api_get(self._api_base, path, token, debug=self._debug),
+                    on_wait=self._wait_status,
+                )
             if raw is None:
                 self.app.call_from_thread(self._on_body_failed)
                 return
@@ -765,13 +776,15 @@ class MailScreen(Screen[None]):
             token = self._get_token_sync()
             if not token:
                 return
-            api_request(
-                "PATCH",
-                self._api_base,
-                f"me/messages/{msg_id}",
-                token,
-                body={"IsRead": new_read},
-                debug=self._debug,
+            retrying(
+                lambda: api_request(
+                    "PATCH",
+                    self._api_base,
+                    f"me/messages/{msg_id}",
+                    token,
+                    body={"IsRead": new_read},
+                    debug=self._debug,
+                )
             )
         except Exception:
             pass  # optimistic update already applied locally

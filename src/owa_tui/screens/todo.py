@@ -148,7 +148,7 @@ class TodoScreen(OwaListScreen):
     async def fetch_items(self, search: str = "") -> list[dict]:
         """Fetch tasks from Outlook REST; returns normalized list of dicts."""
         from owa_tui import fixtures  # noqa: PLC0415
-        from owa_tui.adapter import access_token_for  # noqa: PLC0415
+        from owa_tui.adapter import access_token_for, retrying  # noqa: PLC0415
 
         token = access_token_for(
             self._config, tool_name=self._tool_name, audience=self._audience
@@ -162,7 +162,7 @@ class TodoScreen(OwaListScreen):
             from owa_todo.api import api_get, build_query  # type: ignore[import]  # noqa: PLC0415
 
             endpoint = f"me/tasks?{build_query({'$top': 50})}"
-            raw = api_get(API_BASE, endpoint, token, debug=self._debug)
+            raw = retrying(lambda: api_get(API_BASE, endpoint, token, debug=self._debug))
 
         if raw is None:
             return []
@@ -251,13 +251,17 @@ class TodoScreen(OwaListScreen):
             try:
                 from owa_todo.api import api_request  # type: ignore[import]  # noqa: PLC0415
 
-                from owa_tui.adapter import access_token_for  # noqa: PLC0415
+                from owa_tui.adapter import access_token_for, retrying  # noqa: PLC0415
 
                 token = access_token_for(config, tool_name=tool_name, audience=audience)
                 if not token:
                     return
                 endpoint = f"me/tasks/{urllib.parse.quote(task_id, safe='')}"
-                api_request("PATCH", API_BASE, endpoint, token, body={"Status": new_status}, debug=debug)
+                retrying(
+                    lambda: api_request(
+                        "PATCH", API_BASE, endpoint, token, body={"Status": new_status}, debug=debug
+                    )
+                )
             except Exception:
                 pass
 

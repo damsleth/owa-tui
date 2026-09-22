@@ -217,7 +217,7 @@ class SchedScreen(OwaGridScreen):
         from owa_sched.api import api_post  # type: ignore[import]  # noqa: PLC0415
         from owa_sched.dates import make_local_iso  # type: ignore[import]  # noqa: PLC0415
 
-        from owa_tui.adapter import access_token_for  # noqa: PLC0415
+        from owa_tui.adapter import access_token_for, retrying  # noqa: PLC0415
 
         token = access_token_for(
             self._config, tool_name="owa-sched", audience=self._audience
@@ -239,12 +239,14 @@ class SchedScreen(OwaGridScreen):
 
         payload = await asyncio.get_event_loop().run_in_executor(
             None,
-            lambda: api_post(
-                _GRAPH_BASE,
-                "me/calendar/getSchedule",
-                token,
-                body=body,
-                debug=self._debug,
+            lambda: retrying(
+                lambda: api_post(
+                    _GRAPH_BASE,
+                    "me/calendar/getSchedule",
+                    token,
+                    body=body,
+                    debug=self._debug,
+                )
             ),
         )
 
