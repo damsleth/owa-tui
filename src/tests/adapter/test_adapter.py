@@ -166,3 +166,31 @@ def test_live_access_token_is_usable_jwt(monkeypatch) -> None:
     token = access_token_for({}, tool_name="owa-tui", audience="graph")
     assert token and token.count(".") >= 2, "expected a JWT from the live broker"
     assert _upn_from_jwt(token), "live token has no UPN/preferred_username claim"
+
+
+def test_retrying_retries_on_rate_limit_then_succeeds() -> None:
+    from owa_core.errors import RateLimitedError
+
+    from owa_tui.adapter import RATE_LIMIT_HINT, retrying
+
+    calls = {"n": 0}
+    waits: list[str] = []
+    slept: list[float] = []
+
+    def flaky() -> str:
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise RateLimitedError("rate limited (429)")
+        return "ok"
+
+    assert retrying(flaky, on_wait=waits.append, sleep=slept.append) == "ok"
+    assert calls["n"] == 3
+    assert slept == [5, 5]
+    assert waits == ["rate limited — retrying in 5s (1/2)", "rate limited — retrying in 5s (2/2)"]
+
+    def always() -> str:
+        raise RateLimitedError("rate limited (429)")
+
+    with pytest.raises(RateLimitedError, match="Outlook web"):
+        retrying(always, sleep=lambda _s: None)
+    assert "Outlook web" in RATE_LIMIT_HINT

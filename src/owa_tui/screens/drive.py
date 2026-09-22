@@ -185,14 +185,14 @@ class DriveScreen(OwaTreeScreen):
                 children_endpoint,
             )
 
-            from owa_tui.adapter import access_token_for  # noqa: PLC0415
+            from owa_tui.adapter import access_token_for, retrying  # noqa: PLC0415
 
             if not self._token:
                 self._token = access_token_for(
                     self._config, tool_name=self._tool_name, audience=self._audience
                 )
             endpoint = children_endpoint(path)
-            raw = api_request("GET", _GRAPH_BASE, endpoint, self._token)
+            raw = retrying(lambda: api_request("GET", _GRAPH_BASE, endpoint, self._token))
 
         if raw is None:
             return []

@@ -378,13 +378,17 @@ class CalScreen(Screen):
             token = await asyncio.to_thread(self._token)
 
             def _call() -> Any:
-                return api_request(
-                    "POST",
-                    self._api_base,
-                    endpoint,
-                    token,
-                    body=body,
-                    debug=self._debug,
+                from owa_tui.adapter import retrying  # noqa: PLC0415
+
+                return retrying(
+                    lambda: api_request(
+                        "POST",
+                        self._api_base,
+                        endpoint,
+                        token,
+                        body=body,
+                        debug=self._debug,
+                    )
                 )
 
             from owa_tui import fixtures  # noqa: PLC0415

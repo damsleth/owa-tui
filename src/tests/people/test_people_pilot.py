@@ -804,7 +804,7 @@ def test_get_token_sync_delegates_to_adapter() -> None:
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause(0.1)
             screen: PeopleScreen = app.screen  # type: ignore[assignment]
-            with patch("owa_tui.adapter.access_token_for", return_value="minted"):
+            with patch("owa_tui.screens.people.access_token_for", return_value="minted"):
                 return screen._get_token_sync()
 
     assert asyncio.run(_run()) == "minted"

@@ -33,6 +33,7 @@ from textual.reactive import reactive
 from textual.screen import ModalScreen, Screen
 from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 
+from owa_tui.adapter import access_token_for, retrying
 from owa_tui.people.settings import (
     DEFAULTS as SETTINGS_DEFAULTS,
 )
@@ -467,12 +468,15 @@ class PeopleScreen(Screen[None]):
 
             raw = fixtures.load("people")
             if raw is None:
-                raw = api_get(
-                    self._api_base,
-                    endpoint,
-                    token,
-                    extra_headers=headers,
-                    debug=self._debug,
+                raw = retrying(
+                    lambda: api_get(
+                        self._api_base,
+                        endpoint,
+                        token,
+                        extra_headers=headers,
+                        debug=self._debug,
+                    ),
+                    on_wait=self._wait_status,
                 )
             if raw is None:
                 self.app.call_from_thread(
@@ -489,9 +493,11 @@ class PeopleScreen(Screen[None]):
 
     def _get_token_sync(self) -> str:
         """Mint a fresh auth token via owa-piggy (runs in worker thread)."""
-        from owa_tui.adapter import access_token_for  # noqa: PLC0415
-
         return access_token_for(self._config, tool_name="owa-people", audience="graph")
+
+    def _wait_status(self, msg: str) -> None:
+        """Status-bar callback for ``retrying`` (worker thread → main thread)."""
+        self.app.call_from_thread(setattr, self, "status", msg)
 
     def _apply_people(self, persons: list[dict], search: str) -> None:
         """Called on main thread after successful list fetch."""
@@ -523,7 +529,10 @@ class PeopleScreen(Screen[None]):
 
             raw = fixtures.load("people_detail")
             if raw is None:
-                raw = api_get(self._api_base, path, token, debug=self._debug)
+                raw = retrying(
+                    lambda: api_get(self._api_base, path, token, debug=self._debug),
+                    on_wait=self._wait_status,
+                )
             if raw is None:
                 self.app.call_from_thread(self._on_detail_failed)
                 return

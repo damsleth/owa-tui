@@ -124,7 +124,9 @@ async def fetch_events(
         endpoint = f"me/calendarView?{q}"
 
         def _call() -> Any:
-            return api_get(api_base, endpoint, access_token, debug=debug)
+            from owa_tui.adapter import retrying  # noqa: PLC0415
+
+            return retrying(lambda: api_get(api_base, endpoint, access_token, debug=debug))
 
         from owa_tui import fixtures  # noqa: PLC0415
 
