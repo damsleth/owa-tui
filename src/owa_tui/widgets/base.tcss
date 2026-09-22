@@ -47,29 +47,11 @@ DetailPane {
 }
 
 /* ── Overlay ──────────────────────────────────────────────────────────── */
+/* The Screen rule above also matches ModalScreen and would paint $surface
+ * (== 'transparent' in ansi themes). Opaque $background follows the theme
+ * and is the terminal's own colour under ansi-dark, so ctrl+t works here. */
 SettingsOverlay {
-    align: center middle;
-    background: rgba(0,0,0,0.6);
-}
-
-SettingsOverlay > #overlay-box {
-    width: 52;
-    height: auto;
-    border: solid $border;
-    background: $surface;
-    padding: 1 2;
+    background: $background;
 }
 
 /* ── Home screen ──────────────────────────────────────────────────────── */
-#home-title {
-    text-align: center;
-    color: $primary;
-    text-style: bold;
-    padding: 1 0;
-}
-
-#home-subtitle {
-    text-align: center;
-    color: $text-muted;
-    padding: 0 0 1 0;
-}

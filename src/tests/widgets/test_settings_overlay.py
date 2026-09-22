@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+from pathlib import Path
 
 from textual.app import App, ComposeResult
+from textual.color import Color
 from textual.widgets import Label
 
+import owa_tui
 from owa_tui.widgets.settings_overlay import SettingsOverlay
 
 
@@ -18,6 +21,9 @@ class FakeSettings:
 
 class _OverlayApp(App[None]):
     """Host app that can push a SettingsOverlay and capture the result."""
+
+    # Load the real app stylesheet so tests catch base.tcss shadowing DEFAULT_CSS.
+    CSS_PATH = str(Path(owa_tui.__file__).parent / "widgets" / "base.tcss")
 
     def __init__(self) -> None:
         super().__init__()
@@ -267,3 +273,27 @@ def test_settings_overlay_action_field_dismisses() -> None:
             return app.result
 
     assert asyncio.run(run()) == "reset"
+
+
+def test_overlay_background_follows_theme() -> None:
+    """Regression: base.tcss once pinned the overlay to rgba(0,0,0,0.6),
+    ignoring the theme and painting black over a transparent terminal."""
+
+    async def run() -> None:
+        app = _OverlayApp()
+        async with app.run_test() as pilot:
+            for theme in ("textual-light", "ansi-dark"):
+                app.theme = theme
+                app.show_overlay()
+                await pilot.pause()
+                overlay = app.screen
+                assert isinstance(overlay, SettingsOverlay)
+                expected = app.get_css_variables()["background"]
+                # Full Color compare keeps the ansi flag: ansi_default is what makes
+                # the transparent-terminal toggle work, and a plain black also hexes
+                # to #000000.
+                assert overlay.styles.background == Color.parse(expected)
+                app.pop_screen()
+                await pilot.pause()
+
+    asyncio.run(run())
