@@ -79,6 +79,23 @@ def test_main_passes_tool_arg(monkeypatch: pytest.MonkeyPatch) -> None:
     assert calls[0]._tool == "cal"
 
 
+@pytest.mark.parametrize(
+    ("argv", "expected"),
+    [([], None), (["cal"], "cal"), (["--tool", "cal"], "cal"), (["cal", "--tool", "cal"], "cal")],
+)
+def test_parser_tool_positional_and_flag(argv: list[str], expected: str | None) -> None:
+    """`owa-tui cal` and `owa-tui --tool cal` resolve to the same tool; no arg → None."""
+    args = owa_tui.build_parser().parse_args(argv)
+    assert (args.tool_positional or args.tool) == expected
+
+
+def test_main_conflicting_tools_is_usage_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(owa_tui.sys.stdout, "isatty", lambda: True)
+    with pytest.raises(SystemExit) as exc_info:
+        owa_tui.main(["cal", "--tool", "mail"])
+    assert exc_info.value.code == 2
+
+
 # ---------------------------------------------------------------------------
 # HomeScreen Pilot test
 # ---------------------------------------------------------------------------
