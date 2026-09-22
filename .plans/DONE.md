@@ -31,3 +31,4 @@
 - [x] owa-tui main(): refuse to start when stdout is not a tty (exit 2 usage error) instead of letting Textual misrender (2026-09-21)
 - [x] cal tui: reading_pane / split_ratio settings apply live like mail does (_make_layout only runs in compose) (2026-09-21)
 - [x] cal tui: j/k (and u/d) scroll the detail pane when it has focus, mirroring mail (CalDetailPane has no BINDINGS) (2026-09-21)
+- [x] when reading an email (either using enter or l to navigate into the email), the reading pane should be active, indicated by highlighting the reading pane, and scrolling up and down with j/k should affect the reading pane, not the mail list pane (2026-09-22)

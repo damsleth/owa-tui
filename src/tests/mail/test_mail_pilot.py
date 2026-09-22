@@ -348,10 +348,12 @@ def test_action_go_top_after_moving() -> None:
 
 
 def test_action_open_message_uses_cache() -> None:
-    """Open-message with reading_pane=right uses cached body to populate pane."""
-    msgs = _msgs(1)
-    msg_id = msgs[0]["id"]
-    body_msg = {**msgs[0], "body": "Cached body text"}
+    """Enter/l populate the pane from cache and move focus into it, so j
+    scrolls the pane instead of the list; h hands focus back to the list."""
+    msgs = _msgs(3)
+    # List sorts newest first, so the cursor starts on the last fixture message.
+    msg_id = msgs[-1]["id"]
+    body_msg = {**msgs[-1], "body": "Cached body text"}
 
     async def _run() -> str:
         from textual.widgets import Static
@@ -364,6 +366,15 @@ def test_action_open_message_uses_cache() -> None:
             screen: MailScreen = app.screen  # type: ignore[assignment]
             screen._body_cache[msg_id] = body_msg
             await pilot.press("enter")
+            await pilot.pause(0.05)
+            assert screen.focused is screen.query_one("#reader-pane", ReaderPane)
+            await pilot.press("j")
+            await pilot.pause(0.05)
+            assert screen.selected == 0
+            await pilot.press("h")
+            await pilot.pause(0.05)
+            assert screen.focused is not screen.query_one("#reader-pane", ReaderPane)
+            await pilot.press("l")
             await pilot.pause(0.1)
             pane = screen.query_one("#reader-pane", ReaderPane)
             content = pane.query_one("#reader-content", Static)
