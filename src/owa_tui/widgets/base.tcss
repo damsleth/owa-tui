@@ -9,6 +9,12 @@
 Screen {
     background: $surface;
     color: $text;
+    /* Under ansi themes $surface is fully transparent, so Textual keeps
+     * compositing the screens underneath (home bleeds through doctor).
+     * $background is the opaque terminal default there. */
+    &:ansi {
+        background: $background;
+    }
 }
 
 /* ── Content breathing room ───────────────────────────────────────────────
