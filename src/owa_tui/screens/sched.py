@@ -27,9 +27,12 @@ the fixture before making any API call.
 
 Live path
 ---------
-Posts to ``me/calendar/getSchedule`` on Graph (audience="graph") using the
-``owa_sched.api.api_post`` helper and normalizes each entry with
-``owa_sched.schedule.normalize_attendee``.
+Posts to ``me/calendar/getschedule`` on Outlook REST v2.0 (audience="outlook",
+the same token owa-cal uses) via ``owa_sched.api.api_post``. The graph
+audience owa-piggy mints carries no Calendars.* scope, so Graph's getSchedule
+answers 403; Outlook REST accepts the outlook token. Outlook REST speaks
+PascalCase both ways, so the body is PascalCase and the response is
+lower-camelised (``_camel``) before ``normalize_attendee`` sees it.
 """
 
 from __future__ import annotations
@@ -46,7 +49,7 @@ from owa_tui.screens.base.grid import GRID_BINDINGS, GridData, OwaGridScreen
 # Constants
 # ---------------------------------------------------------------------------
 
-_GRAPH_BASE = "https://graph.microsoft.com/v1.0"
+_OUTLOOK_BASE = "https://outlook.office.com/api/v2.0"
 _SLOT_MINUTES = 60
 _DEFAULT_WORK_START = "08:00"
 _DEFAULT_WORK_END = "17:00"
@@ -91,6 +94,20 @@ def _next_workday() -> str:
     while d.weekday() >= 5:  # 5=Sat, 6=Sun
         d += timedelta(days=1)
     return d.isoformat()
+
+
+def _camel(obj: Any) -> Any:
+    """Lower-case the first letter of every dict key, recursively.
+
+    Outlook REST returns ``ScheduleId``/``AvailabilityView``; the shared
+    ``normalize_attendee`` and the Graph-shaped fixture use camelCase.
+    Idempotent on camelCase input.
+    """
+    if isinstance(obj, dict):
+        return {k[:1].lower() + k[1:]: _camel(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_camel(v) for v in obj]
+    return obj
 
 
 def _parse_grid(raw: dict) -> GridData:
@@ -187,12 +204,14 @@ class SchedScreen(OwaGridScreen):
         super().__init__(
             config=cfg,
             tool_name="sched",
-            audience="graph",
+            audience="outlook",
             title="Scheduling",
             cursor_type="cell",
             **kwargs,
         )
-        self._attendees: list[str] = attendees or _DEMO_ATTENDEES
+        # Live path falls back to the signed-in user when empty; the demo
+        # list only labels fixture rows (which come from sched.json anyway).
+        self._attendees: list[str] = list(attendees or [])
         self._work_start: str = cfg.get("default_work_start") or work_start
         self._work_end: str = cfg.get("default_work_end") or work_end
         self._timezone: str = cfg.get("default_timezone") or timezone
@@ -217,7 +236,7 @@ class SchedScreen(OwaGridScreen):
         from owa_sched.api import api_post  # type: ignore[import]  # noqa: PLC0415
         from owa_sched.dates import make_local_iso  # type: ignore[import]  # noqa: PLC0415
 
-        from owa_tui.adapter import access_token_for, retrying  # noqa: PLC0415
+        from owa_tui.adapter import _upn_from_jwt, access_token_for, retrying  # noqa: PLC0415
 
         token = access_token_for(
             self._config, tool_name="owa-sched", audience=self._audience
@@ -225,24 +244,24 @@ class SchedScreen(OwaGridScreen):
 
         target_date = _next_workday()
         body = {
-            "schedules": self._attendees,
-            "startTime": {
-                "dateTime": make_local_iso(target_date, self._work_start),
-                "timeZone": self._timezone,
+            "Schedules": self._attendees or [_upn_from_jwt(token) or "me"],
+            "StartTime": {
+                "DateTime": make_local_iso(target_date, self._work_start),
+                "TimeZone": self._timezone,
             },
-            "endTime": {
-                "dateTime": make_local_iso(target_date, self._work_end),
-                "timeZone": self._timezone,
+            "EndTime": {
+                "DateTime": make_local_iso(target_date, self._work_end),
+                "TimeZone": self._timezone,
             },
-            "availabilityViewInterval": _SLOT_MINUTES,
+            "AvailabilityViewInterval": _SLOT_MINUTES,
         }
 
         payload = await asyncio.get_event_loop().run_in_executor(
             None,
             lambda: retrying(
                 lambda: api_post(
-                    _GRAPH_BASE,
-                    "me/calendar/getSchedule",
+                    _OUTLOOK_BASE,
+                    "me/calendar/getschedule",
                     token,
                     body=body,
                     debug=self._debug,
@@ -253,7 +272,7 @@ class SchedScreen(OwaGridScreen):
         if payload is None:
             return [], []
 
-        return _parse_grid(payload)
+        return _parse_grid(_camel(payload))
 
     # -------------------------------------------------------------------------
     # Abstract hook: cell_style
