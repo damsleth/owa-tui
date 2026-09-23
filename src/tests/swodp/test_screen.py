@@ -324,3 +324,16 @@ def test_config_is_read_and_seeded(tmp_path, monkeypatch) -> None:
     assert (again._instance, again._settings["cal_profile"], again._monday) == (
         "uat", "nc", date(2026, 9, 14)
     )
+
+
+def test_rapid_week_changes_render_the_last_week() -> None:
+    async def steps(pilot, sc, tbl):
+        await pilot.press("left_square_bracket", "right_square_bracket", "left_square_bracket")
+        await pilot.pause(0.6)
+        title = str(sc.query_one("#owa-grid-breadcrumb", Label).content)
+        return title, [r["label"] for r in sc._plan], _row(tbl, 0)[1]
+
+    title, labels, cell = _run(steps)
+    assert title.startswith("Uke 37")
+    assert labels == ["NOCOS T1PRJTSK4228809"]
+    assert cell == "[dim]7.5[/dim]"  # Approved week: styling matches the rows shown
