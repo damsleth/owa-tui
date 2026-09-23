@@ -4,7 +4,15 @@ All notable changes to `owa-tui` are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); this project uses semantic
 versioning.
 
-## [Unreleased]
+## [0.3.0] - 2026-09-23
+
+### Changed
+- Requires `owa-tools>=1.7.0`, which pulls in `owa-piggy`, so installing
+  `owa-tui` resolves the whole stack. Fixes the sched grid showing every
+  attendee as an error against owa-tools 1.6.0.
+- Imports `build_query`, `OwaError` and `save_config` from their `owa_core`
+  homes after owa-tools 1.7.0 dropped the per-tool re-exports. Settings and
+  bookmarks persist again instead of silently failing.
 
 ### Added
 - **Timesheet (SWODP)**: `owa-tui swodp` shows one week of SWODP time cards
