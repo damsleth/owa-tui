@@ -374,7 +374,8 @@ class CalScreen(Screen):
         body = {"Comment": "", "SendResponse": True}
 
         try:
-            from owa_cal.api import OwaError, api_request  # type: ignore[import]
+            from owa_cal.api import api_request  # type: ignore[import]
+            from owa_core.errors import OwaError  # type: ignore[import]
 
             token = await asyncio.to_thread(self._token)
 
@@ -409,7 +410,7 @@ class CalScreen(Screen):
             self.load_events()
 
         except Exception as exc:
-            from owa_cal.api import OwaError  # type: ignore[import]
+            from owa_core.errors import OwaError  # type: ignore[import]
 
             if isinstance(exc, OwaError):
                 self._status = f"respond failed: {exc}"
@@ -540,9 +541,10 @@ class CalScreen(Screen):
 
     def _persist_settings(self) -> None:
         try:
-            from owa_cal.config import save_config  # type: ignore[import]
+            from owa_cal.config import CONFIG_PATH  # type: ignore[import]
+            from owa_core.config import save_config  # type: ignore[import]
 
             patch = self._settings.to_config_patch()
-            save_config(patch)
+            save_config(CONFIG_PATH, patch)
         except Exception:
             pass

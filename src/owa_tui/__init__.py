@@ -14,7 +14,7 @@ from textual.widgets import Footer
 
 from owa_tui.widgets.app_header import AppHeader
 
-__version__ = "0.2.2"
+__version__ = "0.3.0"
 
 
 class OwaTuiApp(App[None]):

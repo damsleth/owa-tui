@@ -159,7 +159,8 @@ class TodoScreen(OwaListScreen):
 
         if raw is None:
             # Live fetch
-            from owa_todo.api import api_get, build_query  # type: ignore[import]  # noqa: PLC0415
+            from owa_core.query import build_query  # type: ignore[import]
+            from owa_todo.api import api_get  # type: ignore[import]  # noqa: PLC0415
 
             endpoint = f"me/tasks?{build_query({'$top': 50})}"
             raw = retrying(lambda: api_get(API_BASE, endpoint, token, debug=self._debug))

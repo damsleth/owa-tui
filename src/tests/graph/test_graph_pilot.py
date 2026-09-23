@@ -1552,12 +1552,12 @@ def test_action_bookmark_persists_to_config() -> None:
     async def _run() -> dict:
         saved: dict = {}
 
-        def _fake_save(config: dict) -> None:
+        def _fake_save(_path: object, config: dict) -> None:
             saved.update(config)
 
         with patch("owa_tui.screens.graph.fetch_items", side_effect=_noop_fetch), patch(
             "owa_graph.config.load_config", return_value={}
-        ), patch("owa_graph.config.save_config", side_effect=_fake_save):
+        ), patch("owa_core.config.save_config", side_effect=_fake_save):
             app = _make_app()
             async with app.run_test() as pilot:
                 await pilot.pause(0.1)
