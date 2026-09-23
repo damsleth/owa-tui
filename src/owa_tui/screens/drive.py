@@ -4,20 +4,29 @@ Subclasses OwaTreeScreen (base screen) — the first production consumer of
 the hierarchical tree base. Supplies all required hooks; all list / detail /
 search / breadcrumb / menu / nav UX is inherited from the base.
 
-v1 scope: read-only navigation (list children, drill into folders, go up,
-show file detail). Upload / download / delete are deferred to v2.
+Scope: navigation (list children, drill into folders, go up, show file
+detail), ``D`` downloads a file to ``~/Downloads``, Enter on a small text-ish
+file shows its content in the detail pane. Upload / delete are out of scope.
 """
 
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any
+
+from textual import work
+from textual.binding import Binding
 
 from owa_tui.screens.base import OwaTreeScreen, TreeNode
 from owa_tui.screens.base.keys import LIST_BINDINGS
 
 # Graph base URL — mirrors owa_drive.auth.API_BASE exactly.
 _GRAPH_BASE = "https://graph.microsoft.com/v1.0"
+
+# Files viewable inline: text-ish MIME type and under this many bytes.
+_VIEW_MAX_BYTES = 256 * 1024
+_TEXT_MIMES = {"application/json", "application/xml", "application/yaml", "application/x-yaml"}
 
 # Root TreeNode: the root of OneDrive.
 _ROOT_NODE = TreeNode(id="", label="OneDrive")
@@ -71,6 +80,13 @@ def _row_text(item: dict, width: int = 80) -> str:
         name = name[: name_width - 1] + "…"
     gap = max(1, width - 4 - len(name) - len(right))
     return f"{icon}  {name}{' ' * gap}{right}"
+
+
+def _is_text(item: dict) -> bool:
+    """True for a file whose MIME type is text-ish and small enough to view inline."""
+    mime = (item.get("mimeType") or "").lower()
+    size = item.get("size") or 0
+    return size <= _VIEW_MAX_BYTES and (mime.startswith("text/") or mime in _TEXT_MIMES)
 
 
 def _detail_text(item: dict) -> str:
@@ -131,7 +147,10 @@ class DriveScreen(OwaTreeScreen):
         Pre-loaded items for tests / fixture mode — skip the first fetch.
     """
 
-    BINDINGS = LIST_BINDINGS  # type: ignore[assignment]
+    COLUMN_VIEW = True
+    BINDINGS = LIST_BINDINGS + [  # type: ignore[assignment]
+        Binding("D", "download", "Download"),
+    ]
 
     def __init__(
         self,
@@ -185,12 +204,9 @@ class DriveScreen(OwaTreeScreen):
                 children_endpoint,
             )
 
-            from owa_tui.adapter import access_token_for, retrying  # noqa: PLC0415
+            from owa_tui.adapter import retrying  # noqa: PLC0415
 
-            if not self._token:
-                self._token = access_token_for(
-                    self._config, tool_name=self._tool_name, audience=self._audience
-                )
+            self._ensure_token()
             endpoint = children_endpoint(path)
             raw = retrying(lambda: api_request("GET", _GRAPH_BASE, endpoint, self._token))
 
@@ -220,6 +236,87 @@ class DriveScreen(OwaTreeScreen):
         return TreeNode(id=path, label=name)
 
     # ------------------------------------------------------------------
+    # Content: download (D) and inline text view (Enter)
+    # ------------------------------------------------------------------
+
+    def _ensure_token(self) -> None:
+        from owa_tui.adapter import access_token_for  # noqa: PLC0415
+
+        if not self._token:
+            self._token = access_token_for(
+                self._config, tool_name=self._tool_name, audience=self._audience
+            )
+
+    def _fetch_bytes(self, item: dict) -> bytes:
+        """Blocking: GET the file content for *item*. Call from a worker thread."""
+        from owa_drive.api import api_get_binary  # type: ignore[import]  # noqa: PLC0415
+        from owa_drive.paths import content_endpoint  # type: ignore[import]  # noqa: PLC0415
+
+        from owa_tui.adapter import retrying  # noqa: PLC0415
+
+        self._ensure_token()
+        endpoint = content_endpoint(self.child_node(item).id)
+        return retrying(lambda: api_get_binary(_GRAPH_BASE, endpoint, self._token))
+
+    def action_download(self) -> None:
+        from owa_tui import fixtures  # noqa: PLC0415
+
+        item = self._current_item()
+        if item is None or self.is_container(item):
+            self._status = "select a file to download"
+            return
+        if fixtures.enabled():
+            self._status = "download unavailable in fixture mode"
+            return
+        dest = Path.home() / "Downloads" / (item.get("name") or "download")
+        if dest.exists():
+            self._status = f"exists: {dest} (delete it first)"
+            return
+        self._download(item, dest)
+
+    @work(thread=True)
+    def _download(self, item: dict, dest: Path) -> None:
+        self.app.call_from_thread(lambda: setattr(self, "_status", f"downloading {dest.name}…"))
+        try:
+            data = self._fetch_bytes(item)
+            dest.write_bytes(data)
+        except Exception as exc:
+            msg = f"error: {exc}"
+        else:
+            msg = f"wrote {len(data)} bytes to {dest}"
+        self.app.call_from_thread(lambda: setattr(self, "_status", msg))
+
+    def on_item_activated(self, item: dict) -> None:
+        from owa_tui import fixtures  # noqa: PLC0415
+
+        super().on_item_activated(item)
+        # ponytail: detail_pane_mode "off" pushes a full screen we cannot
+        # update later, so the text view only exists for the split pane.
+        if (
+            not self.is_container(item)
+            and _is_text(item)
+            and not fixtures.enabled()
+            and self._detail_pane_mode != "off"
+        ):
+            self._view_text(item)
+
+    @work(thread=True)
+    def _view_text(self, item: dict) -> None:
+        try:
+            text = self._fetch_bytes(item).decode("utf-8", errors="replace")
+        except Exception as exc:
+            msg = f"error: {exc}"
+            self.app.call_from_thread(lambda: setattr(self, "_status", msg))
+            return
+
+        def _show() -> None:
+            pane = self._detail_pane()
+            if pane is not None and self._current_item() is item:
+                pane.update_content(_detail_text(item) + "\n\n" + text)
+
+        self.app.call_from_thread(_show)
+
+    # ------------------------------------------------------------------
     # OwaListScreen abstract hooks
     # ------------------------------------------------------------------
 
@@ -236,4 +333,4 @@ class DriveScreen(OwaTreeScreen):
         )
 
     def help_text(self) -> str:
-        return "j/k move  l open/drill  h back  / search  r refresh  q quit"
+        return "j/k move  l open/drill  h back  D download  c columns  / search  r refresh  q quit"

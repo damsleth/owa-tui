@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any
+from unittest.mock import patch
 
 from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header
@@ -405,3 +406,95 @@ def test_two_drill_levels_then_pop_twice() -> None:
     depths, calls = asyncio.run(_run())
     assert depths == [1, 2, 3, 2, 1]
     assert calls[-1] == ("root", "")
+
+
+# ---------------------------------------------------------------------------
+# Miller columns (c toggle)
+# ---------------------------------------------------------------------------
+
+
+def _parent_pane(app: App):  # noqa: ANN202
+    from owa_tui.screens.base.tree import _ParentPane
+
+    return app.screen.query_one("#owa-parent-pane", _ParentPane)
+
+
+def test_column_view_off_by_default_hides_parent_pane() -> None:
+    async def _run() -> tuple[bool, str]:
+        app = _make_app(detail_pane_mode="right")
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause(0.3)
+            pane = _parent_pane(app)
+            return pane.display, app.screen._list_widget().styles.width.value
+
+    display, width = asyncio.run(_run())
+    assert display is False
+    assert width == 50
+
+
+def test_column_view_shows_parent_listing_after_drill() -> None:
+    async def _run() -> tuple[str, str, int]:
+        with patch.object(_FakeTreeScreen, "COLUMN_VIEW", True):
+            app = _make_app(detail_pane_mode="right")
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause(0.3)
+                sc: _FakeTreeScreen = app.screen
+                pane = _parent_pane(app)
+                root_text = str(pane.content)
+                sc.on_item_activated(sc._items[0])  # drill into Folder A
+                await pilot.pause(0.3)
+                return root_text, str(pane.content), len(sc._items_stack)
+
+    root_text, child_text, depth = asyncio.run(_run())
+    assert root_text == ""
+    assert "> [+] Folder A" in child_text
+    assert "  " + "    Leaf B" in child_text
+    assert depth == 1
+
+
+def test_column_view_pop_clears_items_stack() -> None:
+    async def _run() -> tuple[int, str]:
+        with patch.object(_FakeTreeScreen, "COLUMN_VIEW", True):
+            app = _make_app(detail_pane_mode="right")
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause(0.3)
+                sc: _FakeTreeScreen = app.screen
+                sc.on_item_activated(sc._items[0])
+                await pilot.pause(0.3)
+                await pilot.press("h")
+                await pilot.pause(0.3)
+                return len(sc._items_stack), str(_parent_pane(app).content)
+
+    depth, text = asyncio.run(_run())
+    assert depth == 0
+    assert text == ""
+
+
+def test_c_toggles_column_view_and_widths() -> None:
+    async def _run() -> list[tuple[bool, float]]:
+        app = _make_app(detail_pane_mode="right")
+        out: list[tuple[bool, float]] = []
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause(0.3)
+            pane = _parent_pane(app)
+            lw = app.screen._list_widget()
+            await pilot.press("c")
+            await pilot.pause(0.1)
+            out.append((pane.display, lw.styles.width.value))
+            await pilot.press("c")
+            await pilot.pause(0.1)
+            out.append((pane.display, lw.styles.width.value))
+        return out
+
+    assert asyncio.run(_run()) == [(True, 45), (False, 50)]
+
+
+def test_column_view_not_mounted_when_detail_pane_off() -> None:
+    async def _run() -> int:
+        with patch.object(_FakeTreeScreen, "COLUMN_VIEW", True):
+            app = _make_app(detail_pane_mode="off")
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause(0.3)
+                return len(list(app.screen.query("#owa-parent-pane")))
+
+    assert asyncio.run(_run()) == 0
