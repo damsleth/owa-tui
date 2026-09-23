@@ -65,7 +65,7 @@ GridData = tuple[list[str], list[tuple[str, list[str]]]]
 
 GRID_BINDINGS: list[Binding] = [
     # navigation — arrows are handled natively by DataTable; j/k/h/l are wired
-    # to action_cursor_* wrappers so they call DataTable.action_scroll_* methods.
+    # to action_cursor_* wrappers that call DataTable.action_cursor_*.
     Binding("j", "cursor_down", "Down", show=False),
     Binding("down", "cursor_down", "Down", show=False),
     Binding("k", "cursor_up", "Up", show=False),
@@ -335,29 +335,30 @@ class OwaGridScreen(Screen):
         self.app.push_screen(overlay, self.handle_menu_result)
 
     # Cursor-movement wrappers — delegate to DataTable's own actions so that
-    # j/k/h/l behave identically to the arrow keys DataTable already handles.
+    # j/k/h/l move the cursor exactly like the arrow keys (scroll_* would only
+    # scroll the viewport and leave the cursor behind).
 
     def action_cursor_down(self) -> None:
         try:
-            self.query_one("#owa-grid-table", DataTable).action_scroll_down()
+            self.query_one("#owa-grid-table", DataTable).action_cursor_down()
         except Exception:
             pass
 
     def action_cursor_up(self) -> None:
         try:
-            self.query_one("#owa-grid-table", DataTable).action_scroll_up()
+            self.query_one("#owa-grid-table", DataTable).action_cursor_up()
         except Exception:
             pass
 
     def action_cursor_left(self) -> None:
         try:
-            self.query_one("#owa-grid-table", DataTable).action_scroll_left()
+            self.query_one("#owa-grid-table", DataTable).action_cursor_left()
         except Exception:
             pass
 
     def action_cursor_right(self) -> None:
         try:
-            self.query_one("#owa-grid-table", DataTable).action_scroll_right()
+            self.query_one("#owa-grid-table", DataTable).action_cursor_right()
         except Exception:
             pass
 
