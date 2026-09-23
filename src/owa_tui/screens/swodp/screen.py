@@ -92,7 +92,8 @@ class SwodpScreen(OwaGridScreen):
         self._session: Any = None
         self._categories: dict[str, str] | None = None
         self._plan: list[dict] = []
-        self._incoming: list[dict] | None = None  # built in the worker, swapped in on the UI thread
+        # (monday, rows) built in the worker, swapped in on the UI thread.
+        self._incoming: tuple[date, list[dict]] | None = None
         self._range_cards: list[dict] = []
         self._by_label: dict[str, dict] = {}
         self._note = ""
@@ -132,13 +133,20 @@ class SwodpScreen(OwaGridScreen):
         discarded = sum(plan.is_dirty(r) for r in self._plan)
         if discarded and not self._note:
             self._note = f"discarded {discarded} unwritten row(s)"
+        monday = self._monday
         self._range_cards = cards
-        self._incoming = plan.cards_to_rows(cards, self._monday, self._categories)
-        return plan.grid_data(self._incoming)
+        self._incoming = (monday, plan.cards_to_rows(cards, monday, self._categories))
+        return plan.grid_data(self._incoming[1])
 
     def _apply_grid(self, col_labels: list[str], rows: list[tuple[str, list[str]]]) -> None:
         if self._incoming is not None:
-            self._plan, self._incoming = self._incoming, None
+            monday, rows_in = self._incoming
+            self._incoming = None
+            if monday == self._monday:  # a fetch for a week we already left is dropped
+                self._plan = rows_in
+        # Always render from self._plan so overlapping fetches ([[[) can't mix
+        # one week's cells with another week's row styling.
+        col_labels, rows = plan.grid_data(self._plan)
         self._by_label = {r["label"]: r for r in self._plan}
         tbl = self._table()
         coord = tbl.cursor_coordinate
