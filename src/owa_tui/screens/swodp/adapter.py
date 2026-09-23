@@ -90,8 +90,9 @@ def validate(rows: list[dict]) -> None:
 
 def calendar_events(config: dict[str, Any], profile: str, monday: date) -> list[dict]:
     """Normalized Outlook events for the week, from *profile*'s calendar."""
-    from owa_cal.api import api_get, build_query  # type: ignore[import]  # noqa: PLC0415
+    from owa_cal.api import api_get  # type: ignore[import]  # noqa: PLC0415
     from owa_cal.events import normalize_events_detail  # type: ignore[import]  # noqa: PLC0415
+    from owa_core.query import build_query  # type: ignore[import]
 
     raw = fixtures.load("swodp_cal")
     if raw is None and not fixtures.enabled():

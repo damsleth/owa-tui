@@ -32,9 +32,9 @@ def _today_range() -> tuple[str, str]:
 
 def _week_range() -> tuple[str, str]:
     """Return (from_date, to_date) for the current ISO week (Mon–Sun)."""
-    from owa_cal.dates import current_iso_week, iso_week_range  # type: ignore[import]
+    from owa_cal.dates import iso_week_range  # type: ignore[import]
 
-    week, year = current_iso_week()
+    year, week, _ = date.today().isocalendar()
     from_str, to_str = iso_week_range(week, year)
     return f"{from_str}T00:00:00", f"{to_str}T23:59:59"
 
@@ -107,8 +107,10 @@ async def fetch_events(
     Never raises.
     """
     try:
-        from owa_cal.api import OwaError, api_get, build_query  # type: ignore[import]
+        from owa_cal.api import api_get  # type: ignore[import]
         from owa_cal.events import normalize_events_detail  # type: ignore[import]
+        from owa_core.errors import OwaError  # type: ignore[import]
+        from owa_core.query import build_query  # type: ignore[import]
 
         from_dt, to_dt = _resolve_range(day_range)
 
@@ -150,7 +152,7 @@ async def fetch_events(
         return events, None
 
     except Exception as exc:  # noqa: BLE001
-        from owa_cal.api import OwaError  # type: ignore[import]
+        from owa_core.errors import OwaError  # type: ignore[import]
 
         if isinstance(exc, OwaError):
             return [], f"error: {exc}"

@@ -1029,7 +1029,7 @@ class TestCalScreenPilot:
                 screen = app.query_one(CalScreen)
                 # Patch save_config to raise
                 monkeypatch.setattr(
-                    "owa_cal.config.save_config",
+                    "owa_core.config.save_config",
                     lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("disk full")),
                 )
                 screen._persist_settings()  # must not raise
@@ -1350,7 +1350,7 @@ class TestRespondPostPath:
         assert status == "respond failed"
 
     def test_respond_owa_error_surfaces_message(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        from owa_cal.api import OwaError
+        from owa_core.errors import OwaError
 
         calls, status = self._drive_respond(monkeypatch, "a", OwaError("boom"))
         assert len(calls) == 1

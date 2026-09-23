@@ -539,11 +539,12 @@ class GraphScreen(Screen[None]):
         if fixtures.enabled():
             return  # fixture mode is read-only demo data — never touch the user's config
         try:
-            from owa_graph.config import load_config, save_config  # type: ignore[import]
+            from owa_core.config import save_config  # type: ignore[import]
+            from owa_graph.config import CONFIG_PATH, load_config  # type: ignore[import]
 
             config = load_config()
             config.update(self._settings.to_config_dict())
-            save_config(config)
+            save_config(CONFIG_PATH, config)
         except Exception:
             pass
 

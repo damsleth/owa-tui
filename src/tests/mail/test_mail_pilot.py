@@ -1039,8 +1039,10 @@ def test_persist_settings_calls_save_config() -> None:
             save_calls: list[dict] = []
             mock_module = MagicMock()
             mock_module.load_config.return_value = {}
-            mock_module.save_config.side_effect = lambda cfg: save_calls.append(cfg)
-            with patch.dict("sys.modules", {"owa_mail.config": mock_module}):
+            with patch.dict("sys.modules", {"owa_mail.config": mock_module}), patch(
+                "owa_core.config.save_config",
+                side_effect=lambda _path, cfg: save_calls.append(cfg),
+            ):
                 screen._persist_settings(SETTINGS_DEFAULTS)
             return len(save_calls) > 0
 

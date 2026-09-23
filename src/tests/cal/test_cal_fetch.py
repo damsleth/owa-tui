@@ -120,7 +120,7 @@ def test_owa_error_caught(monkeypatch: pytest.MonkeyPatch) -> None:
     """OwaError from api_get is caught and returned as error string."""
 
     async def _run() -> tuple:
-        from owa_cal.api import OwaError
+        from owa_core.errors import OwaError
 
         import owa_tui.screens.cal.fetch as fetch_mod
 

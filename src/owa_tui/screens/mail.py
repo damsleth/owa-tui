@@ -618,7 +618,8 @@ class MailScreen(Screen[None]):
     def _fetch_folders(self) -> None:
         """Load the mail-folder list for the side panel (background thread)."""
         try:
-            from owa_mail.api import api_get, build_query  # type: ignore[import]
+            from owa_core.query import build_query  # type: ignore[import]
+            from owa_mail.api import api_get  # type: ignore[import]
             from owa_mail.folders import normalize_folders  # type: ignore[import]
 
             token = self._get_token_sync()
@@ -1036,11 +1037,12 @@ class MailScreen(Screen[None]):
 
     def _persist_settings(self, settings: MailSettings) -> None:
         try:
-            from owa_mail.config import load_config, save_config  # type: ignore[import]
+            from owa_core.config import save_config  # type: ignore[import]
+            from owa_mail.config import CONFIG_PATH, load_config  # type: ignore[import]
 
             config = load_config()
             config.update(to_config_dict(settings))
-            save_config(config)
+            save_config(CONFIG_PATH, config)
         except Exception:
             pass
 

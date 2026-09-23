@@ -448,7 +448,8 @@ class PeopleScreen(Screen[None]):
         """Fetch people list from Graph API in a background thread."""
         self.app.call_from_thread(lambda: setattr(self, "status", "Loading people…"))
         try:
-            from owa_people.api import api_get, build_query  # type: ignore[import]  # noqa: PLC0415
+            from owa_core.query import build_query  # type: ignore[import]
+            from owa_people.api import api_get  # type: ignore[import]  # noqa: PLC0415
             from owa_people.people import normalize_person  # type: ignore[import]  # noqa: PLC0415
 
             token = self._get_token_sync()
@@ -701,14 +702,15 @@ class PeopleScreen(Screen[None]):
 
     def _persist_settings(self, settings: PeopleSettings) -> None:
         try:
+            from owa_core.config import save_config  # type: ignore[import]  # noqa: PLC0415
             from owa_people.config import (  # type: ignore[import]  # noqa: PLC0415
+                CONFIG_PATH,
                 load_config,
-                save_config,
             )
 
             config = load_config()
             config.update(to_config_dict(settings))
-            save_config(config)
+            save_config(CONFIG_PATH, config)
         except Exception:
             pass
 
