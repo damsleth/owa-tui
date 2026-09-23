@@ -1,0 +1,17 @@
+[
+  {"task.number": "T1PRJTSK0000001", "category": "Project/Project Task", "state": "Pending",
+   "week_starts_on": "2026-09-14", "monday": "7.5", "tuesday": "7", "wednesday": "2",
+   "thursday": "7.5", "friday": "7.5", "saturday": "0", "sunday": "0", "total": "31.5",
+   "comments": "ACME maintenance: release 14.09, 1234 bugfix, triage, Conf26"},
+  {"task.number": "T1PRJTSK0000002", "category": "Project/Project Task", "state": "Pending",
+   "week_starts_on": "2026-09-14", "monday": "0", "tuesday": "1", "wednesday": "4",
+   "thursday": "0", "friday": "0", "saturday": "0", "sunday": "0", "total": "5",
+   "comments": "GLOBEX: Main Street with the BI consultant, deploy prep"},
+  {"category": "Admin", "state": "Pending", "week_starts_on": "2026-09-14", "monday": "3",
+   "tuesday": "0", "wednesday": "0", "thursday": "0", "friday": "0", "saturday": "0",
+   "sunday": "0", "total": "3", "comments": "Internal tooling (scripts, docs)"},
+  {"task.number": "T1PRJTSK0000001", "category": "Project/Project Task", "state": "Approved",
+   "week_starts_on": "2026-09-07", "monday": "7.5", "tuesday": "7.5", "wednesday": "7.5",
+   "thursday": "7.5", "friday": "7.5", "saturday": "0", "sunday": "0", "total": "37.5",
+   "comments": "ACME maintenance"}
+]
