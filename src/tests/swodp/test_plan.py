@@ -82,6 +82,13 @@ def test_edit_remove_and_new_rows_build_contract_rows() -> None:
     )
 
 
+def test_description_only_edit_is_dirty() -> None:
+    rows = _rows()
+    rows[2]["description"] = "Intern tooling"
+    assert plan.rows_to_write(rows)[0]["description"] == "Intern tooling"
+    assert plan.diff_lines(rows) == ["update  Admin: description: Intern tooling"]
+
+
 def test_terminal_rows_never_write() -> None:
     rows = _rows()
     rows[0]["state"] = "Submitted"

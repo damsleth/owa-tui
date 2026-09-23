@@ -7,17 +7,34 @@ versioning.
 ## [Unreleased]
 
 ### Added
+- **Timesheet (SWODP)**: `owa-tui swodp` shows one week of SWODP time cards
+  as a grid (row per task/category, column per weekday, sums). `i`/Enter edit
+  a cell, `x` zero, `a` add row, `e` description, `D` remove row, `c` fill from
+  the `swon` calendar via `swodp.category_map` in `tui.json` (seeded on first
+  run), `[`/`]`/`t` change week. `w` writes Pending cards through
+  `owa_swodp.service.write_week` after a confirm listing the diff. There is no
+  submit binding, and Submitted/Approved/Processed rows are read-only.
+- **Drive**: `D` downloads the selected file to `~/Downloads` and refuses to
+  overwrite. Enter on a small text file shows its content in the detail pane.
+  `c` toggles lf-style columns (parent | current | detail), on by default.
+- SVG snapshot tests for home, mail, people and drive
+  (`pytest src/tests/snapshots --snapshot-update` after a visual change).
 - **Cal**: `j`/`k`/`u`/`d` (and `g`/`G`) scroll the detail pane when it has
   focus, mirroring mail; `reading_pane` and `split_ratio` settings now apply
   live without re-entering the screen.
 
 ### Changed
+- **Status**: status messages now show on the header's third row, over the
+  `v<version> · profile · upn` line, and clear after 5 seconds. Toasts sit
+  top-right under the header.
 - **Header**: every screen now shows a permanent block-glyph `owa-tui` banner
   with version, screen title and `profile · upn`, replacing Textual's
   one-line `Header`. The home screen's title/"Select a tool" labels and the
   palette's Maximize/Minimize commands are gone.
 
 ### Fixed
+- **Grids** (sched, doctor): `j`/`k`/`h`/`l` now move the cell cursor. They
+  used to scroll the viewport and leave the cursor behind.
 - **Mail**: Enter/`l` now move focus into the reading pane (highlighted
   with a primary border), so `j`/`k`/`u`/`d`/`g`/`G` scroll the message
   instead of the list; `h` hands focus back. Cursor-follow preview no longer

@@ -106,16 +106,22 @@ class _SearchModal(ModalScreen[str | None]):
     }
     """
 
-    def __init__(self, prompt: str = "Search:", placeholder: str = "search term…") -> None:
+    def __init__(
+        self,
+        prompt: str = "Search:",
+        placeholder: str = "search term…",
+        hint: str = "Enter to search  Esc to cancel",
+    ) -> None:
         super().__init__()
         self._prompt = prompt
         self._placeholder = placeholder
+        self._hint = hint
 
     def compose(self) -> ComposeResult:
         with Static(id="search-box"):
             yield Label(self._prompt, classes="overlay-title")
             yield Input(placeholder=self._placeholder, id="search-input")
-            yield Label("Enter to search  Esc to cancel", classes="overlay-hint")
+            yield Label(self._hint, classes="overlay-hint")
 
     def on_mount(self) -> None:
         self.query_one("#search-input", Input).focus()
