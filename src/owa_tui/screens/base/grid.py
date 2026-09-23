@@ -113,7 +113,7 @@ class OwaGridScreen(Screen):
     BINDINGS = GRID_BINDINGS  # type: ignore[assignment]
 
     # Reactive status drives the StatusBar widget (mirroring OwaListScreen)
-    _status: reactive[str] = reactive("")
+    _status: reactive[str] = reactive("", always_update=True)  # re-show after auto-clear
 
     def __init__(
         self,
