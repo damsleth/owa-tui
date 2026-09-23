@@ -628,3 +628,145 @@ def test_detail_pane_off_not_mounted() -> None:
             return len(list(app.screen.query(_DetailPane)))
 
     assert asyncio.run(_run()) == 0
+
+
+# ---------------------------------------------------------------------------
+# Download (D) and inline text view (Enter)
+# ---------------------------------------------------------------------------
+
+
+def _text_item(name: str = "notes.md", size: int = 11) -> dict:
+    item = _file_item(name=name, size=size)
+    item["mimeType"] = "text/markdown"
+    return item
+
+
+def _downloads(tmp_path: pathlib.Path) -> pathlib.Path:
+    d = tmp_path / "Downloads"
+    d.mkdir()
+    return d
+
+
+def test_download_writes_file_to_home_downloads(tmp_path: pathlib.Path) -> None:
+    dl = _downloads(tmp_path)
+    item = _text_item()
+
+    async def _run() -> str:
+        with (
+            patch.dict(os.environ, {"HOME": str(tmp_path)}),
+            patch("owa_tui.adapter.access_token_for", return_value="tok"),
+            patch("owa_drive.api.api_get_binary", return_value=b"hello world") as get,
+        ):
+            app = _make_app(initial_items=[item], detail_pane_mode="right")
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause(0.1)
+                await pilot.press("j")
+                await pilot.press("D")
+                await pilot.pause(0.5)
+                assert get.call_args.args[1] == "me/drive/root:/notes.md:/content"
+                return app.screen._status
+
+    status = asyncio.run(_run())
+    assert (dl / "notes.md").read_bytes() == b"hello world"
+    assert status == f"wrote 11 bytes to {dl / 'notes.md'}"
+
+
+def test_download_refuses_to_overwrite(tmp_path: pathlib.Path) -> None:
+    dl = _downloads(tmp_path)
+    (dl / "notes.md").write_text("keep me")
+
+    async def _run() -> str:
+        with (
+            patch.dict(os.environ, {"HOME": str(tmp_path)}),
+            patch("owa_drive.api.api_get_binary") as get,
+        ):
+            app = _make_app(initial_items=[_text_item()], detail_pane_mode="right")
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause(0.1)
+                await pilot.press("j")
+                await pilot.press("D")
+                await pilot.pause(0.2)
+                assert not get.called
+                return app.screen._status
+
+    status = asyncio.run(_run())
+    assert status.startswith("exists: ") and "delete it first" in status
+    assert (dl / "notes.md").read_text() == "keep me"
+
+
+def test_download_in_fixture_mode_sets_status() -> None:
+    async def _run() -> str:
+        with patch.dict(os.environ, {"OWA_TUI_FIXTURES": _FIXTURE_DIR}):
+            app = _make_app(initial_items=[_text_item()], detail_pane_mode="right")
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause(0.1)
+                await pilot.press("j")
+                await pilot.press("D")
+                await pilot.pause(0.1)
+                return app.screen._status
+
+    assert asyncio.run(_run()) == "download unavailable in fixture mode"
+
+
+def test_download_on_folder_sets_status() -> None:
+    async def _run() -> str:
+        app = _make_app(initial_items=[_folder_item()], detail_pane_mode="right")
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause(0.1)
+            await pilot.press("j")
+            await pilot.press("D")
+            await pilot.pause(0.1)
+            return app.screen._status
+
+    assert asyncio.run(_run()) == "select a file to download"
+
+
+def _detail_content(app: App) -> str:
+    from textual.widgets import Static
+
+    return str(app.screen.query_one("#owa-detail-content", Static).content)
+
+
+def test_enter_on_text_file_renders_content_in_detail_pane() -> None:
+    async def _run() -> tuple[str, str]:
+        with (
+            patch("owa_tui.adapter.access_token_for", return_value="tok"),
+            patch("owa_drive.api.api_get_binary", return_value=b"# Title\nbody text"),
+        ):
+            app = _make_app(initial_items=[_text_item()], detail_pane_mode="right")
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause(0.1)
+                await pilot.press("j")
+                await pilot.press("enter")
+                await pilot.pause(0.5)
+                return app.screen._mode, _detail_content(app)
+
+    mode, content = asyncio.run(_run())
+    assert mode == "detail"
+    assert "MIME:     text/markdown" in content
+    assert "body text" in content
+
+
+def test_enter_on_non_text_file_keeps_metadata_only() -> None:
+    async def _run() -> str:
+        with patch("owa_drive.api.api_get_binary") as get:
+            app = _make_app(initial_items=[_file_item()], detail_pane_mode="right")
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause(0.1)
+                await pilot.press("j")
+                await pilot.press("enter")
+                await pilot.pause(0.3)
+                assert not get.called
+                return _detail_content(app)
+
+    content = asyncio.run(_run())
+    assert "MIME:     application/vnd" in content
+
+
+def test_is_text_respects_mime_and_size() -> None:
+    from owa_tui.screens.drive import _is_text
+
+    assert _is_text(_text_item())
+    assert _is_text({"mimeType": "application/json", "size": 10})
+    assert not _is_text(_text_item(size=1024 * 1024))
+    assert not _is_text(_file_item())
