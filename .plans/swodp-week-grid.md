@@ -178,27 +178,28 @@ out of ten, which the first month of use will tell.
 
 ## Steps
 
-- [ ] `screens/swodp/plan.py` + `src/tests/swodp/test_plan.py`: cards→grid,
+- [x] `screens/swodp/plan.py` + `src/tests/swodp/test_plan.py`: cards→grid,
       grid→rows, events→hours (rounding, ignore-map, unmapped bucket), diff.
       Fixture data: the week-38 `cards` sample below and a `cal.json` of the
       19 backfilled events from 2026-09-14..22.
-- [ ] `screens/swodp/adapter.py`: capture/week/categories/write with fixture
+- [x] `screens/swodp/adapter.py`: capture/week/categories/write with fixture
       seam; map `CdpError` and exit-11 to a status-row hint that names
       `owa-swodp setup --instance <x>`.
-- [ ] `screens/swodp/screen.py`: read-only grid first (`OwaGridScreen`
+- [x] `screens/swodp/screen.py`: read-only grid first (`OwaGridScreen`
       subclass, week nav, cursor, terminal-state dimming, sums). Register in
       `_bootstrap_screens`. Manual check against live prod, read only.
-- [ ] Editing: cell input, `x`, `a`, `e`, `D`, dirty styling, description
+- [x] Editing: cell input, `x`, `a`, `e`, `D`, dirty styling, description
       guard.
-- [ ] `w` with confirm modal and `write_week`; verify by refetch. First live
+- [~] `w` with confirm modal and `write_week`; verify by refetch. (built and
+      tested in fixture mode; the first live write is still to do.) First live
       write against a week that already has Pending cards, one row, then
       `owa-swodp cards` from the shell to cross-check (the skill's snapshot /
       one row / verify rule).
-- [ ] `c` fill-from-calendar with `swodp.category_map` in `tui.json`, seeded
+- [x] `c` fill-from-calendar with `swodp.category_map` in `tui.json`, seeded
       defaults, unmapped-row handling.
-- [ ] `AGENTS.md`: add `owa_swodp` to the import list; `docs/`: one page with
+- [x] `AGENTS.md`: add `owa_swodp` to the import list; `docs/`: one page with
       the key table. `CHANGELOG.md` entry.
-- [ ] tui-test e2e: open, navigate, edit one cell, `w` in fixture mode, assert
+- [x] tui-test e2e: open, navigate, edit one cell, `w` in fixture mode, assert
       the confirm text and the post-write status line.
 - [ ] (owa-tools, separate) `owa-swodp tui` exec shim.
 - [ ] (later, only if needed) `d` diff columns; LLM assist.
@@ -253,3 +254,20 @@ Origin: timeføring uke 38 on 2026-09-22, done by hand through
 `cj-weekly-review` step 4 and `owa-swodp write`. The table in this plan's Goal
 is the literal output of that session; the TUI should make that session a
 two-minute one.
+
+## Status 2026-09-23
+
+Built: plan/adapter/screen, editing, `w` with confirm, `c` fill, e2e, AGENTS.md,
+CHANGELOG. Live read-only check against prod week 38: grid and calendar fill
+both reproduce the reference table cell for cell.
+
+Simplified vs. this plan (each has a `ponytail:` comment in the code):
+- `c` fills empty cells only and reports "kept" cells; no overwrite confirm.
+- Unmapped calendar categories are named in the status row; no `?` row.
+- `a` refuses an identity already in the week, so the `"new": true` case
+  (second card beside a Submitted one) goes through `owa-swodp write`.
+- No blink interval; the DataTable cell cursor is the focus marker.
+- `docs/` does not exist; the key table is the Esc → Help line.
+
+Left: first live write (one row, then `owa-swodp cards` cross-check),
+`owa-swodp tui` shim in owa-tools, `d` diff columns, LLM assist.
