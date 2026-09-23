@@ -6,7 +6,8 @@ No Textual, no owa_swodp imports. A *row* is a plain dict::
      "label": "NOCOS T1PRJTSK4228809" | "Admin",
      "taskNumber": ... | "category": ...,     # exactly one, write-contract shape
      "days": [7 floats], "orig": [7 floats],  # orig = what the server has
-     "description": str, "state": "Pending" | "Submitted" | ... | "New",
+     "description": str, "orig_description": str,
+     "state": "Pending" | "Submitted" | ... | "New",
      "remove": bool}
 
 A cell is dirty when ``days[i] != orig[i]``; a row is dirty when any cell is,
@@ -64,7 +65,12 @@ def is_editable(row: dict) -> bool:
 
 
 def is_dirty(row: dict) -> bool:
-    return row["remove"] or row["state"] == NEW or row["days"] != row["orig"]
+    return (
+        row["remove"]
+        or row["state"] == NEW
+        or row["days"] != row["orig"]
+        or row["description"] != row["orig_description"]
+    )
 
 
 def row_label(spec: dict, description: str = "") -> str:
@@ -110,6 +116,7 @@ def cards_to_rows(cards: list[dict], monday: date, categories: dict[str, str]) -
                 "days": days,
                 "orig": list(days),
                 "description": comments,
+                "orig_description": comments,
                 "state": card.get("state") or "Pending",
                 "remove": False,
             }
@@ -126,6 +133,7 @@ def new_row(spec: dict, label: str, description: str = "") -> dict:
         "days": [0.0] * 7,
         "orig": [0.0] * 7,
         "description": description,
+        "orig_description": description,
         "state": NEW,
         "remove": False,
     }
@@ -176,12 +184,14 @@ def diff_lines(rows: list[dict]) -> list[str]:
             )
             lines.append(f"create  {row['label']}: {cells or 'all 0'}")
             continue
-        cells = ", ".join(
+        changes = [
             f"{d} {fmt(o)}→{fmt(v)}"
             for d, o, v in zip(DAY_LABELS, row["orig"], row["days"])
             if o != v
-        )
-        lines.append(f"update  {row['label']}: {cells}")
+        ]
+        if row["description"] != row["orig_description"]:
+            changes.append(f"description: {row['description'][:40]}")
+        lines.append(f"update  {row['label']}: {', '.join(changes)}")
     return lines
 
 

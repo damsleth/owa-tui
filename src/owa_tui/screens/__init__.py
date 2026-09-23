@@ -123,6 +123,12 @@ def _bootstrap_screens() -> None:
     if "sched" not in SCREEN_REGISTRY:
         register_screen("sched", "Scheduling", SchedScreen)
 
+    # --- Timesheet (SWODP week grid) ---
+    from owa_tui.screens.swodp.screen import SwodpScreen  # noqa: PLC0415
+
+    if "swodp" not in SCREEN_REGISTRY:
+        register_screen("swodp", "Timesheet (SWODP)", SwodpScreen)
+
     # --- Health (owa-doctor) ---
     from owa_tui.screens.doctor import DoctorScreen  # noqa: PLC0415
 
