@@ -17,6 +17,8 @@ The only permitted import boundary from owa-tools is the stable library API:
 - `owa_cal.api` and `owa_cal.events`
 - `owa_mail.api` and `owa_mail.messages`
 - `owa_graph.api`
+- `owa_swodp.service` and `owa_swodp.session`, imported only from
+  `src/owa_tui/screens/swodp/adapter.py`
 
 Dependency is strictly one-way: **owa-tui -> owa-tools**. owa-tools must never
 import from owa-tui. Never import `owa_piggy` Python modules or read
