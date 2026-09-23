@@ -339,7 +339,7 @@ class OwaListScreen(Screen[None]):
     _items: reactive[list[dict]] = reactive(list, recompose=False)
     _selected_idx: reactive[int] = reactive(0)
     _search: reactive[str] = reactive("")
-    _status: reactive[str] = reactive("")
+    _status: reactive[str] = reactive("", always_update=True)  # re-show after auto-clear
     _mode: reactive[str] = reactive("list")  # 'list' | 'detail'
 
     # -------------------------------------------------------------------------

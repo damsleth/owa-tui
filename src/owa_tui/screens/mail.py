@@ -432,7 +432,7 @@ class MailScreen(Screen[None]):
     folder: reactive[str] = reactive("Inbox")
     search: reactive[str] = reactive("")
     settings: reactive[MailSettings] = reactive(lambda: MailSettings())
-    status: reactive[str] = reactive("")
+    status: reactive[str] = reactive("", always_update=True)  # re-show after auto-clear
     mode: reactive[str] = reactive("list")
 
     def __init__(

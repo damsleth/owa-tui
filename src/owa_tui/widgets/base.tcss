@@ -33,12 +33,26 @@ DataTable {
 }
 
 /* ── Status bar ───────────────────────────────────────────────────────── */
+/* Docked over AppHeader row 3 (the identity tail); hidden while empty so
+ * the tail shows through. Opaque background so row 3 doesn't bleed. */
 StatusBar {
+    dock: top;
+    margin-top: 2;
     height: 1;
     width: 1fr;
     padding: 0 1;
     color: $text-muted;
     background: $surface;
+    &:ansi {
+        background: $background;
+    }
+}
+
+/* notify() toasts: top-right, under the header, next to the status row. */
+ToastRack {
+    dock: top;
+    align: right top;
+    margin: 3 0 0 0;
 }
 
 /* ── Detail pane ──────────────────────────────────────────────────────── */

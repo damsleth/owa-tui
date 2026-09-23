@@ -357,7 +357,7 @@ class PeopleScreen(Screen[None]):
     selected: reactive[int] = reactive(0)
     search: reactive[str] = reactive("")
     settings: reactive[PeopleSettings] = reactive(lambda: PeopleSettings())
-    status: reactive[str] = reactive("")
+    status: reactive[str] = reactive("", always_update=True)  # re-show after auto-clear
     mode: reactive[str] = reactive("list")
 
     def __init__(

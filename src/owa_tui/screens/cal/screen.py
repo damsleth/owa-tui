@@ -27,6 +27,7 @@ from owa_tui.screens.cal.detail import CalDetailPane
 from owa_tui.screens.cal.fetch import fetch_events, range_title
 from owa_tui.screens.cal.settings import CalSettings
 from owa_tui.widgets.app_header import AppHeader
+from owa_tui.widgets.status_bar import StatusBar
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -140,7 +141,7 @@ class CalScreen(Screen):
         Binding("h", "back_to_list", "Back", show=False),
     ]
 
-    _status: reactive[str] = reactive("")
+    _status: reactive[str] = reactive("", always_update=True)  # re-show after auto-clear
 
     def __init__(
         self,
@@ -199,7 +200,7 @@ class CalScreen(Screen):
         yield Label(range_title(self._settings.day_range), id="cal-header")
         yield self._make_layout()
         yield Label(HELP_LINE, id="cal-footer")
-        yield Label("", id="cal-status")
+        yield StatusBar(id="cal-status")
 
     def on_mount(self) -> None:
         self.load_events()
