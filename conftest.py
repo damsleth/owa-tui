@@ -20,3 +20,13 @@ def _restore_screen_registry():
     yield
     screens.SCREEN_REGISTRY.clear()
     screens.SCREEN_REGISTRY.update(saved)
+
+
+@pytest.fixture(autouse=True)
+def _no_real_config_writes(monkeypatch):
+    """Screens persist settings via owa_core.config.save_config; never let a
+    test write the user's real ~/.config/owa-* files. Tests that assert on
+    the write patch over this."""
+    import owa_core.config  # noqa: PLC0415
+
+    monkeypatch.setattr(owa_core.config, "save_config", lambda *a, **k: None)
