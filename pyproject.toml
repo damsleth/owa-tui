@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "owa-tui"
-version = "0.2.2"
+version = "0.3.0"
 description = "Textual TUI front-end for the owa-tools Microsoft 365 CLI suite"
 readme = "README.md"
 license = "MIT"
@@ -12,8 +12,9 @@ requires-python = ">=3.10"
 authors = [{ name = "Carl Joakim Damsleth" }]
 dependencies = [
     "textual>=0.60",
-    # >=1.2.0: build_query moved from owa_planner.api to owa_core.query.
-    "owa-tools>=1.2.0",
+    # >=1.7.0: sched grid rows with empty workingHours are no longer errors;
+    # also brings owa-piggy in as a dependency.
+    "owa-tools>=1.7.0",
 ]
 
 [project.optional-dependencies]
