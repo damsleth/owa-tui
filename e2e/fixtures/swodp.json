@@ -1,0 +1,17 @@
+[
+  {"task.number": "T1PRJTSK4228809", "category": "Project/Project Task", "state": "Pending",
+   "week_starts_on": "2026-09-14", "monday": "7.5", "tuesday": "7", "wednesday": "2",
+   "thursday": "7.5", "friday": "7.5", "saturday": "0", "sunday": "0", "total": "31.5",
+   "comments": "NOCOS forvaltning: prodsetting 14.09, 18648 nav-repair, ADO-triage, TechCon26"},
+  {"task.number": "T1PRJTSK4231733", "category": "Project/Project Task", "state": "Pending",
+   "week_starts_on": "2026-09-14", "monday": "0", "tuesday": "1", "wednesday": "4",
+   "thursday": "0", "friday": "0", "saturday": "0", "sunday": "0", "total": "5",
+   "comments": "UNE: Storgata med Qlik-konsulenten, deploy-forarbeid"},
+  {"category": "Admin", "state": "Pending", "week_starts_on": "2026-09-14", "monday": "3",
+   "tuesday": "0", "wednesday": "0", "thursday": "0", "friday": "0", "saturday": "0",
+   "sunday": "0", "total": "3", "comments": "Intern tooling (brain, yaams)"},
+  {"task.number": "T1PRJTSK4228809", "category": "Project/Project Task", "state": "Approved",
+   "week_starts_on": "2026-09-07", "monday": "7.5", "tuesday": "7.5", "wednesday": "7.5",
+   "thursday": "7.5", "friday": "7.5", "saturday": "0", "sunday": "0", "total": "37.5",
+   "comments": "NOCOS forvaltning"}
+]

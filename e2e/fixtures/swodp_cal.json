@@ -1,0 +1,123 @@
+{
+ "value": [
+  {
+   "Id": "sw-1",
+   "Subject": "NOCOS triage",
+   "Start": {
+    "DateTime": "2026-09-14T07:00:00",
+    "TimeZone": "UTC"
+   },
+   "End": {
+    "DateTime": "2026-09-14T10:00:00",
+    "TimeZone": "UTC"
+   },
+   "IsAllDay": false,
+   "ShowAs": "busy",
+   "Categories": [
+    "NC NOCOS"
+   ]
+  },
+  {
+   "Id": "sw-2",
+   "Subject": "Lunch",
+   "Start": {
+    "DateTime": "2026-09-14T10:00:00",
+    "TimeZone": "UTC"
+   },
+   "End": {
+    "DateTime": "2026-09-14T11:00:00",
+    "TimeZone": "UTC"
+   },
+   "IsAllDay": false,
+   "ShowAs": "busy",
+   "Categories": [
+    "CC LUNCH"
+   ]
+  },
+  {
+   "Id": "sw-3",
+   "Subject": "NOCOS release",
+   "Start": {
+    "DateTime": "2026-09-15T07:00:00",
+    "TimeZone": "UTC"
+   },
+   "End": {
+    "DateTime": "2026-09-15T13:00:00",
+    "TimeZone": "UTC"
+   },
+   "IsAllDay": false,
+   "ShowAs": "busy",
+   "Categories": [
+    "NC NOCOS"
+   ]
+  },
+  {
+   "Id": "sw-4",
+   "Subject": "UNE workshop",
+   "Start": {
+    "DateTime": "2026-09-15T13:00:00",
+    "TimeZone": "UTC"
+   },
+   "End": {
+    "DateTime": "2026-09-15T15:00:00",
+    "TimeZone": "UTC"
+   },
+   "IsAllDay": false,
+   "ShowAs": "busy",
+   "Categories": [
+    "UNE 4LYF"
+   ]
+  },
+  {
+   "Id": "sw-5",
+   "Subject": "Admin",
+   "Start": {
+    "DateTime": "2026-09-17T07:00:00",
+    "TimeZone": "UTC"
+   },
+   "End": {
+    "DateTime": "2026-09-17T09:00:00",
+    "TimeZone": "UTC"
+   },
+   "IsAllDay": false,
+   "ShowAs": "busy",
+   "Categories": [
+    "CC ADM"
+   ]
+  },
+  {
+   "Id": "sw-6",
+   "Subject": "Kundem\u00f8te",
+   "Start": {
+    "DateTime": "2026-09-18T12:00:00",
+    "TimeZone": "UTC"
+   },
+   "End": {
+    "DateTime": "2026-09-18T14:00:00",
+    "TimeZone": "UTC"
+   },
+   "IsAllDay": false,
+   "ShowAs": "busy",
+   "Categories": [
+    "XX KUNDE"
+   ]
+  },
+  {
+   "Id": "sw-7",
+   "Subject": "Fri",
+   "Start": {
+    "DateTime": "2026-09-19T07:00:00",
+    "TimeZone": "UTC"
+   },
+   "End": {
+    "DateTime": "2026-09-19T15:00:00",
+    "TimeZone": "UTC"
+   },
+   "IsAllDay": false,
+   "ShowAs": "free",
+   "Categories": [
+    "CC ADM"
+   ]
+  }
+ ]
+}
