@@ -316,4 +316,4 @@ class TeamsScreen(OwaListScreen):
         )
 
     def help_text(self) -> str:
-        return "j/k move  Enter open thread  / filter  r refresh  q quit"
+        return "j/k move  Enter open thread  Tab pane  / filter  r refresh  q quit"

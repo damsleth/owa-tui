@@ -18,7 +18,7 @@ import re
 from typing import Any
 
 from owa_tui.screens.base import OwaTreeScreen, TreeNode
-from owa_tui.screens.base.keys import LIST_BINDINGS
+from owa_tui.screens.base.keys import LIST_BINDINGS, TREE_NAV_BINDINGS
 
 # Root TreeNode: the entry point for the SharePoint site's lists.
 _ROOT_NODE = TreeNode(id="", label="SharePoint Sites")
@@ -127,7 +127,7 @@ class SitesScreen(OwaTreeScreen):
         Pre-loaded items for tests / fixture mode — skip the first fetch.
     """
 
-    BINDINGS = LIST_BINDINGS  # type: ignore[assignment]
+    BINDINGS = LIST_BINDINGS + TREE_NAV_BINDINGS  # type: ignore[assignment]
 
     def __init__(
         self,

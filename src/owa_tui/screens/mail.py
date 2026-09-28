@@ -423,10 +423,10 @@ class MailScreen(Screen[None]):
         Binding("g", "go_top", "Top", show=False),
         Binding("G", "go_bottom", "Bottom", show=False),
         Binding("enter", "open_message", "Open"),
-        Binding("l", "open_message", "Open", show=False),
-        Binding("h", "close_reader", "Back", show=False),
-        Binding("left", "close_reader", "Back", show=False),
-        Binding("tab", "focus_pane", "Focus pane", show=False),
+        # Tab cycles folders → list → reader (shift+Tab backwards); arrows and
+        # hjkl stay inside the focused pane.
+        Binding("tab", "focus_pane(1)", "Switch pane", show=False),
+        Binding("shift+tab", "focus_pane(-1)", "Switch pane", show=False),
         Binding("r", "toggle_read", "Toggle read"),
         Binding("o", "open_browser", "Browser"),
         Binding("F", "toggle_folders", "Folders"),
@@ -952,19 +952,19 @@ class MailScreen(Screen[None]):
                 pass
             self.mode = "list"
 
-    def action_focus_pane(self) -> None:
-        if self.settings.reading_pane == "off":
+    def action_focus_pane(self, step: int = 1) -> None:
+        """Cycle focus through the visible panes: folders, messages, reader."""
+        panes = [
+            *self.query("#folder-list"),
+            *([ml] if (ml := self._message_list()) else []),
+            *(self.query("#reader-pane") if self.settings.reading_pane != "off" else []),
+        ]
+        if len(panes) < 2:
             return
-        try:
-            pane = self.query_one("#reader-pane", ReaderPane)
-            if self.focused == pane:
-                ml = self._message_list()
-                if ml:
-                    ml.focus()
-            else:
-                pane.focus()
-        except Exception:
-            pass
+        at = next((i for i, w in enumerate(panes) if w.has_focus), -1)
+        target = panes[(at + step) % len(panes)]
+        target.focus()
+        self.mode = "reader" if target.id == "reader-pane" else "list"
 
     def action_toggle_read(self) -> None:
         msg = self._current_msg()
@@ -1053,7 +1053,7 @@ class MailScreen(Screen[None]):
             self.app.exit()
             return
         if result == "help":
-            self.status = "j/k move  g/G top/bottom  Enter open  / search  r toggle-read  o browser"
+            self.status = "j/k move  g/G top/bottom  Enter open  Tab pane  / search  r toggle-read  o browser"
             return
         if result == "reset":
             self._apply_settings(SETTINGS_DEFAULTS)

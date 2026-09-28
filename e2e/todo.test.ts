@@ -3,10 +3,14 @@
 // OWA_TUI_FIXTURES (see src/owa_tui/fixtures.py) — no live auth needed.
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { test, expect } from "@microsoft/tui-test";
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
-const env = { ...process.env, OWA_TUI_FIXTURES: FIXTURES };
+// Empty config dir: the user's saved tool settings must not leak into fixture runs.
+const CONFIG = mkdtempSync(join(tmpdir(), "owa-tui-todo-e2e-"));
+const env = { ...process.env, OWA_TUI_FIXTURES: FIXTURES, XDG_CONFIG_HOME: CONFIG };
 // Wide enough that a right-side detail pane does not truncate task titles.
 const size = { columns: 120, rows: 40 };
 
@@ -29,10 +33,10 @@ test.describe("todo", () => {
   // is highlighted. Press "j" first, THEN "l" (terminal.write, not submit()).
   // GOTCHA: task title may appear in both list and detail pane — use strict:false.
   // ---------------------------------------------------------------------------
-  test("j then l opens the detail view", async ({ terminal }) => {
+  test("j then Enter opens the detail view", async ({ terminal }) => {
     await expect(terminal.getByText("Review quarterly report")).toBeVisible();
     terminal.write("j"); // highlight first row
-    terminal.write("l"); // open detail
+    terminal.write("\r"); // open detail
     // Title may now appear in both list and detail pane — strict:false required.
     await expect(
       terminal.getByText("Review quarterly report", { strict: false })
@@ -44,14 +48,14 @@ test.describe("todo", () => {
   // ---------------------------------------------------------------------------
   // 3. h — closes detail and returns to list
   // ---------------------------------------------------------------------------
-  test("h closes detail and returns to list", async ({ terminal }) => {
+  test("tab leaves detail and returns to list", async ({ terminal }) => {
     await expect(terminal.getByText("Review quarterly report")).toBeVisible();
     terminal.write("j");
-    terminal.write("l");
+    terminal.write("\r");
     await expect(
       terminal.getByText("Review quarterly report", { strict: false })
     ).toBeVisible();
-    terminal.write("h"); // back to list
+    terminal.write("\t"); // tab back to the list
     await expect(terminal.getByText("Send onboarding docs to new hire")).toBeVisible();
   });
 
@@ -94,7 +98,7 @@ test.describe("todo", () => {
     terminal.write("j"); // row 0
     terminal.write("j"); // row 1
     terminal.write("k"); // back to row 0
-    terminal.write("l"); // open detail for row 0
+    terminal.write("\r"); // open detail for row 0
     await expect(
       terminal.getByText("Review quarterly report", { strict: false })
     ).toBeVisible();
@@ -151,7 +155,7 @@ test.describe("todo", () => {
     await expect(terminal.getByText("Review quarterly report")).toBeVisible();
     terminal.write("j"); // row 0
     terminal.write("j"); // row 1
-    terminal.write("l"); // open detail for row 1
+    terminal.write("\r"); // open detail for row 1
     await expect(
       terminal.getByText("Send onboarding docs to new hire", { strict: false })
     ).toBeVisible();
@@ -170,14 +174,14 @@ test.describe("todo", () => {
     await expect(terminal.getByText("Review quarterly report")).toBeVisible();
     terminal.write("j"); // highlight a row first
     terminal.write("G"); // jump to last row
-    terminal.write("l"); // open detail
+    terminal.write("\r"); // open detail
     await expect(
       terminal.getByText("Book team offsite venue", { strict: false })
     ).toBeVisible();
     await expect(terminal.getByText("Low", { strict: false })).toBeVisible();
-    terminal.write("h"); // back to list
+    terminal.write("\t"); // tab back to the list
     terminal.write("g"); // jump to first row
-    terminal.write("l"); // open detail
+    terminal.write("\r"); // open detail
     await expect(
       terminal.getByText("Review quarterly report", { strict: false })
     ).toBeVisible();

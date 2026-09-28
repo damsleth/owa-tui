@@ -19,7 +19,7 @@ from textual import work
 from textual.binding import Binding
 
 from owa_tui.screens.base import OwaTreeScreen, TreeNode
-from owa_tui.screens.base.keys import LIST_BINDINGS
+from owa_tui.screens.base.keys import LIST_BINDINGS, TREE_NAV_BINDINGS
 
 # Graph base URL — mirrors owa_drive.auth.API_BASE exactly.
 _GRAPH_BASE = "https://graph.microsoft.com/v1.0"
@@ -148,7 +148,7 @@ class DriveScreen(OwaTreeScreen):
     """
 
     COLUMN_VIEW = True
-    BINDINGS = LIST_BINDINGS + [  # type: ignore[assignment]
+    BINDINGS = LIST_BINDINGS + TREE_NAV_BINDINGS + [  # type: ignore[assignment]
         Binding("D", "download", "Download"),
     ]
 

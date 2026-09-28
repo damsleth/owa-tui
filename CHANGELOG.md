@@ -6,6 +6,16 @@ versioning.
 
 ## [Unreleased]
 
+### Changed
+- Tab / Shift+Tab switch panes in every list+detail screen (mail cycles
+  folders → list → reader when folders are shown). h/l and ←/→ no longer switch
+  panes, so they stay free for moving inside a pane. Enter opens and focuses the
+  detail pane, and Tab goes back. Trees (OneDrive, SharePoint) keep lf-style h/l
+  for up/into folder.
+- cal calendar view: h/l/←/→ move a day cursor (empty days included). In week
+  and today view j/k step through that day's events; in the month grid j/k
+  move a week and J/K step through the day's events.
+
 ### Added
 - `owa-tui -A` / `--all-profiles`, repeated `--profile`, and `--profile all`
   merge cal, mail, people, tasks, planner, ado and teams across owa-piggy

@@ -3,10 +3,14 @@
 // OWA_TUI_FIXTURES (see src/owa_tui/fixtures.py) — no live auth needed.
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { test, expect } from "@microsoft/tui-test";
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
-const env = { ...process.env, OWA_TUI_FIXTURES: FIXTURES };
+// Empty config dir: the user's saved tool settings must not leak into fixture runs.
+const CONFIG = mkdtempSync(join(tmpdir(), "owa-tui-planner-e2e-"));
+const env = { ...process.env, OWA_TUI_FIXTURES: FIXTURES, XDG_CONFIG_HOME: CONFIG };
 // Wide enough that a right-side detail pane does not truncate task titles.
 const size = { columns: 120, rows: 40 };
 
@@ -26,13 +30,13 @@ test.describe("planner", () => {
   // 2. j then l — opens detail view for the highlighted task
   //
   // GOTCHA: ListView starts with index=None; Enter/l is a no-op until a row
-  // is highlighted. Press "j" first, THEN write("l") — not submit().
+  // is highlighted. Press "j" first, THEN Enter — not submit().
   // GOTCHA: task title may appear in both list and detail pane — use strict:false.
   // ---------------------------------------------------------------------------
-  test("j then l opens the detail view", async ({ terminal }) => {
+  test("j then Enter opens the detail view", async ({ terminal }) => {
     await expect(terminal.getByText("Define Q3 OKRs")).toBeVisible();
     terminal.write("j"); // highlight first row
-    terminal.write("l"); // open detail
+    terminal.write("\r"); // open detail
     // Title may appear in both panes — strict:false required.
     await expect(
       terminal.getByText("Define Q3 OKRs", { strict: false })
@@ -45,14 +49,14 @@ test.describe("planner", () => {
   // ---------------------------------------------------------------------------
   // 3. h — closes detail and returns to list
   // ---------------------------------------------------------------------------
-  test("h closes detail and returns to list", async ({ terminal }) => {
+  test("tab leaves detail and returns to list", async ({ terminal }) => {
     await expect(terminal.getByText("Define Q3 OKRs")).toBeVisible();
     terminal.write("j");
-    terminal.write("l");
+    terminal.write("\r");
     await expect(
       terminal.getByText("Define Q3 OKRs", { strict: false })
     ).toBeVisible();
-    terminal.write("h"); // back to list
+    terminal.write("\t"); // tab back to the list
     await expect(terminal.getByText("Review architecture proposal")).toBeVisible();
   });
 
@@ -104,7 +108,7 @@ test.describe("planner", () => {
     await expect(terminal.getByText("Define Q3 OKRs")).toBeVisible();
     terminal.write("j"); // row 0
     terminal.write("j"); // row 1
-    terminal.write("l"); // open detail for row 1
+    terminal.write("\r"); // open detail for row 1
     await expect(
       terminal.getByText("Review architecture proposal", { strict: false })
     ).toBeVisible();
@@ -123,7 +127,7 @@ test.describe("planner", () => {
     terminal.write("j"); // row 0
     terminal.write("j"); // row 1
     terminal.write("k"); // back to row 0
-    terminal.write("l"); // open detail for row 0
+    terminal.write("\r"); // open detail for row 0
     await expect(
       terminal.getByText("Define Q3 OKRs", { strict: false })
     ).toBeVisible();
@@ -140,14 +144,14 @@ test.describe("planner", () => {
     await expect(terminal.getByText("Define Q3 OKRs")).toBeVisible();
     terminal.write("j"); // highlight a row so the cursor exists
     terminal.write("G"); // jump to last row
-    terminal.write("l"); // open detail for last task
+    terminal.write("\r"); // open detail for last task
     await expect(
       terminal.getByText("Update onboarding runbook", { strict: false })
     ).toBeVisible();
     await expect(terminal.getByText("medium", { strict: false })).toBeVisible();
-    terminal.write("h"); // back to list
+    terminal.write("\t"); // tab back to the list
     terminal.write("g"); // jump to first row
-    terminal.write("l"); // open detail for first task
+    terminal.write("\r"); // open detail for first task
     await expect(terminal.getByText("urgent", { strict: false })).toBeVisible();
   });
 

@@ -29,7 +29,7 @@ from textual.binding import Binding
 from textual.containers import Horizontal
 from textual.widgets import Static
 
-from owa_tui.screens.base.keys import LIST_BINDINGS
+from owa_tui.screens.base.keys import LIST_BINDINGS, TREE_NAV_BINDINGS
 from owa_tui.screens.base.screen import OwaListScreen, _DetailPane, _OwaList
 
 # ---------------------------------------------------------------------------
@@ -113,7 +113,7 @@ class OwaTreeScreen(OwaListScreen):
     """
 
     COLUMN_VIEW = False
-    BINDINGS = LIST_BINDINGS + [  # type: ignore[assignment]
+    BINDINGS = LIST_BINDINGS + TREE_NAV_BINDINGS + [  # type: ignore[assignment]
         Binding("c", "toggle_columns", "Columns", show=False),
     ]
 

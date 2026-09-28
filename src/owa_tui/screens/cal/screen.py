@@ -35,8 +35,8 @@ from owa_tui.widgets.status_bar import StatusBar
 # ---------------------------------------------------------------------------
 
 HELP_LINE = (
-    "j/k move · enter detail · v list/calendar · / search · r refresh"
-    " · y respond (a/t/d) · o browser · esc menu · q quit"
+    "j/k move · h/l day (calendar) · enter/tab detail · v list/calendar · / search"
+    " · r refresh · y respond (a/t/d) · o browser · esc menu · q quit"
 )
 
 _VALID_DAY_RANGES = ("today", "week", "month")
@@ -150,8 +150,8 @@ class CalScreen(Screen):
         Binding("escape", "open_menu", "Menu", show=False),
         Binding("/", "search", "Search", show=False),
         Binding("v", "toggle_view", "List/calendar", show=False),
-        Binding("left", "back_to_list", "Back", show=False),
-        Binding("h", "back_to_list", "Back", show=False),
+        # Tab switches panes; arrows and hjkl stay inside the focused pane.
+        Binding("tab,shift+tab", "focus_pane", "Switch pane", show=False),
     ]
 
     _status: reactive[str] = reactive("", always_update=True)  # re-show after auto-clear
@@ -345,7 +345,7 @@ class CalScreen(Screen):
             self._refresh_detail()
 
     def on_agenda_item_drilled(self, message: AgendaItemDrilled) -> None:
-        """Handle Enter/→/l in the agenda list."""
+        """Handle Enter (or Tab) in the agenda list/grid."""
         message.stop()
         if self._settings.reading_pane == "off":
             self._status = "enable the reading pane (Esc → Settings) to view details"
@@ -354,7 +354,7 @@ class CalScreen(Screen):
         if detail is not None:
             self._refresh_detail()
             detail.focus()
-            self._status = "detail focus — j/k scroll · h/← back"
+            self._status = "detail focus — j/k scroll · tab back"
 
     # ------------------------------------------------------------------
     # Actions
@@ -579,8 +579,16 @@ class CalScreen(Screen):
         self._on_setting_changed("view", self._settings.cycle("view"))
         self._status = f"view: {self._settings.view}"
 
+    def action_focus_pane(self) -> None:
+        """Tab / shift+Tab — toggle focus between the event list/grid and the reading pane."""
+        detail = self._detail()
+        if detail is not None and detail.has_focus:
+            self.action_back_to_list()
+        else:
+            self.on_agenda_item_drilled(AgendaItemDrilled(self._current_event()))
+
     def action_back_to_list(self) -> None:
-        """h / ← — return focus to the agenda list from the detail pane."""
+        """Return focus to the agenda list/grid from the detail pane."""
         self._agenda().focus_list()  # the AgendaList wrapper itself can't take focus
         self._status = ""
 

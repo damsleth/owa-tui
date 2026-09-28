@@ -371,10 +371,10 @@ def test_action_open_message_uses_cache() -> None:
             await pilot.press("j")
             await pilot.pause(0.05)
             assert screen.selected == 0
-            await pilot.press("h")
+            await pilot.press("tab")
             await pilot.pause(0.05)
             assert screen.focused is not screen.query_one("#reader-pane", ReaderPane)
-            await pilot.press("l")
+            await pilot.press("enter")
             await pilot.pause(0.1)
             pane = screen.query_one("#reader-pane", ReaderPane)
             content = pane.query_one("#reader-content", Static)
@@ -390,7 +390,7 @@ def test_action_open_message_uses_cache() -> None:
 
 
 def test_action_close_reader_with_pane() -> None:
-    """h key with reading_pane='right' sets mode back to 'list'."""
+    """Tab from the reader (reading_pane='right') sets mode back to 'list'."""
 
     async def _run() -> str:
         app = _make_app(reading_pane="right")
@@ -399,8 +399,9 @@ def test_action_close_reader_with_pane() -> None:
             from owa_tui.screens.mail import MailScreen
 
             screen: MailScreen = app.screen  # type: ignore[assignment]
+            screen.query_one("#reader-pane").focus()
             screen.mode = "reader"
-            await pilot.press("h")
+            await pilot.press("tab")
             await pilot.pause(0.05)
             return screen.mode
 
@@ -2466,3 +2467,45 @@ def test_action_toggle_read_msg_no_id_skips_patch() -> None:
             return len(patch_calls) == 0
 
     assert asyncio.run(_run())
+
+
+def test_tab_cycles_folders_list_reader_when_folders_are_shown() -> None:
+    """With the folder panel (F) on, Tab goes folders → list → reader → folders;
+    shift+Tab walks it backwards. h/l no longer switch panes."""
+
+    async def _run() -> list[str]:
+        from textual.app import App
+
+        from owa_tui.screens.mail import MailScreen
+
+        class _App(App[None]):
+            def on_mount(self) -> None:
+                self.push_screen(
+                    MailScreen(
+                        initial_messages=_msgs(),
+                        initial_settings=MailSettings(reading_pane="right", show_folders=True),
+                    )
+                )
+
+        app = _App()
+        seen: list[str] = []
+        async with app.run_test(size=(160, 40)) as pilot:
+            await pilot.pause(0.1)
+            app.screen._message_list().focus()
+            await pilot.pause()
+            seen.append(app.focused.id or type(app.focused).__name__)
+            for key in ("l", "tab", "tab", "tab", "shift+tab", "h"):
+                await pilot.press(key)
+                await pilot.pause(0.05)
+                seen.append(app.focused.id or type(app.focused).__name__)
+            seen.append(app.screen.mode)
+        return seen
+
+    start, *rest = asyncio.run(_run())
+    assert rest == [
+        start,  # l: stays in the list
+        "reader-pane", "folder-list", start,  # tab ×3 wraps round
+        "folder-list",  # shift+tab back
+        "folder-list",  # h: stays put
+        "list",
+    ]

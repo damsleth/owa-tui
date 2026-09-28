@@ -170,7 +170,7 @@ def test_open_item_switches_to_detail_mode() -> None:
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause(0.1)
             await pilot.press("j")
-            await pilot.press("l")  # open
+            await pilot.press("enter")  # open
             await pilot.pause(0.1)
             return app.screen._mode
 
@@ -183,7 +183,7 @@ def test_open_item_off_mode_pushes_full_detail() -> None:
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause(0.1)
             await pilot.press("j")
-            await pilot.press("l")
+            await pilot.press("enter")
             await pilot.pause(0.1)
             return type(app.screen).__name__
 
@@ -405,7 +405,7 @@ def test_full_detail_screen_scroll_and_pop() -> None:
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause(0.1)
             await pilot.press("j")
-            await pilot.press("l")  # opens _FullDetailScreen
+            await pilot.press("enter")  # opens _FullDetailScreen
             await pilot.pause(0.1)
             for key in ("j", "k", "space", "g", "G"):  # scroll actions
                 await pilot.press(key)

@@ -352,10 +352,8 @@ class PeopleScreen(Screen[None]):
         Binding("g", "go_top", "Top", show=False),
         Binding("G", "go_bottom", "Bottom", show=False),
         Binding("enter", "open_detail", "Open"),
-        Binding("l", "open_detail", "Open", show=False),
-        Binding("h", "close_detail", "Back", show=False),
-        Binding("left", "close_detail", "Back", show=False),
-        Binding("tab", "focus_pane", "Focus pane", show=False),
+        # Tab switches panes; arrows and hjkl stay inside the focused pane.
+        Binding("tab,shift+tab", "focus_pane", "Switch pane", show=False),
         Binding("r", "refresh", "Refresh"),
         Binding("/", "search", "Search"),
         Binding("escape", "escape", "Back / Menu"),
@@ -562,6 +560,15 @@ class PeopleScreen(Screen[None]):
             from owa_tui import fixtures  # noqa: PLC0415
 
             raw = fixtures.load("people_detail")
+            if raw is None and fixtures.enabled():
+                # Fixture mode never goes live: show the person's own list record.
+                listed = next((p for p in self.people if p.get("id") == person_id), None)
+                if listed is None:
+                    self.app.call_from_thread(self._on_detail_failed)
+                    return
+                self._detail_cache[person_id] = listed
+                self.app.call_from_thread(self._show_cached_detail, person_id)
+                return
             if raw is None:
                 raw = retrying(
                     lambda: api_get(self._api_base, path, token, debug=self._debug),
@@ -581,8 +588,12 @@ class PeopleScreen(Screen[None]):
             )
             self.app.call_from_thread(lambda: setattr(self, "mode", "list"))
 
-    def _show_cached_detail(self, person_id: str) -> None:
-        """Display cached detail in detail pane or push DetailScreen."""
+    def _show_cached_detail(self, person_id: str, *, focus: bool = True) -> None:
+        """Display cached detail in detail pane or push DetailScreen.
+
+        ``focus`` moves keyboard focus into the pane (Enter), so Tab goes back
+        to the list; the cursor-follow preview passes ``focus=False``.
+        """
         full = self._detail_cache.get(person_id)
         if full is None:
             self._on_detail_failed()
@@ -595,6 +606,8 @@ class PeopleScreen(Screen[None]):
                 pane = self.query_one("#detail-pane", DetailPane)
                 pane.show_person(full)
                 self.mode = "detail"
+                if focus:
+                    pane.focus()
             except Exception:
                 self.app.push_screen(DetailScreen(full))
 
@@ -671,11 +684,10 @@ class PeopleScreen(Screen[None]):
         try:
             pane = self.query_one("#detail-pane", DetailPane)
             if self.focused == pane:
-                pl = self._people_list()
-                if pl:
-                    pl.focus()
+                self.action_close_detail()  # focus the list, mode → list (Esc opens the menu)
             else:
                 pane.focus()
+                self.mode = "detail"
         except Exception:
             pass
 
@@ -723,7 +735,7 @@ class PeopleScreen(Screen[None]):
             self.app.exit()
             return
         if result == "help":
-            self.status = "j/k move  g/G top/bottom  Enter open  / search  r refresh"
+            self.status = "j/k move  g/G top/bottom  Enter open  Tab pane  / search  r refresh"
             return
         if result == "reset":
             self._apply_settings(SETTINGS_DEFAULTS)
@@ -766,7 +778,7 @@ class PeopleScreen(Screen[None]):
         if self.settings.detail_pane != "off":
             person_id = event.person.get("id") or ""
             if person_id and person_id in self._detail_cache:
-                self._show_cached_detail(person_id)
+                self._show_cached_detail(person_id, focus=False)
 
     def on_people_list_item_activated(self, event: PeopleList.ItemActivated) -> None:
         self._selected_person = event.person

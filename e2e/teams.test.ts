@@ -17,7 +17,7 @@
 //     appears in multiple places (sender names in both list row + thread header,
 //     chat topic in both chats list AND thread breadcrumb, repeated words)
 //   - ListView starts index=None; "l"/Enter is a no-op until "j" highlights a row
-//   - open chat thread:  terminal.write("j")  then  terminal.write("l")
+//   - open chat thread:  terminal.write("j")  then  terminal.write("\r")
 //   - back to chats:     terminal.write("h")
 //   - OWA_TUI_FIXTURES must be absolute — derive via import.meta.url
 //   - env spread: { ...process.env, OWA_TUI_FIXTURES: FIXTURES }
@@ -25,10 +25,14 @@
 
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { test, expect } from "@microsoft/tui-test";
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
-const env = { ...process.env, OWA_TUI_FIXTURES: FIXTURES };
+// Empty config dir: the user's saved tool settings must not leak into fixture runs.
+const CONFIG = mkdtempSync(join(tmpdir(), "owa-tui-teams-e2e-"));
+const env = { ...process.env, OWA_TUI_FIXTURES: FIXTURES, XDG_CONFIG_HOME: CONFIG };
 // Wide enough that chat topics and sender columns never truncate.
 const size = { columns: 120, rows: 40 };
 
@@ -56,14 +60,14 @@ test.describe("teams", () => {
   // GOTCHA: sender names (e.g. "Alice Strand") appear in multiple message
   //         blocks — always strict:false for those.
   // ---------------------------------------------------------------------------
-  test("j then l opens a chat thread and shows message content", async ({ terminal }) => {
+  test("j then Enter opens a chat thread and shows message content", async ({ terminal }) => {
     // Wait for chats list to be ready.
     await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
 
     // Highlight the first row.
     terminal.write("j");
     // Open the thread (equivalent to Enter / right-arrow for list screens).
-    terminal.write("l");
+    terminal.write("\r");
 
     // Thread breadcrumb should contain the chat topic.
     // strict:false — topic now appears in breadcrumb AND possibly status bar.
@@ -84,7 +88,7 @@ test.describe("teams", () => {
     await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
 
     terminal.write("j");
-    terminal.write("l");
+    terminal.write("\r");
 
     // Confirm thread is open.
     await expect(
@@ -165,7 +169,7 @@ test.describe("teams", () => {
 
     terminal.write("j"); // highlight row 0 (General Engineering)
     terminal.write("j"); // move to row 1 (Q2 Review)
-    terminal.write("l"); // open the highlighted thread
+    terminal.write("\r"); // open the highlighted thread
 
     // Q2 Review breadcrumb + its fallback messages confirm the SECOND row opened,
     // not the first.  "Standup in 10 minutes" (General-only) must NOT show.
@@ -188,7 +192,7 @@ test.describe("teams", () => {
     terminal.write("j"); // row 0
     terminal.write("j"); // row 1 (Q2 Review)
     terminal.write("k"); // back to row 0 (General Engineering)
-    terminal.write("l"); // open the highlighted thread
+    terminal.write("\r"); // open the highlighted thread
 
     // General Engineering thread body is unique to the specific fixture.
     await expect(
@@ -264,7 +268,7 @@ test.describe("teams", () => {
   test("thread j/k scroll without crashing", async ({ terminal }) => {
     await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
     terminal.write("j");
-    terminal.write("l");
+    terminal.write("\r");
     await expect(
       terminal.getByText("Standup in 10 minutes", { strict: false })
     ).toBeVisible();
@@ -283,7 +287,7 @@ test.describe("teams", () => {
   test("thread d/u page scroll without crashing", async ({ terminal }) => {
     await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
     terminal.write("j");
-    terminal.write("l");
+    terminal.write("\r");
     await expect(
       terminal.getByText("Standup in 10 minutes", { strict: false })
     ).toBeVisible();
@@ -303,7 +307,7 @@ test.describe("teams", () => {
   test("thread g/G jump to top and bottom", async ({ terminal }) => {
     await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
     terminal.write("j");
-    terminal.write("l");
+    terminal.write("\r");
     await expect(
       terminal.getByText("Standup in 10 minutes", { strict: false })
     ).toBeVisible();
@@ -326,7 +330,7 @@ test.describe("teams", () => {
   test("thread r refreshes and keeps content visible", async ({ terminal }) => {
     await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
     terminal.write("j");
-    terminal.write("l");
+    terminal.write("\r");
     await expect(
       terminal.getByText("Standup in 10 minutes", { strict: false })
     ).toBeVisible();
@@ -343,7 +347,7 @@ test.describe("teams", () => {
   test("thread Esc pops back to the chats list", async ({ terminal }) => {
     await expect(terminal.getByText("General Engineering", { strict: false })).toBeVisible();
     terminal.write("j");
-    terminal.write("l");
+    terminal.write("\r");
     await expect(
       terminal.getByText("Standup in 10 minutes", { strict: false })
     ).toBeVisible();

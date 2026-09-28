@@ -3,10 +3,14 @@
 // src/owa_tui/fixtures.py) so no live auth / network is needed.
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { test, expect } from "@microsoft/tui-test";
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
-const env = { ...process.env, OWA_TUI_FIXTURES: FIXTURES };
+// Empty config dir: the user's saved tool settings must not leak into fixture runs.
+const CONFIG = mkdtempSync(join(tmpdir(), "owa-tui-actions-e2e-"));
+const env = { ...process.env, OWA_TUI_FIXTURES: FIXTURES, XDG_CONFIG_HOME: CONFIG };
 // Wide enough that cal/graph side panes don't truncate list labels.
 const size = { columns: 120, rows: 40 };
 
@@ -107,12 +111,12 @@ test.describe("cal", () => {
     await expect(terminal.getByText("tentatively accepted")).toBeVisible();
   });
 
-  test("enter opens the detail pane and h closes it", async ({ terminal }) => {
+  test("enter opens the detail pane and tab goes back", async ({ terminal }) => {
     await expect(terminal.getByText("Morning standup", { strict: false })).toBeVisible();
     terminal.write("j"); // highlight first row (index starts at None)
     terminal.submit(); // Enter -> drill into detail pane
     await expect(terminal.getByText("detail focus", { strict: false })).toBeVisible();
-    terminal.write("h"); // back_to_list — clears status, list stays visible
+    terminal.write("\t"); // tab back to the list — clears status, list stays visible
     await expect(terminal.getByText("Morning standup", { strict: false })).toBeVisible();
   });
 
@@ -138,9 +142,9 @@ test.describe("mail", () => {
   test("l opens the reader and h closes it", async ({ terminal }) => {
     await expect(terminal.getByText("Q3 planning notes")).toBeVisible();
     terminal.write("j"); // highlight first row
-    terminal.write("l"); // open reader
+    terminal.write("\r"); // open reader
     await expect(terminal.getByText("Ship owa-tui v1")).toBeVisible();
-    terminal.write("h"); // back to list
+    terminal.write("\t"); // tab back to the list
     await expect(terminal.getByText("Invoice")).toBeVisible();
   });
 
@@ -208,7 +212,7 @@ test.describe("mail", () => {
   test("reader scroll keys work and h closes it", async ({ terminal }) => {
     await expect(terminal.getByText("Q3 planning notes")).toBeVisible();
     terminal.write("j"); // highlight first row
-    terminal.write("l"); // open reader
+    terminal.write("\r"); // open reader
     await expect(terminal.getByText("Ship owa-tui v1")).toBeVisible();
     // Exercise reader scroll bindings — body is short so content stays visible.
     terminal.write("j"); // scroll down line
@@ -218,7 +222,7 @@ test.describe("mail", () => {
     terminal.write("g"); // top
     terminal.write("G"); // bottom
     await expect(terminal.getByText("Ship owa-tui v1")).toBeVisible();
-    terminal.write("h"); // close reader
+    terminal.write("\t"); // tab back to the list
     await expect(terminal.getByText("Invoice")).toBeVisible();
   });
 });

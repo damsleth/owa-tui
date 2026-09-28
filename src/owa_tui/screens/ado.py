@@ -246,7 +246,7 @@ class AdoScreen(OwaListScreen):
     # -------------------------------------------------------------------------
 
     def help_text(self) -> str:
-        return "j/k move  Enter open  / search  r refresh  q quit"
+        return "j/k move  Enter open  Tab pane  / search  r refresh  q quit"
 
     # -------------------------------------------------------------------------
     # Optional: open_browser_for
