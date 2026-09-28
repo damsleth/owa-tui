@@ -10,7 +10,8 @@ Grid shape
   columns = registered tools (SCREEN_REGISTRY order); each maps to the
             owa-piggy audience its screen mints via _TOOL_AUDIENCE
   cells   = classify_finding() result: "ok" | "warn" | "fail", or
-            "disabled" for a profile owa-piggy reports as not registered
+            "disabled" for a profile owa-piggy reports as not registered, or
+            "n/a" when the tenant never offers that audience (AADSTS65002)
 
 Cell styles
 -----------
@@ -18,6 +19,7 @@ Cell styles
   warn     → yellow
   fail     → bold red
   disabled → dim
+  n/a      → dim
 
 Fixture seam
 ------------
@@ -69,11 +71,17 @@ _RESULT_STYLE: dict[str, str] = {
     "warn": "yellow",
     "fail": "bold red",
     "disabled": "dim",
+    "n/a": "dim",
 }
 
 # Cell value / finding error for a profile owa-piggy reports as not registered.
 _DISABLED = "disabled"
 _DISABLED_ERROR = "profile not registered in owa-piggy"
+
+# AAD "first-party app not preauthorized for this resource": the tenant does not
+# offer that audience at all (e.g. devops outside the ADO tenant). Not a fault.
+_NOT_APPLICABLE = "n/a"
+_NOT_APPLICABLE_CODE = "AADSTS65002"
 
 
 # ---------------------------------------------------------------------------
@@ -82,11 +90,13 @@ _DISABLED_ERROR = "profile not registered in owa-piggy"
 
 
 def _classify(finding: dict) -> str:
-    """classify_finding, with a "disabled" short-circuit for unregistered profiles."""
+    """classify_finding, with "disabled" / "n/a" short-circuits."""
     from owa_doctor.probe import classify_finding  # noqa: PLC0415
 
     if finding.get(_DISABLED):
         return _DISABLED
+    if _NOT_APPLICABLE_CODE in (finding.get("error") or ""):
+        return _NOT_APPLICABLE
     return classify_finding(finding)
 
 

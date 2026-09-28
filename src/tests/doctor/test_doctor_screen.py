@@ -182,6 +182,13 @@ class TestParseGridColumns:
         _, rows = _parse_grid(findings, [("people", "graph")])
         assert rows == [("off", ["disabled"])]
 
+    def test_unoffered_audience_classifies_as_na(self) -> None:
+        err = "ERROR: invalid_request: AADSTS65002: Consent between first party application ..."
+        findings = [{"alias": "une", "audience": "devops", "token_ok": False, "error": err}]
+        _cols, rows = _parse_grid(findings)
+        assert rows == [("une", ["n/a"])]
+        assert _RESULT_STYLE["n/a"] == "dim"
+
     def test_tool_audience_map_uses_known_broker_audiences(self) -> None:
         assert set(_TOOL_AUDIENCE.values()) == {"outlook", "graph", "devops"}
 
