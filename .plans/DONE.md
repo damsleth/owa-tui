@@ -43,3 +43,4 @@
 - [x] mail tui: date_format=custom has no UI entry path and never calls validate_custom_format — either wire it (prompt + validate, status 'invalid strftime format: …') or drop 'custom' from the cycle (2026-09-22)
 - [x] scheduling only returns 403 — graph-audience token has no Calendars.* scope; switched sched to the outlook audience + Outlook REST v2.0 getschedule (PascalCase), same token owa-cal uses. owa-tools' owa-sched CLI has the same bug (audience graph) — fix upstream separately (2026-09-22)
 - [x] owa-tui teams: error: no module named 'httpx' when running teams from owa-tui (2026-09-28)
+- [x] owa-tui: health / diagnostics should not show 'fail' for clients that are not active for a given profile, e.g. 'ado' for most owa-piggy profiles. instead of 'fail', a greyed out 'n/a' or similar is sufficient (2026-09-28)
