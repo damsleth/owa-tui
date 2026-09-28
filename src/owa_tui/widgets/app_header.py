@@ -2,7 +2,8 @@
 
 Replaces Textual's ``Header`` (whose only job was a one-line title that
 varied per tool). Row 3 carries ``v<version>`` and the ``profile · upn``
-identity the app resolves at startup; tool identity comes from each screen's
+identity the app resolves at startup; the StatusBar sits right of the logo on
+row 2 (see base.tcss). Tool identity comes from each screen's
 own content. A tab row for switching tools is planned to sit beneath it.
 """
 

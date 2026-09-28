@@ -18,14 +18,14 @@ class _App(App):
         yield StatusBar("Loading…", id="status-bar")
 
 
-def test_status_bar_overlays_header_row_and_hides_when_empty() -> None:
+def test_status_bar_sits_right_of_logo_and_hides_when_empty() -> None:
     async def _run() -> list:
         out = []
         app = _App()
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
             bar = app.query_one(StatusBar)
-            out.append((bar.display, bar.region.y, bar.region.height))
+            out.append((bar.display, bar.region.y, bar.region.height, bar.region.x))
             bar.update("")
             await pilot.pause()
             out.append(bar.display)
@@ -35,9 +35,9 @@ def test_status_bar_overlays_header_row_and_hides_when_empty() -> None:
         return out
 
     first, hidden, again = asyncio.run(_run())
-    assert first == (True, 2, 1)  # initial text shows on header row 3
-    assert hidden is False  # empty → identity row shows through
-    assert again == (True, 2)
+    assert first == (True, 1, 1, 20)  # header row 2, clear of the 20-col logo
+    assert hidden is False
+    assert again == (True, 1)
 
 
 def test_status_bar_auto_clears_and_new_message_resets_timer(monkeypatch) -> None:
