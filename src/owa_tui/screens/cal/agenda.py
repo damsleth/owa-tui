@@ -156,9 +156,14 @@ class AgendaList(Static):
             lv.append(ListItem(Static(PLACEHOLDER)))
             return
         width = self.size.width or 80
+        pad = max((len(ev.get("_profile") or "") for ev in self._data), default=0)  # -A column
         for ev in self._data:
-            row = render_row(ev, width, show_date=show_date)
-            lv.append(ListItem(Static(row)))
+            if pad:
+                alias = (ev.get("_profile") or "").ljust(pad)
+                row = f"{alias} " + render_row(ev, max(1, width - pad - 1), show_date=show_date)
+            else:
+                row = render_row(ev, width, show_date=show_date)
+            lv.append(ListItem(Static(row, markup=False)))
         # Ensure first item is selected so current_item() works immediately
         lv.index = 0
 

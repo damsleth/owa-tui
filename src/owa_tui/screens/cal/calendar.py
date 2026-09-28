@@ -50,7 +50,8 @@ def _days(event: dict[str, Any]) -> list[date]:
 
 def _line(event: dict[str, Any], selected: bool) -> Text:
     when = "all-day" if event.get("isAllDay") else (event.get("start") or "")[11:16]
-    text = Text(f"{when} {event.get('subject') or '(no subject)'}", no_wrap=True, overflow="ellipsis")
+    who = f"{event['_profile']} " if event.get("_profile") else ""  # merged (-A) mode
+    text = Text(f"{when} {who}{event.get('subject') or '(no subject)'}", no_wrap=True, overflow="ellipsis")
     if selected:
         text.stylize(SELECTED)
     return text

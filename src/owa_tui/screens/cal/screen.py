@@ -282,21 +282,47 @@ class CalScreen(Screen):
 
         return access_token_for(self._config, tool_name="owa-cal", audience="outlook")
 
+    async def _fetch_one(self) -> tuple[list[dict[str, Any]], str]:
+        token = await asyncio.to_thread(self._token)
+        return await fetch_events(
+            token,
+            self._api_base,
+            self._settings.day_range,
+            self._settings.show_declined,
+            self._search,
+            self._debug,
+        )
+
+    async def _fetch_all(self) -> tuple[list[dict[str, Any]], str]:
+        """One profile, or every -A profile merged by start time (rows tagged _profile)."""
+        from owa_tui.adapter import as_profile, eligible_profiles, is_multi  # noqa: PLC0415
+
+        if not is_multi(self._config):
+            return await self._fetch_one()
+        try:
+            aliases = await asyncio.to_thread(eligible_profiles, self._config)
+        except Exception as exc:  # noqa: BLE001
+            return [], f"profiles: {exc}"
+        events: list[dict[str, Any]] = []
+        errors: list[str] = []
+        for alias in aliases:
+            with as_profile(alias):  # set inside this worker's task; to_thread copies it
+                got, err = await self._fetch_one()
+            if err:
+                errors.append(f"{alias}: {err}")
+            for ev in got:
+                ev["_profile"] = alias
+            events.extend(got)
+        events.sort(key=lambda e: e.get("start") or "")
+        return events, ("failed: " + "; ".join(errors)) if errors else ""
+
     @work(exclusive=True)
     async def load_events(self) -> None:
         """Async worker: fetch events and update the UI."""
         agenda = self._agenda()
         agenda.loading = True  # Textual's built-in LoadingIndicator over the list
         try:
-            token = await asyncio.to_thread(self._token)
-            events, err = await fetch_events(
-                token,
-                self._api_base,
-                self._settings.day_range,
-                self._settings.show_declined,
-                self._search,
-                self._debug,
-            )
+            events, err = await self._fetch_all()
         finally:
             if agenda.is_attached:  # the screen may have been popped mid-fetch
                 agenda.loading = False
@@ -406,7 +432,10 @@ class CalScreen(Screen):
             from owa_cal.api import api_request  # type: ignore[import]
             from owa_core.errors import OwaError  # type: ignore[import]
 
-            token = await asyncio.to_thread(self._token)
+            from owa_tui.adapter import as_profile  # noqa: PLC0415
+
+            with as_profile(ev.get("_profile")):  # respond as the event's own profile (-A)
+                token = await asyncio.to_thread(self._token)
 
             def _call() -> Any:
                 from owa_tui.adapter import retrying  # noqa: PLC0415

@@ -1,0 +1,5 @@
+[
+  {"alias": "work", "default": true, "registered": true, "has_config": true, "services": ["owa", "ado"]},
+  {"alias": "side", "default": false, "registered": true, "has_config": true, "services": ["owa"]},
+  {"alias": "gone", "default": false, "registered": false, "has_config": true, "services": ["owa"]}
+]

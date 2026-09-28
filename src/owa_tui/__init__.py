@@ -151,8 +151,20 @@ class OwaTuiApp(App[None]):
     @work(thread=True, exclusive=True)
     def _load_identity(self) -> None:
         """Set the header subtitle to ``profile · upn`` (best-effort)."""
-        from owa_tui.adapter import current_identity  # noqa: PLC0415
+        from owa_tui.adapter import (  # noqa: PLC0415
+            current_identity,  # noqa: PLC0415
+            eligible_profiles,
+            is_multi,
+        )
 
+        if is_multi(self._config):
+            try:
+                names = eligible_profiles(self._config)
+            except Exception:  # noqa: BLE001 — header is best-effort
+                names = list(self._config["owa_piggy_profiles"])
+            label = f"merged: {'+'.join(names)}"
+            self.call_from_thread(setattr, self, "sub_title", label)
+            return
         profile, upn = current_identity(self._config)
         label = "  ·  ".join(part for part in (profile, upn) if part)
         if label:
@@ -172,6 +184,7 @@ class OwaTuiApp(App[None]):
         from owa_tui import fixtures  # noqa: PLC0415
         from owa_tui.screens import SCREEN_REGISTRY  # noqa: PLC0415
 
+        self._config.pop("owa_piggy_profiles", None)  # leave merged (-A) mode
         self._config["owa_piggy_profile"] = alias
         self.sub_title = alias
         if not self.is_headless and not fixtures.enabled():
@@ -234,11 +247,37 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--profile",
+        action="append",
         default=None,
         metavar="ALIAS",
-        help="owa-piggy profile alias to authenticate as (default: the broker's default profile).",
+        help=(
+            "owa-piggy profile alias to authenticate as (default: the broker's default "
+            "profile). Repeat it, or pass 'all', to merge profiles in list screens."
+        ),
+    )
+    parser.add_argument(
+        "-A",
+        "--all-profiles",
+        action="store_true",
+        help=(
+            "Merge every eligible owa-piggy profile into the list screens (cal, mail, "
+            "people, tasks, planner, ado, teams); rows are tagged with their profile and "
+            "actions on a row use that profile. Same as --profile all."
+        ),
     )
     return parser
+
+
+def _profile_config(profiles: list[str], all_profiles: bool) -> dict[str, Any] | None:
+    """One profile → ``owa_piggy_profile``; several (or all) → merged mode."""
+    from owa_tui.adapter import ALL_PROFILES  # noqa: PLC0415
+
+    wanted = ([ALL_PROFILES] if all_profiles else []) + profiles
+    if not wanted:
+        return None
+    if len(wanted) == 1 and wanted[0] != ALL_PROFILES:
+        return {"owa_piggy_profile": wanted[0]}
+    return {"owa_piggy_profiles": list(dict.fromkeys(wanted))}
 
 
 def main(argv: Sequence[str] | None = None) -> int | None:
@@ -251,5 +290,5 @@ def main(argv: Sequence[str] | None = None) -> int | None:
     if not sys.stdout.isatty():
         print("owa-tui: stdout is not a terminal; refusing to start the TUI.", file=sys.stderr)
         return 2
-    config = {"owa_piggy_profile": args.profile} if args.profile else None
+    config = _profile_config(args.profile or [], args.all_profiles)
     OwaTuiApp(config=config, tool=tool, debug=args.debug).run()

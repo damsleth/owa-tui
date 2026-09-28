@@ -294,8 +294,10 @@ class TeamsScreen(OwaListScreen):
         """Open the selected chat's message thread."""
         chat_id = chat.get("id", "")
         chat_name = _chat_display_name(chat)
+        from owa_tui.adapter import profile_config  # noqa: PLC0415
+
         thread = TeamsThreadScreen(
-            self._config,
+            profile_config(self._config, chat),  # the chat's own profile under -A
             chat_id=chat_id,
             chat_name=chat_name,
         )
