@@ -12,8 +12,11 @@ Config (``~/.config/owa-tui/tui.json``, key ``swodp``, seeded on first run)::
     {"instance": "prod", "cal_profile": "swon", "default_week": "current",
      "category_map": {...}}
 
-``default_week`` (``previous`` | ``current`` | ``next``, also in Esc → Settings)
-is the week the screen opens on.
+``default_week`` (``previous`` | ``current`` | ``next``) is the week the screen
+opens on; ``weeks_shown`` (1–4) stacks that many weeks, ending at it, one block
+each (title row, cards, ``per dag``). Both are also in Esc → Settings. The
+block under the cursor is the active week: edits, ``a``, ``c`` and ``w`` act on
+it. Weeks that stay in view keep unwritten edits across ``H``/``L``.
 
 ``category_map`` maps an Outlook category to a row identity for ``c``
 (fill from calendar); ``null`` ignores the category.
@@ -38,6 +41,8 @@ TASK_RE = re.compile(r"^T[0-9A-Z]{5,30}$")
 
 # default_week setting -> week offset from the current week.
 DEFAULT_WEEKS = {"previous": -1, "current": 0, "next": 1}
+# ponytail: capped at 4 — one week_cards call spans ±3 weeks around the anchor.
+WEEKS_SHOWN = (1, 2, 3, 4)
 
 HELP = (
     "hjkl move  Enter/i edit  x zero  a add row  e description  D remove row  "
@@ -54,6 +59,7 @@ def _settings() -> dict[str, Any]:
         "instance": data.get("instance") or "prod",
         "cal_profile": data.get("cal_profile") or "swon",
         "default_week": data.get("default_week") if data.get("default_week") in DEFAULT_WEEKS else "current",
+        "weeks_shown": data.get("weeks_shown") if data.get("weeks_shown") in WEEKS_SHOWN else 1,
         "category_map": data.get("category_map") or dict(plan.DEFAULT_CATEGORY_MAP),
         "_seeded": "swodp" in saved,
     }
@@ -97,18 +103,24 @@ class SwodpScreen(OwaGridScreen):
         )
         self._settings = _settings()
         self._instance: str = self._settings["instance"]
-        self._monday = plan.monday_of(
+        # The anchor is the navigation week (last block); _monday/_plan are the
+        # active week, i.e. the block the cursor is in.
+        self._anchor = plan.monday_of(
             week_start
             or (fixtures.enabled() and _fixture_monday())
             or date.today() + timedelta(weeks=DEFAULT_WEEKS[self._settings["default_week"]])
         )
+        self._monday = self._anchor
+        self._weeks_shown: int = self._settings["weeks_shown"]
         self._session: Any = None
         self._categories: dict[str, str] | None = None
+        self._plans: dict[date, list[dict]] = {}
         self._plan: list[dict] = []
-        # (monday, rows) built in the worker, swapped in on the UI thread.
-        self._incoming: tuple[date, list[dict]] | None = None
+        # {monday: rows} built in the worker, merged in on the UI thread.
+        self._incoming: dict[date, list[dict]] | None = None
         self._range_cards: list[dict] = []
-        self._by_label: dict[str, dict] = {}
+        # One (monday, plan index | None) per table row; None = title/per dag row.
+        self._row_map: list[tuple[date, int | None]] = []
         self._note = ""
 
     # ------------------------------------------------------------------
@@ -136,50 +148,108 @@ class SwodpScreen(OwaGridScreen):
                 lambda: setattr(self, "_status", f"capturing SWODP session ({self._instance})…")
             )
             self._session = adapter.capture(self._instance)
+        anchor = self._anchor
         try:
-            cards = adapter.week(self._session, self._monday, self._instance)
+            cards = adapter.week(self._session, anchor, self._instance)  # ±3 weeks
         except adapter.SwodpAuthError:
             self._session = None  # r re-captures
             raise
         if self._categories is None:
             self._categories = adapter.categories(self._session)
-        discarded = sum(plan.is_dirty(r) for r in self._plan)
+        self._range_cards = cards
+        self._incoming = {
+            m: plan.cards_to_rows(cards, m, self._categories) for m in self._window(anchor)
+        }
+        return [], []  # _apply_grid renders from self._plans
+
+    def _window(self, anchor: date | None = None) -> list[date]:
+        """Mondays shown, oldest first, ending at *anchor* (default: the current one)."""
+        anchor = anchor or self._anchor
+        return [anchor - timedelta(weeks=n) for n in range(self._weeks_shown - 1, -1, -1)]
+
+    def _drop_weeks(self, weeks: list[date]) -> None:
+        """Forget loaded weeks; note how many unwritten rows that throws away."""
+        discarded = sum(plan.is_dirty(r) for m in weeks for r in self._plans.pop(m, []))
         if discarded and not self._note:
             self._note = f"discarded {discarded} unwritten row(s)"
-        monday = self._monday
-        self._range_cards = cards
-        self._incoming = (monday, plan.cards_to_rows(cards, monday, self._categories))
-        return plan.grid_data(self._incoming[1])
 
-    def _apply_grid(self, col_labels: list[str], rows: list[tuple[str, list[str]]]) -> None:
-        if self._incoming is not None:
-            monday, rows_in = self._incoming
-            self._incoming = None
-            if monday == self._monday:  # a fetch for a week we already left is dropped
-                self._plan = rows_in
-        # Always render from self._plan so overlapping fetches ([[[) can't mix
-        # one week's cells with another week's row styling.
-        col_labels, rows = plan.grid_data(self._plan)
-        self._by_label = {r["label"]: r for r in self._plan}
+    def _apply_grid(self, _cols: Any = None, _rows: Any = None) -> None:
+        # Merge only weeks still in view and not loaded yet: overlapping fetches
+        # ([[[) can't clobber local edits or render a week we already left.
+        incoming, self._incoming = self._incoming or {}, None
+        window = self._window()
+        for m in window:
+            if m not in self._plans and m in incoming:
+                self._plans[m] = incoming[m]
         tbl = self._table()
         coord = tbl.cursor_coordinate
-        super()._apply_grid(col_labels, rows)
-        if rows:
-            tbl.move_cursor(row=min(coord.row, len(rows) - 1), column=max(1, coord.column))
+        was = self._row_map[coord.row] if 0 <= coord.row < len(self._row_map) else None
+        self._render_table(window)
+        if not self._row_map:
+            return
+        if was in self._row_map:
+            row = self._row_map.index(was)
+        else:  # first card row of the anchor week (or its per dag row)
+            row = next(
+                (i for i, (m, _) in enumerate(self._row_map) if m == self._anchor),
+                len(self._row_map) - 1,
+            )
+            if self._weeks_shown > 1 and self._row_map[row][1] is None and row + 1 < len(self._row_map):
+                row += 1  # skip the title row
+        tbl.move_cursor(row=row, column=max(1, coord.column))
+        self._activate(self._row_map[row][0])
+
+    def _render_table(self, window: list[date]) -> None:
+        tbl = self._table()
+        tbl.clear(columns=True)
+        cols = [*plan.DAY_LABELS, "sum"]
+        tbl.add_column("", key="_row_label")
+        for c in cols:
+            tbl.add_column(c, key=c)
+        self._col_labels, self._rows, self._row_map = cols, [], []
+        for m in window:
+            rows = self._plans.get(m)
+            if rows is None:
+                continue  # still loading
+            if self._weeks_shown > 1:
+                title = f"Uke {m.isocalendar()[1]} · {m:%d.%m}–{m + timedelta(days=6):%d.%m}"
+                tbl.add_row(f"[bold]{title}[/bold]", *[""] * len(cols))
+                self._rows.append((title, [""] * len(cols)))
+                self._row_map.append((m, None))
+            for i, (label, cells) in enumerate(plan.grid_data(rows)[1]):
+                row = rows[i] if i < len(rows) else None
+                styled = []
+                for c, v in zip(cols, cells):
+                    st = self._style(row, label, c, v)
+                    styled.append(f"[{st}]{v}[/{st}]" if st else v)
+                tbl.add_row(label, *styled)
+                self._rows.append((label, cells))
+                self._row_map.append((m, i if row is not None else None))
+
+    def _activate(self, monday: date) -> None:
+        """Make *monday*'s block the active week: breadcrumb and status follow it."""
+        self._monday = monday
+        self._plan = self._plans.get(monday, [])
         self.query_one("#owa-grid-breadcrumb", Label).update(
-            plan.week_title(self._monday, self._instance)
+            plan.week_title(monday, self._instance)
         )
         dirty = sum(plan.is_dirty(r) for r in self._plan)
-        summary = f"{len(self._plan)} kort · {rows[-1][1][-1] if rows else 0} timer"
+        total = plan.grid_data(self._plan)[1][-1][1][-1]
+        summary = f"{len(self._plan)} kort · {total} timer"
         if dirty:
             summary += f" · {dirty} unwritten (w to write)"
         self._status = f"{self._note} · {summary}" if self._note else summary
         self._note = ""
 
+    def on_data_table_cell_highlighted(self, event: DataTable.CellHighlighted) -> None:
+        row = event.coordinate.row
+        if 0 <= row < len(self._row_map) and self._row_map[row][0] != self._monday:
+            self._activate(self._row_map[row][0])
+
     def _render_plan(self, note: str = "") -> None:
-        """Re-render from ``self._plan`` after a local edit, keeping the cursor."""
+        """Re-render after a local edit, keeping the cursor."""
         self._note = note
-        self._apply_grid(*plan.grid_data(self._plan))
+        self._apply_grid()
 
     def _table(self) -> DataTable:
         return self.query_one("#owa-grid-table", DataTable)
@@ -191,8 +261,11 @@ class SwodpScreen(OwaGridScreen):
     def cell_style(self, row_label: str, col_label: str, value: str) -> str | None:
         if row_label == plan.SUM_LABEL or col_label == "sum":
             return "bold"
-        row = self._by_label.get(row_label)
-        if row is not None:
+        return "dim" if value == "0" else None
+
+    def _style(self, row: dict | None, label: str, col_label: str, value: str) -> str | None:
+        """cell_style, plus per-row state (removed, read-only, dirty) for card rows."""
+        if row is not None and col_label != "sum":
             if row["remove"]:
                 return "strike dim"
             if not plan.is_editable(row):
@@ -200,7 +273,7 @@ class SwodpScreen(OwaGridScreen):
             i = plan.DAY_LABELS.index(col_label)
             if row["days"][i] != row["orig"][i]:
                 return "bold yellow"
-        return "dim" if value == "0" else None
+        return self.cell_style(label, col_label, value)
 
     # ------------------------------------------------------------------
     # Cursor helpers
@@ -208,10 +281,11 @@ class SwodpScreen(OwaGridScreen):
 
     def _cursor(self) -> tuple[dict | None, int | None]:
         coord = self._table().cursor_coordinate
-        if coord.row >= len(self._plan):
-            return None, None  # the per-dag row
+        m, i = self._row_map[coord.row] if 0 <= coord.row < len(self._row_map) else (None, None)
+        if i is None:
+            return None, None  # a title or per-dag row
         day = coord.column - 1 if 1 <= coord.column <= 7 else None
-        return self._plan[coord.row], day
+        return self._plans[m][i], day
 
     def _editable_row(self) -> dict | None:
         row, _ = self._cursor()
@@ -248,16 +322,17 @@ class SwodpScreen(OwaGridScreen):
 
     def _show_cell_detail(self, row: int, column: int) -> None:
         """Enter on a day cell of an editable row edits it; else show detail."""
-        if row < len(self._plan) and 1 <= column <= 7 and plan.is_editable(self._plan[row]):
+        m, i = self._row_map[row] if 0 <= row < len(self._row_map) else (None, None)
+        if i is None:
+            super()._show_cell_detail(row, column)
+            return
+        card = self._plans[m][i]
+        if 1 <= column <= 7 and plan.is_editable(card):
             self.action_edit_cell()
         else:
-            super()._show_cell_detail(row, column)
-
-    def cell_detail(self, row_label: str, col_label: str, value: str) -> str:
-        row = self._by_label.get(row_label)
-        if row is None:
-            return super().cell_detail(row_label, col_label, value)
-        return f"{row['label']} · {row['state']} · {row['description'] or '(no description)'}"
+            self._status = (
+                f"{card['label']} · {card['state']} · {card['description'] or '(no description)'}"
+            )
 
     def action_edit_cell(self) -> None:
         target = self._editable_cell()
@@ -388,6 +463,7 @@ class SwodpScreen(OwaGridScreen):
             label = who.get("taskNumber") or who.get("category") or ""
             self._status = f"cannot write {label}: {exc}".replace("  ", " ")
             return
+        monday = self._monday
         lines = plan.diff_lines(self._plan)
         text = "\n".join(
             [
@@ -400,19 +476,19 @@ class SwodpScreen(OwaGridScreen):
 
         def _done(value: str | None) -> None:
             if (value or "").strip().lower() in ("y", "yes"):
-                self._write(rows)
+                self._write(monday, rows)
             else:
                 self._status = "write cancelled"
 
         self._prompt(text, "y", _done)
 
     @work(thread=True, exclusive=True, group="swodp-write")
-    def _write(self, rows: list[dict]) -> None:
+    def _write(self, monday: date, rows: list[dict]) -> None:
         self.app.call_from_thread(lambda: setattr(self, "_status", "writing…"))
         try:
             if self._session is None:
                 self._session = adapter.capture(self._instance)
-            results = adapter.write(self._session, self._monday, rows)
+            results = adapter.write(self._session, monday, rows)
         except Exception as exc:  # noqa: BLE001
             if isinstance(exc, adapter.SwodpAuthError):
                 self._session = None
@@ -430,7 +506,7 @@ class SwodpScreen(OwaGridScreen):
             note += " (fixture dry-run)"
 
         def _after() -> None:
-            self._plan = []  # written: nothing to discard on reload
+            self._plans.pop(monday, None)  # written: reload that week, nothing to discard
             self._note = note
             self._fetch_grid()
 
@@ -443,22 +519,27 @@ class SwodpScreen(OwaGridScreen):
     @work(thread=True, exclusive=True, group="swodp-fill")
     def action_fill_calendar(self) -> None:
         profile = self._settings["cal_profile"]
+        monday = self._monday
         self.app.call_from_thread(
             lambda: setattr(self, "_status", f"reading calendar ({profile})…")
         )
         try:
-            events = adapter.calendar_events(self._config, profile, self._monday)
+            events = adapter.calendar_events(self._config, profile, monday)
         except Exception as exc:  # noqa: BLE001
             msg = f"calendar: {exc}"
             self.app.call_from_thread(lambda: setattr(self, "_status", msg))
             return
-        self.app.call_from_thread(self._merge_calendar, events)
+        self.app.call_from_thread(self._merge_calendar, events, monday)
 
-    def _merge_calendar(self, events: list[dict]) -> None:
+    def _merge_calendar(self, events: list[dict], monday: date) -> None:
         hours, specs, unmapped = plan.events_to_hours(
-            events, self._monday, self._settings["category_map"]
+            events, monday, self._settings["category_map"]
         )
-        filled, kept = plan.merge_fill(self._plan, hours, specs)
+        rows = self._plans.get(monday)
+        if rows is None:
+            self._status = "calendar: that week is no longer shown"
+            return
+        filled, kept = plan.merge_fill(rows, hours, specs)
         note = f"calendar: {filled} cell(s) filled"
         if kept:
             note += f", {kept} kept (already filled; edit by hand)"
@@ -471,8 +552,13 @@ class SwodpScreen(OwaGridScreen):
     # Week navigation
     # ------------------------------------------------------------------
 
-    def _go(self, monday: date) -> None:
-        self._monday = monday
+    def _go(self, anchor: date) -> None:
+        self._anchor = self._monday = anchor
+        self._drop_weeks([m for m in self._plans if m not in self._window()])
+        self._fetch_grid()
+
+    def action_refresh(self) -> None:
+        self._drop_weeks(list(self._plans))
         self._fetch_grid()
 
     def action_prev_week(self) -> None:
@@ -493,7 +579,7 @@ class SwodpScreen(OwaGridScreen):
     def menu_config(self) -> tuple[str, list[tuple[str, str]]]:
         return (
             f"Timesheet (SWODP) — {self._instance} · calendar {self._settings['cal_profile']}",
-            [("default_week", "Default week")],
+            [("default_week", "Default week"), ("weeks_shown", "Weeks shown")],
         )
 
     def action_open_menu(self) -> None:
@@ -507,22 +593,30 @@ class SwodpScreen(OwaGridScreen):
             title_lines=[title],
             top_items=[("Resume", "resume"), ("Settings", "settings"), ("Help", "help"), ("Quit", "quit")],
             settings_fields=fields,
-            settings=SimpleNamespace(default_week=self._settings["default_week"]),
-            cycle_fn=lambda st, _f, d: SimpleNamespace(
-                default_week=cycle_value(st.default_week, tuple(DEFAULT_WEEKS), d)
+            settings=SimpleNamespace(
+                default_week=self._settings["default_week"], weeks_shown=self._weeks_shown
             ),
-            on_change=lambda _f, st: self._save_default_week(st.default_week),
+            cycle_fn=lambda st, f, d: SimpleNamespace(
+                **{**vars(st), f: cycle_value(getattr(st, f), options[f], d)}
+            ),
+            on_change=lambda f, st: self._save_setting(f, getattr(st, f)),
         )
+        options = {"default_week": tuple(DEFAULT_WEEKS), "weeks_shown": WEEKS_SHOWN}
         self.app.push_screen(overlay, self.handle_menu_result)
 
-    def _save_default_week(self, value: str) -> None:
-        """Persist default_week to tui.json; takes effect on the next open."""
-        self._settings["default_week"] = value
+    def _save_setting(self, key: str, value: Any) -> None:
+        """Persist a swodp setting to tui.json. weeks_shown applies live;
+        default_week takes effect on the next open."""
+        self._settings[key] = value
+        if key == "weeks_shown":
+            self._weeks_shown = value
+            self._drop_weeks([m for m in self._plans if m not in self._window()])
+            self._fetch_grid()
         if fixtures.enabled():
             return
         from owa_tui import app_config  # noqa: PLC0415
 
         data = app_config.load()
-        data.setdefault("swodp", {})["default_week"] = value
+        data.setdefault("swodp", {})[key] = value
         app_config.save(data)
 
