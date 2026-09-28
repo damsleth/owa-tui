@@ -163,11 +163,11 @@ class DriveScreen(OwaTreeScreen):
         initial_items: list[dict] | None = None,
         **kw: Any,
     ) -> None:
-        self._config = config or {}
         self._tool_name = tool_name
         self._audience = audience
         self._token: str = ""
         super().__init__(
+            config=config,  # the base sets self._config; dropping it lost --profile / Switch profile
             root_node=_ROOT_NODE,
             tool_name=tool_name,
             audience=audience,
