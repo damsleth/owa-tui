@@ -284,7 +284,8 @@ class CalScreen(Screen):
                 self._debug,
             )
         finally:
-            agenda.loading = False
+            if agenda.is_attached:  # the screen may have been popped mid-fetch
+                agenda.loading = False
         self._events = events
         # Keep any prior confirmation (e.g. "accepted: …") on success; a reload
         # triggered right after a respond would otherwise wipe it instantly.
