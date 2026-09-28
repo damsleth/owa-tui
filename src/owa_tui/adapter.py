@@ -7,8 +7,10 @@ people inline) — see plan 20: v2 tools each get their own ``adapter.py``.
 
 from __future__ import annotations
 
+import contextlib
+import contextvars
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any, TypeVar
 
 T = TypeVar("T")
@@ -66,6 +68,9 @@ def access_token_for(config: dict[str, Any], *, tool_name: str, audience: str) -
     """
     from owa_tui import fixtures  # noqa: PLC0415
 
+    override = _PROFILE.get()
+    if override:
+        config = profile_config(config, override)
     if fixtures.enabled():
         return fixtures.TOKEN
     try:
@@ -81,6 +86,120 @@ def access_token_for(config: dict[str, Any], *, tool_name: str, audience: str) -
     if isinstance(info, dict):
         return info.get("access_token") or ""
     return getattr(info, "access_token", "") or ""
+
+
+# ---------------------------------------------------------------------------
+# Multi-profile fan-out (owa-tui -A / repeated --profile)
+# ---------------------------------------------------------------------------
+#
+# ``config["owa_piggy_profiles"]`` (a list, may contain "all") puts list
+# screens in merged mode. Each fetch runs once per eligible profile with the
+# profile set in a context var that access_token_for honours, so no fetch path
+# needs a profile argument. Rows come back tagged ``_profile``; anything done
+# to a row afterwards (reply, respond, open) mints with profile_config(row).
+
+ALL_PROFILES = "all"  # reserved, same meaning as in owa-tools
+_PROFILE: contextvars.ContextVar[str | None] = contextvars.ContextVar("owa_tui_profile", default=None)
+
+
+def is_multi(config: dict[str, Any]) -> bool:
+    return bool(config.get("owa_piggy_profiles"))
+
+
+def profile_config(config: dict[str, Any], item_or_alias: Any) -> dict[str, Any]:
+    """*config* pinned to one profile: the alias itself, or a row's ``_profile``.
+
+    Drops the merged-mode list so a screen pushed for one row (a thread, a
+    message) doesn't fan out again. Returns *config* unchanged when there is no
+    profile to pin.
+    """
+    alias = item_or_alias.get("_profile") if isinstance(item_or_alias, dict) else item_or_alias
+    if not alias:
+        return config
+    out = {k: v for k, v in config.items() if k != "owa_piggy_profiles"}
+    out["owa_piggy_profile"] = alias
+    return out
+
+
+@contextlib.contextmanager
+def as_profile(alias: str | None) -> Iterator[None]:
+    """Mint tokens as *alias* inside the block (no-op for None).
+
+    Always reset: worker threads are pooled, and a leaked value would mint the
+    next fetch's tokens for the wrong profile.
+    """
+    if not alias:
+        yield
+        return
+    token = _PROFILE.set(alias)
+    try:
+        yield
+    finally:
+        _PROFILE.reset(token)
+
+
+def _eligible(row: Any, service: str) -> bool:
+    """owa-tools' ``-A`` rule: registered, configured, and offering *service*."""
+    if not (row.registered and row.has_config):
+        return False
+    if row.services:
+        return service in row.services
+    return row.type == ("ado" if service == "ado" else "m365")  # older brokers omit services
+
+
+def eligible_profiles(config: dict[str, Any], service: str = "owa") -> list[str]:
+    """Expand ``owa_piggy_profiles`` ("all" → every eligible profile), de-duplicated.
+
+    Blocking (shells out to owa-piggy); call from a worker. Fixture mode reads
+    ``profiles.json`` (a list of broker rows) instead.
+    """
+    from owa_tui import fixtures  # noqa: PLC0415
+
+    requested = list(config.get("owa_piggy_profiles") or [])
+    if ALL_PROFILES in requested:
+        if fixtures.enabled():
+            from types import SimpleNamespace  # noqa: PLC0415
+
+            rows: list[Any] = [
+                SimpleNamespace(**{"type": "m365", "services": (), **r})
+                for r in fixtures.load("profiles") or []
+            ]
+        else:
+            from owa_core.auth import get_profiles  # type: ignore[import]  # noqa: PLC0415
+
+            rows = get_profiles(tool_name="owa-tui")
+        eligible = [r.alias for r in rows if _eligible(r, service)]
+    else:
+        eligible = []
+    out: list[str] = []
+    for value in requested:  # explicit names are kept even if ineligible: they error visibly
+        for name in eligible if value == ALL_PROFILES else [value]:
+            if name not in out:
+                out.append(name)
+    return out
+
+
+def fan_out(
+    config: dict[str, Any], fetch: Callable[[], list[dict]], *, service: str = "owa"
+) -> tuple[list[dict], list[str]]:
+    """Run *fetch* once per eligible profile; return (tagged rows, "alias: error" list).
+
+    Blocking — call from a worker thread. A profile that fails doesn't sink the
+    others; its error comes back for the status line.
+    """
+    rows: list[dict] = []
+    errors: list[str] = []
+    for alias in eligible_profiles(config, service):
+        with as_profile(alias):
+            try:
+                got = fetch()
+            except Exception as exc:  # noqa: BLE001 — reported per profile
+                errors.append(f"{alias}: {exc}")
+                continue
+        for row in got:
+            row["_profile"] = alias
+        rows.extend(got)
+    return rows, errors
 
 
 def current_identity(config: dict[str, Any]) -> tuple[str | None, str | None]:

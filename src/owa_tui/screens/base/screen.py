@@ -244,8 +244,14 @@ class _OwaList(ListView):
             self.append(ListItem(Static(self._empty_label, id="owa-list-empty")))
             return
         w = self.size.width or 80
+        # Merged (-A) rows carry _profile: a fixed-width profile column in front.
+        pad = max((len(i.get("_profile") or "") for i in self._items), default=0)
         for item in self._items:
-            text = self._render_fn(item, w)
+            if pad:
+                alias = (item.get("_profile") or "").ljust(pad)
+                text = f"[dim]{alias}[/dim] " + self._render_fn(item, max(1, w - pad - 1))
+            else:
+                text = self._render_fn(item, w)
             self.append(ListItem(Label(text)))
 
     def on_mount(self) -> None:
@@ -346,6 +352,9 @@ class OwaListScreen(Screen[None]):
     _selected_idx: reactive[int] = reactive(0)
     _search: reactive[str] = reactive("")
     _status: reactive[str] = reactive("", always_update=True)  # re-show after auto-clear
+
+    # owa-piggy service a profile must offer to join a merged (-A) fetch.
+    FAN_OUT_SERVICE = "owa"
     _mode: reactive[str] = reactive("list")  # 'list' | 'detail'
 
     # -------------------------------------------------------------------------
@@ -519,14 +528,29 @@ class OwaListScreen(Screen[None]):
         """Background thread: call fetch_items() and marshal results to main thread."""
         import asyncio  # noqa: PLC0415
 
+        from owa_tui.adapter import fan_out, is_multi  # noqa: PLC0415
+
         self.app.call_from_thread(lambda: setattr(self, "_status", "Loading…"))
+        errors: list[str] = []
         try:
-            items = asyncio.run(self.fetch_items(search))
+            if is_multi(self._config):
+                items, errors = fan_out(
+                    self._config,
+                    lambda: asyncio.run(self.fetch_items(search)),
+                    service=self.FAN_OUT_SERVICE,
+                )
+                if errors and not items:
+                    raise RuntimeError("; ".join(errors))
+            else:
+                items = asyncio.run(self.fetch_items(search))
         except Exception as exc:
             err = str(exc)
             self.app.call_from_thread(lambda: setattr(self, "_status", f"error: {err}"))
             return
         self.app.call_from_thread(self._apply_items, items, search)
+        if errors:
+            note = f"{len(items)} items · failed: " + "; ".join(errors)
+            self.app.call_from_thread(lambda: setattr(self, "_status", note))
 
     def _apply_items(self, items: list[dict], search: str) -> None:
         """Main-thread callback: update reactive state and rebuild the list."""

@@ -223,27 +223,29 @@ class TodoScreen(OwaListScreen):
 
         # Persist to API in the background (no-op in fixture mode)
         if task_id:
-            self._patch_complete(task_id, new_status)
+            self._patch_complete(task_id, new_status, item.get("_profile"))
 
     # -------------------------------------------------------------------------
     # Background PATCH worker
     # -------------------------------------------------------------------------
 
-    def _patch_complete(self, task_id: str, new_status: str) -> None:
+    def _patch_complete(self, task_id: str, new_status: str, profile: str | None = None) -> None:
         """Dispatch a PATCH in a background thread (no-op in fixture mode)."""
         from owa_tui import fixtures  # noqa: PLC0415
 
         if fixtures.enabled():
             return
 
-        self._do_patch_complete(task_id, new_status)
+        self._do_patch_complete(task_id, new_status, profile)
 
-    def _do_patch_complete(self, task_id: str, new_status: str) -> None:
+    def _do_patch_complete(self, task_id: str, new_status: str, profile: str | None = None) -> None:
         """Fire a background thread to PATCH task status via Outlook REST."""
         import threading  # noqa: PLC0415
         import urllib.parse  # noqa: PLC0415
 
-        config = self._config
+        from owa_tui.adapter import profile_config  # noqa: PLC0415
+
+        config = profile_config(self._config, profile)  # merged (-A) rows carry their profile
         tool_name = self._tool_name
         audience = self._audience
         debug = self._debug

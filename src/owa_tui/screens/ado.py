@@ -110,6 +110,8 @@ class AdoScreen(OwaListScreen):
     v1 is read-only: no mutation bindings.
     """
 
+    FAN_OUT_SERVICE = "ado"
+
     BINDINGS = LIST_BINDINGS  # type: ignore[assignment]
 
     def __init__(self, config: dict[str, Any] | None = None, **kw: Any) -> None:
