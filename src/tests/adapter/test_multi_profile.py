@@ -237,3 +237,68 @@ def test_people_merges_profiles_and_looks_up_detail_in_the_rows_tenant(fixture_m
     assert tags == ["work"] * half + ["side"] * half and half > 0
     assert row0.startswith("[dim]work[/dim] ")
     assert detail_minted == ["side"]
+
+
+def _mail_screen(config):
+    from owa_tui.screens.mail import MailScreen
+
+    return MailScreen(config)
+
+
+def test_mail_merges_profiles_and_pages_each_profile_on_its_own_skip(monkeypatch) -> None:
+    from owa_tui.screens import mail as mail_mod
+
+    monkeypatch.setattr(adapter, "eligible_profiles", lambda config, service="owa": ["une", "nc"])
+    calls: list[tuple[str | None, int]] = []
+
+    def fetch_page(self, search, skip):
+        alias = adapter._PROFILE.get()
+        calls.append((alias, skip))
+        n = mail_mod.PAGE_SIZE if alias == "une" and skip == 0 else 2  # une has a 2nd page
+        return [{"id": f"{alias}-{skip + i}", "subject": "s", "is_read": True} for i in range(n)]
+
+    monkeypatch.setattr(mail_mod.MailScreen, "_fetch_page", fetch_page)
+
+    async def run():
+        app = owa_tui.OwaTuiApp(config=dict(ALL))
+        async with app.run_test(size=(120, 30)) as pilot:
+            sc = _mail_screen(app._config)
+            app.push_screen(sc)
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            first = (len(sc.messages), sc._has_more, sorted(sc._mail_open))
+            row0 = str(sc.query("ListItem Label").first().content)
+            sc._fetch_list(append=True)
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            return first, row0, len(sc.messages), sc._has_more, list(calls)
+
+    first, row0, total, more, seen = asyncio.run(run())
+    assert first == (mail_mod.PAGE_SIZE + 2, True, ["une"])
+    assert row0.split("[/dim]")[0] in ("[dim]une", "[dim]nc ")  # padded profile column
+    assert seen == [("une", 0), ("nc", 0), ("une", mail_mod.PAGE_SIZE)]  # nc was exhausted
+    assert (total, more) == (mail_mod.PAGE_SIZE + 4, False)
+
+
+def test_mail_opens_and_marks_messages_as_their_own_profile(monkeypatch) -> None:
+    from owa_tui.screens import mail as mail_mod
+
+    minted: list[str | None] = []
+    monkeypatch.setattr(
+        mail_mod.MailScreen, "_get_token_sync", lambda self: minted.append(adapter._PROFILE.get()) or ""
+    )
+
+    async def run():
+        app = owa_tui.OwaTuiApp(config=dict(ALL))
+        async with app.run_test() as pilot:
+            sc = mail_mod.MailScreen(app._config, initial_messages=[])
+            app.push_screen(sc)
+            await pilot.pause()
+            sc._fetch_body("m1", "nc")
+            await app.workers.wait_for_complete()
+            with patch("owa_tui.fixtures.enabled", return_value=False):
+                sc._patch_read("m1", True, "une")
+                await app.workers.wait_for_complete()
+            return minted
+
+    assert asyncio.run(run()) == ["nc", "une"]
