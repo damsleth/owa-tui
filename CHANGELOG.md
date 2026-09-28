@@ -4,6 +4,35 @@ All notable changes to `owa-tui` are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); this project uses semantic
 versioning.
 
+## [Unreleased]
+
+### Added
+- `owa-tui -A` / `--all-profiles`, repeated `--profile`, and `--profile all`
+  merge cal, mail, people, tasks, planner, ado and teams across owa-piggy
+  profiles, using the owa-tools `-A` eligibility rule. Rows carry a profile
+  column. Actions on a row mint as that row's profile. Mail pages each profile
+  on its own `$skip`; the folder panel stays single-profile.
+- Esc → Switch profile on every screen: pick an owa-piggy profile and the open
+  tool screen is rebuilt under it.
+- cal: calendar view (`v`, remembered). It follows the day range: an hour
+  timeline for today, seven day columns for a week, a month grid for a month.
+- cal: a loading indicator over the agenda while events load.
+- swodp: `weeks_shown` (1–4) stacks weeks; edits, `a`, `c` and `w` act on the
+  week under the cursor. `default_week` (previous/current/next) picks the
+  opening week. Both are in Esc → Settings. `H`/`L` switch week alongside `[` `]`.
+
+### Fixed
+- teams: chats and messages load via `owa_graph.api` again (the screen imported
+  `httpx`, which was never a dependency, and never awaited its requests).
+- cal: saved settings (day range, reading pane, …) are restored on the next run;
+  they were written to the owa-cal config but read from the wrong dict.
+- cal: `h`/`←` return focus from the reading pane to the list.
+- cal: event locations (`[Teams]`) no longer disappear as markup.
+- doctor: an audience the tenant doesn't offer (AADSTS65002, e.g. devops outside
+  the ADO tenant) shows a dim `n/a` instead of `fail`.
+- The status line sits right of the logo on header row 2, so it covers neither
+  the logo nor the version/identity row.
+
 ## [0.3.0] - 2026-09-23
 
 ### Changed
