@@ -1501,3 +1501,47 @@ class TestLiveSettings:
         assert "60" in agenda_w
         assert "40" in detail_w
         assert subject == "Lunch review"  # no rebuild → selection untouched
+
+
+def test_load_events_shows_loading_indicator_while_fetching(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The agenda shows Textual's loading indicator during a fetch, then clears it
+    and keeps list focus so j/k work straight after an ``r`` refresh."""
+    import owa_tui.screens.cal.fetch as fetch_mod
+
+    gate = asyncio.Event()
+
+    async def _slow(fn: Any, *args: Any, **kwargs: Any) -> Any:
+        await gate.wait()
+        return {"value": [_EV1, _EV2]}
+
+    monkeypatch.setattr(fetch_mod.asyncio, "to_thread", _slow)
+
+    async def _run() -> tuple[bool, bool, str]:
+        from textual.app import App
+
+        class _App(App[None]):
+            def on_mount(self) -> None:
+                s = CalScreen(config={}, access_token="fake", api_base="https://fake.api")
+                s._persist_settings = lambda: None  # type: ignore[method-assign]
+                self.push_screen(s)
+
+        app = _App()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            during = app.screen._agenda().loading
+            gate.set()
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            after = app.screen._agenda().loading
+            gate.clear()
+            await pilot.press("r")
+            await pilot.pause()
+            gate.set()
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            return during, after, app.focused.id if app.focused else ""
+
+    during, after, focused = asyncio.run(_run())
+    assert during is True
+    assert after is False
+    assert focused == "agenda-lv"
