@@ -41,7 +41,7 @@ DEFAULT_WEEKS = {"previous": -1, "current": 0, "next": 1}
 
 HELP = (
     "hjkl move  Enter/i edit  x zero  a add row  e description  D remove row  "
-    "c fill from calendar  w write  [ ] week  t this week  r reload  q quit"
+    "c fill from calendar  w write  H/L or [ ] week  t this week  r reload  q quit"
 )
 
 
@@ -79,6 +79,9 @@ class SwodpScreen(OwaGridScreen):
         Binding("w", "write", "Write"),
         Binding("left_square_bracket", "prev_week", "Prev week", show=False),
         Binding("right_square_bracket", "next_week", "Next week", show=False),
+        # [ ] are Alt+8/9 on a Norwegian Mac layout; H/L sit next to h/l.
+        Binding("H", "prev_week", "Prev week", show=False),
+        Binding("L", "next_week", "Next week", show=False),
         Binding("t", "this_week", "This week", show=False),
     ]
 
