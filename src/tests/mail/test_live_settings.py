@@ -47,10 +47,10 @@ def test_reading_pane_change_rebuilds_layout_and_keeps_selection() -> None:
     async def _run():
         app = _make_app(reading_pane="right")
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause(0.1)
+            await _settle(app, pilot)  # the list's mount-time highlight must not reset us to 0
             screen: MailScreen = app.screen  # type: ignore[assignment]
             screen.selected = 3
-            await pilot.pause(0.05)
+            await _settle(app, pilot)
             has_reader_right = bool(list(screen.query(ReaderPane)))
 
             screen._apply_settings(dataclasses.replace(screen.settings, reading_pane="off"))
