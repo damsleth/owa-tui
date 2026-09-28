@@ -103,9 +103,8 @@ def test_settings_overlay_select_quit() -> None:
             await pilot.pause()
             app.show_overlay()
             await pilot.pause()
-            # Move down twice to reach "Quit" (items: Resume, Settings, Quit)
-            await pilot.press("j")
-            await pilot.press("j")
+            # Items: Resume, Settings, Switch profile (auto-inserted), Quit
+            await pilot.press("j", "j", "j")
             await pilot.press("enter")
             await pilot.pause()
             return app.result
@@ -297,3 +296,69 @@ def test_overlay_background_follows_theme() -> None:
                 await pilot.pause()
 
     asyncio.run(run())
+
+
+def _profiles(*aliases: str, default: str = ""):
+    from types import SimpleNamespace
+
+    return [SimpleNamespace(alias=a, registered=True, default=a == default) for a in aliases]
+
+
+def test_switch_profile_item_is_inserted_before_quit() -> None:
+    from owa_tui.widgets.settings_overlay import PROFILE_ITEM, _with_profile_item
+
+    items = [("Resume", "resume"), ("Help", "help"), ("Quit", "quit")]
+    assert _with_profile_item(items) == [items[0], items[1], PROFILE_ITEM, items[2]]
+    assert _with_profile_item([("Resume", "resume")])[-1] == PROFILE_ITEM
+    assert _with_profile_item(_with_profile_item(items)).count(PROFILE_ITEM) == 1
+
+
+def test_switch_profile_picks_alias_and_calls_app(monkeypatch) -> None:
+    """Switch profile → picker lists registered profiles → Enter hands the alias to the app."""
+    import owa_core.auth
+
+    monkeypatch.setattr(owa_core.auth, "get_profiles", lambda **k: _profiles("une", "nc", default="une"))
+    switched: list[str] = []
+
+    class _App(_OverlayApp):
+        def switch_profile(self, alias: str) -> None:
+            switched.append(alias)
+
+    async def run() -> tuple[list[str], str | None]:
+        app = _App()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app.show_overlay()
+            await pilot.pause()
+            await pilot.press("j", "j", "enter")  # Switch profile
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            opts = [str(o.prompt) for o in app.screen.query_one("OptionList").options]
+            await pilot.press("j", "enter")  # nc
+            await pilot.pause()
+            await pilot.pause()
+            return opts, app.result
+
+    opts, result = asyncio.run(run())
+    assert opts == ["une  (current)", "nc"]
+    assert result == "resume"
+    assert switched == ["nc"]
+
+
+def test_app_switch_profile_rebuilds_the_open_tool_screen(monkeypatch) -> None:
+    monkeypatch.setenv("OWA_TUI_FIXTURES", str(Path(owa_tui.__file__).parents[2] / "e2e" / "fixtures"))
+    from owa_tui.screens.cal import CalScreen
+
+    async def run():
+        app = owa_tui.OwaTuiApp(tool="cal")
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            before = app.screen
+            app.switch_profile("nc")
+            await pilot.pause()
+            return before, app.screen, app._config, app.sub_title, len(app.screen_stack)
+
+    before, after, config, sub, depth = asyncio.run(run())
+    assert isinstance(after, CalScreen) and after is not before
+    assert config["owa_piggy_profile"] == "nc" and sub == "nc"
+    assert depth == 2  # default screen + the rebuilt tool, nothing stacked twice
