@@ -17,8 +17,8 @@ EVENTS = [
 TODAY = date(2026, 9, 28)
 
 
-def _text(renderable) -> str:
-    console = Console(width=120, record=True, file=open("/dev/null", "w"))  # noqa: SIM115
+def _text(renderable, width: int = 120) -> str:
+    console = Console(width=width, record=True, file=open("/dev/null", "w"))  # noqa: SIM115
     console.print(renderable)
     return console.export_text()
 
@@ -39,14 +39,13 @@ def test_week_grid_has_seven_day_columns_and_spans_all_day_events() -> None:
     assert out.count("all-day Ferie") == 2  # Wed 30.09 and Thu 01.10, end is exclusive
 
 
-def test_month_grid_caps_cells_but_always_shows_the_selected_event() -> None:
+def test_month_grid_shows_every_event_of_a_day() -> None:
     many = [
         {"subject": f"m{n}", "start": f"2026-09-15T{8 + n:02d}:00:00", "end": f"2026-09-15T{9 + n:02d}:00:00"}
-        for n in range(5)
+        for n in range(6)
     ]
     out = _text(render_grid(many, "month", 4, TODAY))
-    assert "m0" in out and "m4" in out and "m3" not in out and "+2" in out
-
+    assert all(f"m{n}" in out for n in range(6)) and "+" not in out.replace("+47", "")
 
 def test_anchor_falls_back_to_first_event_outside_the_period() -> None:
     june = [{"subject": "x", "start": "2026-06-18T09:00:00"}]
@@ -167,25 +166,55 @@ def test_week_grid_hl_move_days_and_jk_move_within_the_day() -> None:
     ]
 
 
-def test_month_grid_jk_move_a_week_and_JK_step_the_days_events() -> None:
+def test_month_grid_jk_step_events_first_then_move_a_week() -> None:
     d = date
-    steps = _walk(WEEK, "month", ["J", "j", "k", "l", "K", "k", "k", "k", "k"])
+    steps = _walk(WEEK, "month", ["j", "j", "k", "k", "k", "l", "j", "k"])
     assert steps == [
         (d(2026, 9, 28), "mon9"),
-        (d(2026, 9, 28), "mon14"),  # J: next event in the day
-        (d(2026, 9, 28), "mon14"),  # j: 5 Oct is outside September → stays
-        (d(2026, 9, 21), None),  # k: a week up
-        (d(2026, 9, 22), None),  # l
-        (d(2026, 9, 22), None),  # K on an empty day
+        (d(2026, 9, 28), "mon14"),  # j: the event below in the same day
+        (d(2026, 9, 28), "mon14"),  # j past the last event: 5 Oct is outside September
+        (d(2026, 9, 28), "mon9"),  # k: the event above
+        (d(2026, 9, 21), None),  # k past the first event: a week up (an empty day)
+        (d(2026, 9, 14), None),
+        (d(2026, 9, 15), None),  # l
+        (d(2026, 9, 22), None),  # j on an empty day: a week down
         (d(2026, 9, 15), None),
-        (d(2026, 9, 8), None),
-        (d(2026, 9, 1), None),
-        (d(2026, 9, 1), None),  # k past the 1st: stays
     ]
 
+
+def test_month_grid_moving_up_into_a_day_lands_on_its_last_event() -> None:
+    events = [*WEEK, {"id": "sep21a", "subject": "x", "start": "2026-09-21T09:00:00", "end": "2026-09-21T10:00:00"},
+              {"id": "sep21b", "subject": "y", "start": "2026-09-21T13:00:00", "end": "2026-09-21T14:00:00"}]
+    steps = _walk(events, "month", ["k", "k", "j", "j"])
+    assert [s[1] for s in steps] == ["mon9", "sep21b", "sep21a", "sep21b", "mon9"]
+
+
+def test_month_grid_titles_get_the_squeeze_not_the_time() -> None:
+    long = [  # every day of the week competes for width
+        {"subject": "UNE Storgata med Qlik-konsulenten og mer", "start": f"2026-09-{d:02d}T10:00:00",
+         "end": f"2026-09-{d:02d}T11:00:00"}
+        for d in range(14, 21)
+    ]
+    out = _text(render_grid(long, "month", 0, TODAY), width=90)
+    assert "10:00 UNE" in out and "…" in out
 
 def test_cursor_day_is_marked_in_week_and_month_grids() -> None:
     out = _text(render_grid(WEEK, "week", None, TODAY, cursor=date(2026, 9, 30)))
     assert "Wed 30.09" in out
     month = _text(render_grid(WEEK, "month", None, TODAY, cursor=date(2026, 9, 15)))
     assert " 15 " in month
+
+
+def test_calendar_view_moves_a_right_hand_reading_pane_underneath() -> None:
+    from owa_tui.screens.cal import CalScreen
+    from owa_tui.screens.cal.settings import CalSettings
+
+    sc = CalScreen(config={})
+    for view, pane, used in [
+        ("calendar", "right", "bottom"),
+        ("calendar", "bottom", "bottom"),
+        ("calendar", "off", "off"),
+        ("list", "right", "right"),
+    ]:
+        sc._settings = CalSettings(view=view, reading_pane=pane)
+        assert sc._reading_pane() == used, (view, pane)

@@ -185,9 +185,15 @@ class CalScreen(Screen):
     # Layout helpers
     # ------------------------------------------------------------------
 
+    def _reading_pane(self) -> str:
+        """The layout actually used: calendar view needs the full width for its
+        seven day columns, so a right-hand reading pane moves underneath it."""
+        rp = self._settings.reading_pane
+        return "bottom" if rp == "right" and self._settings.view == "calendar" else rp
+
     def _make_layout(self) -> Widget:
         """Build the pane layout according to current settings."""
-        rp = self._settings.reading_pane
+        rp = self._reading_pane()
         ratio = self._settings.split_ratio
 
         agenda: Widget = (
@@ -536,7 +542,7 @@ class CalScreen(Screen):
 
     def _resize_panes(self) -> None:
         """Update split sizes in place (no rebuild → keeps selection + detail)."""
-        rp = self._settings.reading_pane
+        rp = self._reading_pane()
         detail = self._detail()
         if rp == "off" or detail is None:
             return
