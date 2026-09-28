@@ -517,7 +517,7 @@ class CalScreen(Screen):
 
     def action_back_to_list(self) -> None:
         """h / ← — return focus to the agenda list from the detail pane."""
-        self._agenda().focus()
+        self._agenda()._lv().focus()  # the AgendaList wrapper itself can't take focus
         self._status = ""
 
     def action_quit(self) -> None:

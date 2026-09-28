@@ -361,28 +361,6 @@ class TestAgendaListPilot:
         asyncio.run(_run())
         assert len(drilled) >= 1
 
-    def test_on_key_left_fires_back(self) -> None:
-        """left arrow calls action_back (lines 204-206)."""
-        called: list = []
-
-        async def _run() -> None:
-            app = self._make_agenda_app()
-            async with app.run_test() as pilot:
-                await pilot.pause()
-                al = app.query_one(AgendaList)
-                orig = al.action_back
-
-                def _capture():
-                    called.append(1)
-                    orig()
-
-                al.action_back = _capture  # type: ignore[method-assign]
-                await pilot.press("left")
-                await pilot.pause()
-
-        asyncio.run(_run())
-        assert len(called) >= 1
-
     def test_action_move_down(self) -> None:
         """action_move_down increments cursor (line 213)."""
 
@@ -566,39 +544,6 @@ class TestAgendaListPilot:
 
         asyncio.run(_run())
         assert len(drilled) == 1
-
-    def test_action_back_posts_back_message(self) -> None:
-        """action_back posts an internal _Back message (lines 240-245).
-
-        We verify by patching post_message on the AgendaList itself and checking
-        that it's called — the message type name is 'AgendaList._Back' internals.
-        """
-        posted: list = []
-
-        async def _run() -> None:
-            from textual.app import App, ComposeResult
-
-            class _App(App[None]):
-                def compose(self) -> ComposeResult:
-                    yield AgendaList(id="al")
-
-            app = _App()
-            async with app.run_test() as pilot:
-                await pilot.pause()
-                al = app.query_one(AgendaList)
-                orig = al.post_message
-
-                def _cap(msg):  # type: ignore[no-untyped-def]
-                    posted.append(type(msg).__name__)
-                    orig(msg)
-
-                al.post_message = _cap  # type: ignore[method-assign]
-                al.action_back()
-                await pilot.pause()
-
-        asyncio.run(_run())
-        # _Back is a local class inside action_back; just check post_message was called
-        assert len(posted) >= 1
 
     def test_on_list_view_selected_fires_drilled(self) -> None:
         """ListView.Selected triggers AgendaItemDrilled (lines 183-184)."""
@@ -1449,6 +1394,23 @@ class TestDetailPaneScroll:
         assert r["index"] == 0  # keys went to the pane, not the agenda list
         assert r["respond_mode"] is False
         assert "declin" not in r["status"]
+
+    def test_hl_and_arrows_move_focus_between_panes(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """l/→ focus the reading pane; h/← hand focus back to the list's ListView."""
+
+        async def _run() -> list[str]:
+            app = _push_cal_app(monkeypatch, [_EV1, _EV2], reading_pane="right")
+            seen = []
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                await pilot.pause()
+                for key in ("l", "h", "right", "left"):
+                    await pilot.press(key)
+                    await pilot.pause()
+                    seen.append(app.focused.id if app.focused else "")
+            return seen
+
+        assert asyncio.run(_run()) == ["detail-pane", "agenda-lv", "detail-pane", "agenda-lv"]
 
 
 

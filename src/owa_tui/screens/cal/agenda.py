@@ -128,7 +128,6 @@ class AgendaList(Static):
         ("G", "move_bottom", "Bottom"),
         ("u", "page_up_half", "Half-page up"),
         ("l", "drill", "Open"),
-        ("h", "back", "Back"),
     ]
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -205,9 +204,6 @@ class AgendaList(Static):
         elif key in ("enter", "right"):
             self.action_drill()
             event.stop()
-        elif key == "left":
-            self.action_back()
-            event.stop()
 
     # ------------------------------------------------------------------
     # Actions
@@ -239,11 +235,3 @@ class AgendaList(Static):
 
     def action_drill(self) -> None:
         self.post_message(AgendaItemDrilled(self.current_item()))
-
-    def action_back(self) -> None:
-        from textual.message import Message
-
-        class _Back(Message):
-            pass
-
-        self.post_message(_Back())
