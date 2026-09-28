@@ -54,6 +54,10 @@ API_BASE = "https://graph.microsoft.com/v1.0"
 # ---------------------------------------------------------------------------
 
 
+class _FetchFailed(Exception):
+    """A people fetch failure whose message is the status text itself."""
+
+
 def _list_row(person: dict, width: int = 80) -> str:
     """Format a single person entry for display in the list."""
     name = person.get("displayName") or "(no name)"
@@ -203,8 +207,14 @@ class PeopleList(ListView):
         if not self._people:
             self.append(ListItem(Static("(no people)", id="no-people-label")))
             return
+        width = self.size.width or 80
+        pad = max((len(p.get("_profile") or "") for p in self._people), default=0)  # -A column
         for p in self._people:
-            row_text = _list_row(p, width=self.size.width or 80)
+            if pad:
+                alias = (p.get("_profile") or "").ljust(pad)
+                row_text = f"[dim]{alias}[/dim] " + _list_row(p, width=max(1, width - pad - 1))
+            else:
+                row_text = _list_row(p, width=width)
             self.append(ListItem(Label(row_text)))
 
     # ------------------------------------------------------------------
@@ -445,52 +455,68 @@ class PeopleScreen(Screen[None]):
 
     @work(thread=True)
     def _fetch_list(self, search: str = "") -> None:
-        """Fetch people list from Graph API in a background thread."""
+        """Fetch people list from Graph API in a background thread (fans out under -A)."""
+        from owa_tui.adapter import fan_out, is_multi  # noqa: PLC0415
+
         self.app.call_from_thread(lambda: setattr(self, "status", "Loading people…"))
+        errors: list[str] = []
         try:
-            from owa_core.query import build_query  # type: ignore[import]
-            from owa_people.api import api_get  # type: ignore[import]  # noqa: PLC0415
-            from owa_people.people import normalize_person  # type: ignore[import]  # noqa: PLC0415
-
-            token = self._get_token_sync()
-            if not token:
-                self.app.call_from_thread(lambda: setattr(self, "status", "auth failed"))
-                return
-
-            # Build endpoint
-            params: dict[str, Any] = {"$top": 50}
-            if search:
-                params["$search"] = f'"{search}"'
-            qs = build_query(params)
-            endpoint = f"me/people?{qs}" if qs else "me/people"
-            headers = {"ConsistencyLevel": "eventual"}
-
-            from owa_tui import fixtures  # noqa: PLC0415
-
-            raw = fixtures.load("people")
-            if raw is None:
-                raw = retrying(
-                    lambda: api_get(
-                        self._api_base,
-                        endpoint,
-                        token,
-                        extra_headers=headers,
-                        debug=self._debug,
-                    ),
-                    on_wait=self._wait_status,
-                )
-            if raw is None:
-                self.app.call_from_thread(
-                    lambda: setattr(self, "status", "fetch failed: no data returned")
-                )
-                return
-
-            items = (raw or {}).get("value") or []
-            persons = [normalize_person(i, "people") for i in items]
-            self.app.call_from_thread(self._apply_people, persons, search)
+            if is_multi(self._config):
+                persons, errors = fan_out(self._config, lambda: self._fetch_people(search))
+                if errors and not persons:
+                    raise _FetchFailed("; ".join(errors))
+            else:
+                persons = self._fetch_people(search)
+        except _FetchFailed as exc:
+            msg = str(exc)
+            self.app.call_from_thread(lambda: setattr(self, "status", msg))
+            return
         except Exception as exc:
             err = str(exc)
             self.app.call_from_thread(lambda: setattr(self, "status", f"error: {err}"))
+            return
+        self.app.call_from_thread(self._apply_people, persons, search)
+        if errors:
+            note = f"{len(persons)} people · failed: " + "; ".join(errors)
+            self.app.call_from_thread(lambda: setattr(self, "status", note))
+
+    def _fetch_people(self, search: str) -> list[dict]:
+        """One profile's people (blocking); raises _FetchFailed with the status text."""
+        from owa_core.query import build_query  # type: ignore[import]
+        from owa_people.api import api_get  # type: ignore[import]  # noqa: PLC0415
+        from owa_people.people import normalize_person  # type: ignore[import]  # noqa: PLC0415
+
+        token = self._get_token_sync()
+        if not token:
+            raise _FetchFailed("auth failed")
+
+        # Build endpoint
+        params: dict[str, Any] = {"$top": 50}
+        if search:
+            params["$search"] = f'"{search}"'
+        qs = build_query(params)
+        endpoint = f"me/people?{qs}" if qs else "me/people"
+        headers = {"ConsistencyLevel": "eventual"}
+
+        from owa_tui import fixtures  # noqa: PLC0415
+
+        raw = fixtures.load("people")
+        if raw is None:
+            raw = retrying(
+                lambda: api_get(
+                    self._api_base,
+                    endpoint,
+                    token,
+                    extra_headers=headers,
+                    debug=self._debug,
+                ),
+                on_wait=self._wait_status,
+            )
+        if raw is None:
+            raise _FetchFailed("fetch failed: no data returned")
+
+        items = (raw or {}).get("value") or []
+        return [normalize_person(i, "people") for i in items]
 
     def _get_token_sync(self) -> str:
         """Mint a fresh auth token via owa-piggy (runs in worker thread)."""
@@ -511,8 +537,14 @@ class PeopleScreen(Screen[None]):
         self.status = f"{count} person{'s' if count != 1 else ''}"
 
     @work(thread=True)
-    def _fetch_detail(self, person_id: str) -> None:
-        """Lazy-fetch a person's full profile in a background thread."""
+    def _fetch_detail(self, person_id: str, profile: str | None = None) -> None:
+        """Lazy-fetch a person's full profile in a background thread.
+
+        *profile* is the row's ``_profile`` under -A: the directory lookup must
+        run in the tenant the person came from.
+        """
+        from owa_tui.adapter import as_profile  # noqa: PLC0415
+
         if person_id in self._detail_cache:
             self.app.call_from_thread(self._show_cached_detail, person_id)
             return
@@ -520,7 +552,8 @@ class PeopleScreen(Screen[None]):
             from owa_people.api import api_get  # type: ignore[import]  # noqa: PLC0415
             from owa_people.people import normalize_person  # type: ignore[import]  # noqa: PLC0415
 
-            token = self._get_token_sync()
+            with as_profile(profile):
+                token = self._get_token_sync()
             if not token:
                 self.app.call_from_thread(self._on_detail_failed)
                 return
@@ -607,7 +640,7 @@ class PeopleScreen(Screen[None]):
         if person_id in self._detail_cache:
             self._show_cached_detail(person_id)
         else:
-            self._fetch_detail(person_id)
+            self._fetch_detail(person_id, person.get("_profile"))
 
     def action_escape(self) -> None:
         """Esc: back to the list when viewing a detail, else open the menu.
@@ -743,7 +776,7 @@ class PeopleScreen(Screen[None]):
         if person_id in self._detail_cache:
             self._show_cached_detail(person_id)
         else:
-            self._fetch_detail(person_id)
+            self._fetch_detail(person_id, event.person.get("_profile"))
 
     # ------------------------------------------------------------------
     # Reactives

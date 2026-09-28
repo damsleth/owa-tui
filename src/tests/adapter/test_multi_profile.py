@@ -209,3 +209,31 @@ def test_switch_profile_leaves_merged_mode(fixture_mode) -> None:
             return app._config
 
     assert asyncio.run(run()) == {"owa_piggy_profile": "side"}
+
+
+def test_people_merges_profiles_and_looks_up_detail_in_the_rows_tenant(fixture_mode) -> None:
+    from owa_tui.screens.people import PeopleScreen
+
+    minted: list[str | None] = []
+
+    async def run():
+        app = owa_tui.OwaTuiApp(config=dict(ALL))
+        async with app.run_test(size=(120, 30)) as pilot:
+            sc = PeopleScreen(app._config)
+            real = sc._get_token_sync
+            sc._get_token_sync = lambda: minted.append(adapter._PROFILE.get()) or real()  # type: ignore[method-assign]
+            app.push_screen(sc)
+            await pilot.pause(0.5)
+            tags = [p["_profile"] for p in sc.people]
+            row0 = str(sc.query("ListItem Label").first().content)
+            last = sc.people[-1]
+            minted.clear()
+            sc._fetch_detail(last["id"], last["_profile"])
+            await app.workers.wait_for_complete()
+            return tags, row0, minted
+
+    tags, row0, detail_minted = asyncio.run(run())
+    half = len(tags) // 2
+    assert tags == ["work"] * half + ["side"] * half and half > 0
+    assert row0.startswith("[dim]work[/dim] ")
+    assert detail_minted == ["side"]
