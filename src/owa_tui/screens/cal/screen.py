@@ -271,20 +271,24 @@ class CalScreen(Screen):
     @work(exclusive=True)
     async def load_events(self) -> None:
         """Async worker: fetch events and update the UI."""
-        token = await asyncio.to_thread(self._token)
-        events, err = await fetch_events(
-            token,
-            self._api_base,
-            self._settings.day_range,
-            self._settings.show_declined,
-            self._search,
-            self._debug,
-        )
+        agenda = self._agenda()
+        agenda.loading = True  # Textual's built-in LoadingIndicator over the list
+        try:
+            token = await asyncio.to_thread(self._token)
+            events, err = await fetch_events(
+                token,
+                self._api_base,
+                self._settings.day_range,
+                self._settings.show_declined,
+                self._search,
+                self._debug,
+            )
+        finally:
+            agenda.loading = False
         self._events = events
         # Keep any prior confirmation (e.g. "accepted: …") on success; a reload
         # triggered right after a respond would otherwise wipe it instantly.
         self._status = err or self._status
-        agenda = self._agenda()
         agenda.update_rows(events, show_date=self._settings.day_range != "today")
         if self._current_event() is not None:
             self._refresh_detail()
