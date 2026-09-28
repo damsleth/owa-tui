@@ -33,14 +33,15 @@ DataTable {
 }
 
 /* ── Status bar ───────────────────────────────────────────────────────── */
-/* Docked over AppHeader row 3 (the identity tail); hidden while empty so
- * the tail shows through. Opaque background so row 3 doesn't bleed. */
+/* Docked on AppHeader row 2, right of the logo (1 pad + 19 glyph cols), so it
+ * covers neither the logo nor the row-3 identity tail; text lines up with
+ * the tail's "v<version>". Hidden while empty. */
 StatusBar {
     dock: top;
-    margin-top: 2;
+    margin: 1 0 0 20;
     height: 1;
     width: 1fr;
-    padding: 0 1;
+    padding: 0 2;
     color: $text-muted;
     background: $surface;
     &:ansi {

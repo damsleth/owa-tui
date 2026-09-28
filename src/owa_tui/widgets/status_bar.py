@@ -1,4 +1,4 @@
-"""StatusBar: reactive status line overlaying the AppHeader identity row."""
+"""StatusBar: reactive status line on AppHeader row 2, right of the logo."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from owa_tui import fixtures
 
 
 class StatusBar(Label):
-    """Reactive status line shown on header row 3 of every tool screen.
+    """Reactive status line shown on header row 2 of every tool screen.
 
     Usage
     -----
@@ -22,9 +22,8 @@ class StatusBar(Label):
 
     The widget is a thin ``Label`` subclass so it inherits all Textual
     reactive-update and styling machinery without extra complexity.  Placement
-    and colours come from ``base.tcss`` (docked over the AppHeader identity
-    row).  An empty message hides the bar so the identity row shows through;
-    a non-empty one auto-clears after ``AUTO_CLEAR`` seconds.
+    and colours come from ``base.tcss`` (docked right of the logo on header
+    row 2).  An empty message hides the bar; a non-empty one auto-clears after ``AUTO_CLEAR`` seconds.
     """
 
     # Seconds a message stays visible; 0 disables auto-clear (e2e fixtures, tests).
