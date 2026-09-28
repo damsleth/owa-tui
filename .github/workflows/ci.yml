@@ -20,6 +20,9 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
+          # owa-tools ships via GitHub Releases, not PyPI (PyPI stops at 1.6.0).
+          # Keep this tag >= the owa-tools lower bound in pyproject.toml.
+          pip install "owa-tools @ git+https://github.com/damsleth/owa-tools@v1.7.0"
           pip install -e .[dev]
       - name: Lint
         run: ruff check .
