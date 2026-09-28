@@ -9,7 +9,11 @@ or ``owa-swodp submit``.
 
 Config (``~/.config/owa-tui/tui.json``, key ``swodp``, seeded on first run)::
 
-    {"instance": "prod", "cal_profile": "swon", "category_map": {...}}
+    {"instance": "prod", "cal_profile": "swon", "default_week": "current",
+     "category_map": {...}}
+
+``default_week`` (``previous`` | ``current`` | ``next``, also in Esc → Settings)
+is the week the screen opens on.
 
 ``category_map`` maps an Outlook category to a row identity for ``c``
 (fill from calendar); ``null`` ignores the category.
@@ -32,6 +36,9 @@ from owa_tui.screens.swodp import adapter, plan
 
 TASK_RE = re.compile(r"^T[0-9A-Z]{5,30}$")
 
+# default_week setting -> week offset from the current week.
+DEFAULT_WEEKS = {"previous": -1, "current": 0, "next": 1}
+
 HELP = (
     "hjkl move  Enter/i edit  x zero  a add row  e description  D remove row  "
     "c fill from calendar  w write  [ ] week  t this week  r reload  q quit"
@@ -46,6 +53,7 @@ def _settings() -> dict[str, Any]:
     return {
         "instance": data.get("instance") or "prod",
         "cal_profile": data.get("cal_profile") or "swon",
+        "default_week": data.get("default_week") if data.get("default_week") in DEFAULT_WEEKS else "current",
         "category_map": data.get("category_map") or dict(plan.DEFAULT_CATEGORY_MAP),
         "_seeded": "swodp" in saved,
     }
@@ -87,7 +95,9 @@ class SwodpScreen(OwaGridScreen):
         self._settings = _settings()
         self._instance: str = self._settings["instance"]
         self._monday = plan.monday_of(
-            week_start or (fixtures.enabled() and _fixture_monday()) or date.today()
+            week_start
+            or (fixtures.enabled() and _fixture_monday())
+            or date.today() + timedelta(weeks=DEFAULT_WEEKS[self._settings["default_week"]])
         )
         self._session: Any = None
         self._categories: dict[str, str] | None = None
@@ -478,5 +488,38 @@ class SwodpScreen(OwaGridScreen):
             super().handle_menu_result(result)
 
     def menu_config(self) -> tuple[str, list[tuple[str, str]]]:
-        return (f"Timesheet (SWODP) — {self._instance} · calendar {self._settings['cal_profile']}", [])
+        return (
+            f"Timesheet (SWODP) — {self._instance} · calendar {self._settings['cal_profile']}",
+            [("default_week", "Default week")],
+        )
+
+    def action_open_menu(self) -> None:
+        from types import SimpleNamespace  # noqa: PLC0415
+
+        from owa_tui.settings_cycle import cycle_value  # noqa: PLC0415
+        from owa_tui.widgets.settings_overlay import SettingsOverlay  # noqa: PLC0415
+
+        title, fields = self.menu_config()
+        overlay = SettingsOverlay(
+            title_lines=[title],
+            top_items=[("Resume", "resume"), ("Settings", "settings"), ("Help", "help"), ("Quit", "quit")],
+            settings_fields=fields,
+            settings=SimpleNamespace(default_week=self._settings["default_week"]),
+            cycle_fn=lambda st, _f, d: SimpleNamespace(
+                default_week=cycle_value(st.default_week, tuple(DEFAULT_WEEKS), d)
+            ),
+            on_change=lambda _f, st: self._save_default_week(st.default_week),
+        )
+        self.app.push_screen(overlay, self.handle_menu_result)
+
+    def _save_default_week(self, value: str) -> None:
+        """Persist default_week to tui.json; takes effect on the next open."""
+        self._settings["default_week"] = value
+        if fixtures.enabled():
+            return
+        from owa_tui import app_config  # noqa: PLC0415
+
+        data = app_config.load()
+        data.setdefault("swodp", {})["default_week"] = value
+        app_config.save(data)
 
