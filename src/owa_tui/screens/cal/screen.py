@@ -63,6 +63,16 @@ _RESPOND_KEYS: dict[str, str] = {
 }
 
 
+def _load_cal_config() -> dict[str, Any]:
+    """The owa-cal config file, where _persist_settings writes the tui_* keys."""
+    try:
+        from owa_cal.config import load_config  # type: ignore[import]  # noqa: PLC0415
+
+        return load_config()
+    except Exception:
+        return {}
+
+
 # ---------------------------------------------------------------------------
 # Search modal
 # ---------------------------------------------------------------------------
@@ -160,7 +170,7 @@ class CalScreen(Screen):
         self._api_base = api_base
         self._debug = debug
 
-        self._settings = CalSettings.from_config(self._config)
+        self._settings = CalSettings.from_config({**_load_cal_config(), **self._config})
         if day_range in _VALID_DAY_RANGES:
             self._settings = CalSettings(**{**self._settings.__dict__, "day_range": day_range})
 
