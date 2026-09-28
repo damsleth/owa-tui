@@ -28,3 +28,18 @@ def test_every_screen_accepts_positional_config_and_debug() -> None:
         # Exactly the call OwaTuiApp.push_tool makes.
         screen = cls({}, debug=False)
         assert screen is not None, key
+
+
+def test_every_screen_keeps_the_profile_it_was_built_with() -> None:
+    """Switch profile / --profile hand the alias in via config. A screen that
+    drops it (sites and drive set self._config, then the base reset it to {})
+    silently runs as the broker's default profile."""
+    from owa_tui.screens import get_screen_class
+
+    _bootstrap_screens()
+    for key, _label in registered_tools():
+        if key.startswith("_"):
+            continue
+        screen = get_screen_class(key)({"owa_piggy_profile": "dno"}, debug=False)
+        config = getattr(screen, "_config", None)
+        assert config is not None and config.get("owa_piggy_profile") == "dno", key

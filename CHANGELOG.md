@@ -32,6 +32,9 @@ versioning.
   opening week. Both are in Esc → Settings. `H`/`L` switch week alongside `[` `]`.
 
 ### Fixed
+- OneDrive and SharePoint ignored the chosen profile (`--profile`, Esc → Switch
+  profile) and always ran as owa-piggy's default: the screen's config was
+  dropped on construction. SharePoint listed the default tenant's root site.
 - teams: chats and messages load via `owa_graph.api` again (the screen imported
   `httpx`, which was never a dependency, and never awaited its requests).
 - cal: saved settings (day range, reading pane, …) are restored on the next run;
