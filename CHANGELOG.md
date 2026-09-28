@@ -12,9 +12,11 @@ versioning.
   panes, so they stay free for moving inside a pane. Enter opens and focuses the
   detail pane, and Tab goes back. Trees (OneDrive, SharePoint) keep lf-style h/l
   for up/into folder.
-- cal calendar view: h/l/←/→ move a day cursor (empty days included). In week
-  and today view j/k step through that day's events; in the month grid j/k
-  move a week and J/K step through the day's events.
+- cal calendar view: h/l/←/→ move a day cursor (empty days included); j/k/↑/↓
+  step through that day's events, and in the month grid carry on to the week
+  below/above past the first/last one. Every event of a day is shown (no "+N").
+  Columns size to their content, busy days get the width, and a right-hand
+  reading pane moves underneath the calendar so the grid gets the full width.
 
 ### Added
 - `owa-tui -A` / `--all-profiles`, repeated `--profile`, and `--profile all`
