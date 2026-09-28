@@ -17,6 +17,7 @@ _ALLOWED: dict[str, tuple[str, ...]] = {
     "day_range": ("today", "week", "month"),
     "show_declined": ("yes", "no"),
     "event_detail": ("full", "basic"),
+    "view": ("list", "calendar"),
 }
 
 # Maps dataclass field name -> config key used for persistence.
@@ -26,6 +27,7 @@ FIELD_TO_KEY: ClassVar[dict[str, str]] = {
     "day_range": "tui_day_range",
     "show_declined": "tui_show_declined",
     "event_detail": "tui_event_detail",
+    "view": "tui_view",
 }
 
 
@@ -38,6 +40,7 @@ class CalSettings:
     day_range: str = "today"  # 'today' | 'week' | 'month'
     show_declined: str = "no"  # 'yes' | 'no'
     event_detail: str = "full"  # 'full' | 'basic'
+    view: str = "list"  # 'list' | 'calendar' (grid follows day_range)
 
     # ------------------------------------------------------------------
     # Allowed values

@@ -174,6 +174,18 @@ class AgendaList(Static):
     def item_count(self) -> int:
         return len(self._data)
 
+    # index / focus_list: the selection surface CalendarGrid shares.
+    @property
+    def index(self) -> int | None:
+        return self._lv().index
+
+    @index.setter
+    def index(self, value: int | None) -> None:
+        self._lv().index = value
+
+    def focus_list(self) -> None:
+        self._lv().focus()
+
     # ------------------------------------------------------------------
     # Event handlers
     # ------------------------------------------------------------------

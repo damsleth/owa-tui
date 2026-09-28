@@ -1027,8 +1027,8 @@ class TestCalScreenPilot:
                 await pilot.press("j", "enter")    # → Settings → open sub-menu
                 await pilot.pause()
                 # settings fields: reading_pane, split_ratio, day_range,
-                # show_declined, event_detail, _reset (index 5)
-                await pilot.press("j", "j", "j", "j", "j")
+                # show_declined, event_detail, view, _reset (index 6)
+                await pilot.press("j", "j", "j", "j", "j", "j")
                 await pilot.press("enter")         # activate _reset
                 await pilot.pause()
                 return screen._settings.reading_pane
