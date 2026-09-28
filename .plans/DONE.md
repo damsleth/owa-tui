@@ -51,3 +51,4 @@
 - [x] owa-tui cal: loading-animation when refreshing events, to indicate the app is working (2026-09-28)
 - [x] owa-tui swodp: setting to choose which week is default: current, previous, next (2026-09-28)
 - [x] owa-tui: esc-menu option to switch owa-piggy profile (2026-09-28)
+- [x] owa-tui swodp: option to navigate between weeks (2026-09-28)

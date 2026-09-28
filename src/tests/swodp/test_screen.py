@@ -254,6 +254,20 @@ def test_fill_from_calendar_error_goes_to_status() -> None:
     assert _run(steps) == "calendar: no token"
 
 
+def test_shift_h_l_move_weeks_like_brackets() -> None:
+    async def steps(pilot, sc, tbl):
+        await pilot.press("H")
+        await pilot.pause(0.4)
+        prev = sc._monday
+        await pilot.press("L", "L")
+        await pilot.pause(0.4)
+        return prev, sc._monday, tbl.cursor_coordinate.column
+
+    prev, nxt, col = _run(steps)
+    assert (prev, nxt) == (date(2026, 9, 7), date(2026, 9, 21))
+    assert col == 1  # H/L change the week, not the cell cursor
+
+
 def test_week_navigation_discards_edits() -> None:
     async def steps(pilot, sc, tbl):
         out = []
