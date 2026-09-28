@@ -49,3 +49,4 @@
 - [x] owa-tui cal: navigate between reading pane and list pane with l/h or arrow left/right buttons doesnt work (2026-09-28)
 - [x] owa-tui cal: remember day span setting (day/week/month) between runs (2026-09-28)
 - [x] owa-tui cal: loading-animation when refreshing events, to indicate the app is working (2026-09-28)
+- [x] owa-tui swodp: setting to choose which week is default: current, previous, next (2026-09-28)

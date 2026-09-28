@@ -326,6 +326,41 @@ def test_config_is_read_and_seeded(tmp_path, monkeypatch) -> None:
     )
 
 
+def test_default_week_opens_offset_and_persists(tmp_path, monkeypatch) -> None:
+    from datetime import timedelta
+
+    from owa_tui.screens.swodp import plan
+
+    cfg = tmp_path / "owa-tui" / "tui.json"
+    cfg.parent.mkdir(parents=True)
+    cfg.write_text(json.dumps({"swodp": {"default_week": "previous"}}))
+    monkeypatch.setattr("owa_tui.fixtures.enabled", lambda: False)
+    this_monday = plan.monday_of(date.today())
+
+    sc = SwodpScreen()
+    assert sc._monday == this_monday - timedelta(weeks=1)
+    sc._save_default_week("next")
+    assert json.loads(cfg.read_text())["swodp"]["default_week"] == "next"
+    assert SwodpScreen()._monday == this_monday + timedelta(weeks=1)
+
+    cfg.write_text(json.dumps({"swodp": {"default_week": "bogus"}}))
+    assert SwodpScreen()._monday == this_monday
+
+
+def test_default_week_cycles_in_esc_settings() -> None:
+    async def steps(pilot, sc, tbl):
+        await pilot.press("escape")
+        await pilot.pause()
+        await pilot.press("j", "enter")  # Settings
+        await pilot.pause()
+        before = sc._settings["default_week"]
+        await pilot.press("l")
+        await pilot.pause()
+        return before, sc._settings["default_week"]
+
+    assert _run(steps) == ("current", "next")
+
+
 def test_rapid_week_changes_render_the_last_week() -> None:
     async def steps(pilot, sc, tbl):
         await pilot.press("left_square_bracket", "right_square_bracket", "left_square_bracket")
