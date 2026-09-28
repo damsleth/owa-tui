@@ -46,3 +46,4 @@
 - [x] owa-tui: health / diagnostics should not show 'fail' for clients that are not active for a given profile, e.g. 'ado' for most owa-piggy profiles. instead of 'fail', a greyed out 'n/a' or similar is sufficient (2026-09-28)
 - [x] owa-tui: notification/popup-text should not overlay the owa-tui header (2026-09-28)
 - [x] description text like "detail focus - j/k scroll, h/← back" should not overlay the owa-tui logo (2026-09-28)
+- [x] owa-tui cal: navigate between reading pane and list pane with l/h or arrow left/right buttons doesnt work (2026-09-28)
