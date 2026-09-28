@@ -271,3 +271,9 @@ Simplified vs. this plan (each has a `ponytail:` comment in the code):
 
 Left: first live write (one row, then `owa-swodp cards` cross-check),
 `owa-swodp tui` shim in owa-tools, `d` diff columns, LLM assist.
+
+## Closed 2026-09-25
+
+Closed without the first live write. `w` is tested in fixture mode only; do
+the one-row live write plus the `owa-swodp cards` cross-check the first time
+it is used for real. Shim, `d` diff and LLM assist dropped (YAGNI).
