@@ -20,6 +20,15 @@ from owa_tui.screens.base.thread import OwaThreadScreen
 
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 
+
+def _graph_collect(url: str, token: str) -> list[dict]:
+    """Walk a Graph collection via owa_graph (blocking; runs in the fetch worker)."""
+    from owa_graph.api import paginate  # type: ignore[import]  # noqa: PLC0415
+
+    from owa_tui.adapter import retrying  # noqa: PLC0415
+
+    return retrying(lambda: list(paginate("GET", url, token, max_pages=50)))
+
 # ---------------------------------------------------------------------------
 # Module-level pure helpers
 # ---------------------------------------------------------------------------
@@ -163,19 +172,7 @@ class TeamsThreadScreen(OwaThreadScreen):
             token = access_token_for(
                 self._config, tool_name=self._tool_name, audience=self._audience
             )
-            import httpx  # noqa: PLC0415
-
-            headers = {"Authorization": f"Bearer {token}"}
-            url: str | None = f"{GRAPH_BASE}/me/chats/{self._chat_id}/messages"
-            pages: list[dict] = []
-            async with httpx.AsyncClient(timeout=20) as client:
-                while url:
-                    resp = client.get(url, headers=headers)
-                    resp.raise_for_status()
-                    data = resp.json()
-                    pages.extend(data.get("value", []))
-                    url = data.get("@odata.nextLink")
-            raw = {"value": pages}
+            raw = {"value": _graph_collect(f"{GRAPH_BASE}/me/chats/{self._chat_id}/messages", token)}
 
         messages: list[dict] = list(raw.get("value") or [])
         # Reverse so oldest-first (Graph returns newest-first by default).
@@ -243,19 +240,7 @@ class TeamsScreen(OwaListScreen):
             token = access_token_for(
                 self._config, tool_name=self._tool_name, audience=self._audience
             )
-            import httpx  # noqa: PLC0415
-
-            headers = {"Authorization": f"Bearer {token}"}
-            url: str | None = f"{GRAPH_BASE}/me/chats?$expand=members&$top=50"
-            pages: list[dict] = []
-            async with httpx.AsyncClient(timeout=20) as client:
-                while url:
-                    resp = client.get(url, headers=headers)
-                    resp.raise_for_status()
-                    data = resp.json()
-                    pages.extend(data.get("value", []))
-                    url = data.get("@odata.nextLink")
-            raw = {"value": pages}
+            raw = {"value": _graph_collect(f"{GRAPH_BASE}/me/chats?$expand=members&$top=50", token)}
 
         chats: list[dict] = list(raw.get("value") or [])
 
