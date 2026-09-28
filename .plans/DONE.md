@@ -47,3 +47,4 @@
 - [x] owa-tui: notification/popup-text should not overlay the owa-tui header (2026-09-28)
 - [x] description text like "detail focus - j/k scroll, h/← back" should not overlay the owa-tui logo (2026-09-28)
 - [x] owa-tui cal: navigate between reading pane and list pane with l/h or arrow left/right buttons doesnt work (2026-09-28)
+- [x] owa-tui cal: remember day span setting (day/week/month) between runs (2026-09-28)

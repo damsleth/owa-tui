@@ -648,3 +648,15 @@ def test_open_browser_no_event(monkeypatch: pytest.MonkeyPatch) -> None:
 
     status = asyncio.run(_run())
     assert status == "no event selected"
+
+
+def test_settings_restored_from_owa_cal_config(monkeypatch) -> None:
+    """tui_* keys _persist_settings wrote to the owa-cal config come back on the next run."""
+    import owa_core.config
+
+    monkeypatch.setattr(owa_core.config, "load_config_file", lambda *a, **k: {"tui_day_range": "week"})
+    from owa_tui.screens.cal import CalScreen
+
+    assert CalScreen(config={})._settings.day_range == "week"
+    # an explicit app config still wins over the file
+    assert CalScreen(config={"tui_day_range": "month"})._settings.day_range == "month"
