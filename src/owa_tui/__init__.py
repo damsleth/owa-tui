@@ -162,6 +162,32 @@ class OwaTuiApp(App[None]):
     # Public API used by HomeScreen and per-tool entrypoints
     # ------------------------------------------------------------------
 
+    def switch_profile(self, alias: str) -> None:
+        """Authenticate as owa-piggy profile *alias* from now on.
+
+        Screens copy the config and mint tokens per fetch, so the open tool
+        screen (and anything pushed over it) is rebuilt from scratch; unsaved
+        state on it, e.g. unwritten SWODP cells, is dropped.
+        """
+        from owa_tui import fixtures  # noqa: PLC0415
+        from owa_tui.screens import SCREEN_REGISTRY  # noqa: PLC0415
+
+        self._config["owa_piggy_profile"] = alias
+        self.sub_title = alias
+        if not self.is_headless and not fixtures.enabled():
+            self._load_identity()
+        keys = {entry["screen_class"]: key for key, entry in SCREEN_REGISTRY.items()}
+        stack = self.screen_stack
+        at = next((i for i, scr in enumerate(stack) if type(scr) in keys), None)
+        if at is None:
+            self.notify(f"profile: {alias}")
+            return
+        key = keys[type(stack[at])]
+        for _ in range(len(stack) - at):
+            self.pop_screen()
+        self.push_tool(key)
+        self.notify(f"profile: {alias}")
+
     def push_tool(self, key: str) -> None:
         """Push the screen registered for *key*, or log an error if unknown."""
         from owa_tui.screens import get_screen_class

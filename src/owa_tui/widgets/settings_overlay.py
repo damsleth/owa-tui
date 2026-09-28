@@ -12,18 +12,101 @@ Usage
 
 The ``callback`` receives the action string (``'resume'``, ``'quit'``,
 ``'settings'``, ``'cycle:<field>'``) so the parent screen can act on it.
+
+Every overlay also gets a "Switch profile" top item (inserted before Quit),
+handled here: it opens :class:`ProfilePicker` and hands the chosen owa-piggy
+alias to ``App.switch_profile``, so no screen has to wire it up.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
+from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import ModalScreen
-from textual.widgets import Label, Static
+from textual.widgets import Label, OptionList, Static
 
 from owa_tui.widgets.menu_state import MenuState
+
+PROFILE_ITEM = ("Switch profile", "_profile")
+
+
+def _with_profile_item(top_items: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Insert the Switch profile item before Quit (or append it)."""
+    items = [i for i in top_items if i != PROFILE_ITEM]
+    at = next((n for n, (_label, action) in enumerate(items) if action == "quit"), len(items))
+    return items[:at] + [PROFILE_ITEM] + items[at:]
+
+
+class ProfilePicker(ModalScreen[str | None]):
+    """Pick a registered owa-piggy profile; dismisses with the alias or None."""
+
+    DEFAULT_CSS = """
+    ProfilePicker { align: center middle; background: $background; }
+    ProfilePicker #profile-box {
+        width: 52; height: auto; border: solid $border; background: $surface; padding: 1 2;
+    }
+    ProfilePicker OptionList { height: auto; max-height: 12; }
+    """
+
+    BINDINGS = [
+        Binding("escape", "cancel", "Cancel"),
+        Binding("q", "cancel", "Cancel", show=False),
+        Binding("j", "down", show=False),
+        Binding("k", "up", show=False),
+    ]
+
+    def __init__(self, current: str | None = None) -> None:
+        super().__init__()
+        self._current = current
+        self._aliases: list[str] = []
+
+    def compose(self) -> ComposeResult:
+        with Static(id="profile-box"):
+            yield Label("Switch owa-piggy profile", classes="overlay-title")
+            yield OptionList(id="profile-list")
+            yield Label("loading profiles…", id="profile-note", classes="overlay-hint")
+
+    def on_mount(self) -> None:
+        self.query_one(OptionList).focus()
+        self._load()
+
+    @work(thread=True, exclusive=True)
+    def _load(self) -> None:
+        try:
+            from owa_core.auth import get_profiles  # type: ignore[import]  # noqa: PLC0415
+
+            rows = [p for p in get_profiles(tool_name="owa-tui") if p.registered]
+        except Exception as exc:  # noqa: BLE001 — shown in the picker, never swallowed
+            self.app.call_from_thread(self._show, [], f"could not list profiles: {exc}")
+            return
+        current = self._current or next((p.alias for p in rows if p.default), None)
+        self._current = current
+        self.app.call_from_thread(self._show, [p.alias for p in rows], "Enter switch  Esc cancel")
+
+    def _show(self, aliases: list[str], note: str) -> None:
+        self._aliases = aliases
+        opts = self.query_one(OptionList)
+        opts.clear_options()
+        opts.add_options([f"{a}  (current)" if a == self._current else a for a in aliases])
+        if self._current in aliases:
+            opts.highlighted = aliases.index(self._current)
+        self.query_one("#profile-note", Label).update(note)
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        alias = self._aliases[event.option_index]
+        self.dismiss(None if alias == self._current else alias)
+
+    def action_down(self) -> None:
+        self.query_one(OptionList).action_cursor_down()
+
+    def action_up(self) -> None:
+        self.query_one(OptionList).action_cursor_up()
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
 
 
 class SettingsOverlay(ModalScreen[str]):
@@ -109,7 +192,7 @@ class SettingsOverlay(ModalScreen[str]):
         super().__init__()
         self._menu_state = MenuState(
             title_lines=list(title_lines),
-            top_items=list(top_items),
+            top_items=_with_profile_item(list(top_items)),
             settings_fields=list(settings_fields or []),
         )
         self._settings = settings
@@ -234,8 +317,21 @@ class SettingsOverlay(ModalScreen[str]):
         if action == "settings":
             self._menu_state.open_settings()
             self._refresh_menu()
+        elif action == PROFILE_ITEM[1]:
+            self.app.push_screen(
+                ProfilePicker((getattr(self.app, "_config", None) or {}).get("owa_piggy_profile")),
+                self._on_profile_picked,
+            )
         else:
             self.dismiss(action)
+
+    def _on_profile_picked(self, alias: str | None) -> None:
+        if not alias:
+            return
+        self.dismiss("resume")
+        switch = getattr(self.app, "switch_profile", None)
+        if switch is not None:
+            self.app.call_later(switch, alias)
 
     def action_back_or_close(self) -> None:
         if self._menu_state.screen == "settings":
