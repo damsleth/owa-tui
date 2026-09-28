@@ -11,4 +11,3 @@
 - [ ] owa-tui: notification/popup-text should not overlay the owa-tui header
 - [ ] owa-tui: esc-menu option to switch owa-piggy profile
 - [ ] owa-tui: health / diagnostics should not show 'fail' for clients that are not active for a given profile, e.g. 'ado' for most owa-piggy profiles. instead of 'fail', a greyed out 'n/a' or similar is sufficient
-- [ ] owa-tui teams: error: no module named 'httpx' when running teams from owa-tui

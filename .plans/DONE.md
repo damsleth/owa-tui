@@ -42,3 +42,4 @@
 - [x] mail tui (low): search modal only takes KQL; since/until are plumbed to build_list_query but unreachable from the UI (2026-09-22)
 - [x] mail tui: date_format=custom has no UI entry path and never calls validate_custom_format — either wire it (prompt + validate, status 'invalid strftime format: …') or drop 'custom' from the cycle (2026-09-22)
 - [x] scheduling only returns 403 — graph-audience token has no Calendars.* scope; switched sched to the outlook audience + Outlook REST v2.0 getschedule (PascalCase), same token owa-cal uses. owa-tools' owa-sched CLI has the same bug (audience graph) — fix upstream separately (2026-09-22)
+- [x] owa-tui teams: error: no module named 'httpx' when running teams from owa-tui (2026-09-28)

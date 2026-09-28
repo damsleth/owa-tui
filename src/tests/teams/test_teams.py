@@ -9,7 +9,7 @@ Coverage targets:
 - on_item_activated: pushes TeamsThreadScreen
 - menu_config, sort_items, help_text
 - Registration in SCREEN_REGISTRY
-- Mocked live path: access_token_for + httpx calls
+- Mocked live path: access_token_for + owa_graph.api.paginate
 """
 
 from __future__ import annotations
@@ -570,7 +570,7 @@ def test_fetch_items_does_not_overwrite_existing_member_names() -> None:
 
 
 def test_fetch_items_no_fixture_mocked_live() -> None:
-    """Live path: fetch_items calls httpx and returns normalized chats."""
+    """Live path: fetch_items walks owa_graph.api.paginate and returns normalized chats."""
     live_payload = {
         "value": [
             {
@@ -583,7 +583,6 @@ def test_fetch_items_no_fixture_mocked_live() -> None:
         ]
     }
 
-    # Mock the httpx module that is imported lazily inside fetch_items.
     mock_resp = MagicMock()
     mock_resp.raise_for_status = MagicMock()
     mock_resp.json = MagicMock(return_value=live_payload)
@@ -597,17 +596,17 @@ def test_fetch_items_no_fixture_mocked_live() -> None:
     mock_httpx.AsyncClient = MagicMock(return_value=mock_client_instance)
 
     async def _run() -> list[dict]:
-        import sys  # noqa: PLC0415
-
         screen = TeamsScreen(config={})
         with (
             patch("owa_tui.fixtures.load", return_value=None),
             # autospec enforces the real signature so a missing `config` arg
             # (the live-path bug fixed 2026-06-30) fails loudly here.
             patch("owa_tui.adapter.access_token_for", autospec=True, return_value="mock-token"),
-            patch.dict(sys.modules, {"httpx": mock_httpx}),
+            patch("owa_graph.api.paginate", return_value=iter(live_payload["value"])) as pg,
         ):
-            return await screen.fetch_items()
+            items = await screen.fetch_items()
+            assert pg.call_args.args[1].endswith("/me/chats?$expand=members&$top=50")
+            return items
 
     items = asyncio.run(_run())
     assert len(items) == 1
@@ -692,34 +691,22 @@ def test_fetch_messages_reversal_oldest_first() -> None:
 
 
 def test_fetch_messages_no_fixture_mocked_live() -> None:
-    """Live path for fetch_messages: httpx paginated call returns messages."""
+    """Live path for fetch_messages: owa_graph.api.paginate returns messages."""
     msgs = _messages(3)
-    live_payload = {"value": msgs}
 
-    mock_resp = MagicMock()
-    mock_resp.raise_for_status = MagicMock()
-    mock_resp.json = MagicMock(return_value=live_payload)
-
-    mock_client_instance = MagicMock()
-    mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
-    mock_client_instance.__aexit__ = AsyncMock(return_value=False)
-    mock_client_instance.get = MagicMock(return_value=mock_resp)
-
-    mock_httpx = MagicMock()
-    mock_httpx.AsyncClient = MagicMock(return_value=mock_client_instance)
 
     async def _run() -> list[dict]:
-        import sys  # noqa: PLC0415
-
         screen = TeamsThreadScreen({}, chat_id="19:live@thread.v2", chat_name="Live")
         with (
             patch("owa_tui.fixtures.load", return_value=None),
             # autospec enforces the real signature so a missing `config` arg
             # (the live-path bug fixed 2026-06-30) fails loudly here.
             patch("owa_tui.adapter.access_token_for", autospec=True, return_value="mock-token"),
-            patch.dict(sys.modules, {"httpx": mock_httpx}),
+            patch("owa_graph.api.paginate", return_value=iter(msgs)) as pg,
         ):
-            return await screen.fetch_messages()
+            result = await screen.fetch_messages()
+            assert pg.call_args.args[1].endswith("/me/chats/19:live@thread.v2/messages")
+            return result
 
     result = asyncio.run(_run())
     assert len(result) == 3
