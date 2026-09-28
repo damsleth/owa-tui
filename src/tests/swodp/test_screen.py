@@ -353,7 +353,7 @@ def test_default_week_opens_offset_and_persists(tmp_path, monkeypatch) -> None:
 
     sc = SwodpScreen()
     assert sc._monday == this_monday - timedelta(weeks=1)
-    sc._save_default_week("next")
+    sc._save_setting("default_week", "next")
     assert json.loads(cfg.read_text())["swodp"]["default_week"] == "next"
     assert SwodpScreen()._monday == this_monday + timedelta(weeks=1)
 
@@ -386,3 +386,83 @@ def test_rapid_week_changes_render_the_last_week() -> None:
     assert title.startswith("Uke 37")
     assert labels == ["NOCOS T1PRJTSK4228809"]
     assert cell == "[dim]7.5[/dim]"  # Approved week: styling matches the rows shown
+
+
+def _two_weeks(tmp_path) -> None:
+    cfg = tmp_path / "owa-tui" / "tui.json"
+    cfg.parent.mkdir(parents=True, exist_ok=True)
+    cfg.write_text(json.dumps({"swodp": {"weeks_shown": 2}}))
+
+
+def test_weeks_shown_stacks_blocks_and_cursor_picks_the_active_week(tmp_path) -> None:
+    _two_weeks(tmp_path)
+
+    async def steps(pilot, sc, tbl):
+        labels = [str(tbl.get_row_at(r)[0]) for r in range(tbl.row_count)]
+        start = (tbl.cursor_coordinate.row, sc._monday)
+        await pilot.press("k", "k")  # up into week 37's per dag row
+        await pilot.pause()
+        crumb = str(sc.query_one("#owa-grid-breadcrumb", Label).content)
+        return labels, start, sc._monday, crumb, sc._status
+
+    labels, (row, monday), after, crumb, status = _run(steps)
+    assert labels == [
+        "[bold]Uke 37 · 07.09–13.09[/bold]", "NOCOS T1PRJTSK4228809", "per dag",
+        "[bold]Uke 38 · 14.09–20.09[/bold]", "NOCOS T1PRJTSK4228809",
+        "UNE T1PRJTSK4231733", "Admin", "per dag",
+    ]
+    assert (row, monday) == (4, date(2026, 9, 14))  # first card row of the anchor week
+    assert after == date(2026, 9, 7)
+    assert crumb.startswith("Uke 37") and status == "1 kort · 37.5 timer"
+
+
+def test_edits_in_a_week_that_stays_in_view_survive_week_shift(tmp_path) -> None:
+    _two_weeks(tmp_path)
+
+    async def steps(pilot, sc, tbl):
+        await pilot.press("x")  # zero NOCOS man in week 38
+        await pilot.press("L")  # window 38–39: week 38 stays
+        await pilot.pause(0.4)
+        return sc._plans[date(2026, 9, 14)][0]["days"][0], sc._status, sc._anchor
+
+    zeroed, status, anchor = _run(steps)
+    assert zeroed == 0.0 and anchor == date(2026, 9, 21)
+    assert "discarded" not in status
+
+
+def test_write_confirm_names_the_week_under_the_cursor(tmp_path) -> None:
+    _two_weeks(tmp_path)
+
+    async def steps(pilot, sc, tbl):
+        await pilot.press("k", "k", "k")  # week 37 NOCOS row (Approved)
+        await pilot.press("x")
+        readonly = sc._status
+        await pilot.press("a")
+        await _answer(pilot, "admin")  # lands in week 37, not the anchor week
+        weeks = {m: [r["label"] for r in rows] for m, rows in sc._plans.items()}
+        await pilot.press("w")
+        await pilot.pause()
+        return readonly, weeks, str(pilot.app.screen.query(Label).first().content)
+
+    readonly, weeks, prompt = _run(steps)
+    assert readonly == "NOCOS T1PRJTSK4228809 is Approved — read-only"
+    assert weeks[date(2026, 9, 7)] == ["NOCOS T1PRJTSK4228809", "Admin"]
+    assert weeks[date(2026, 9, 14)] == ["NOCOS T1PRJTSK4228809", "UNE T1PRJTSK4231733", "Admin"]
+    assert prompt.splitlines()[:2] == [
+        "Write to SWODP, Uke 37 · 07.09–13.09.2026 · prod:",
+        "create  Admin: all 0",
+    ]
+
+
+def test_weeks_shown_setting_applies_live() -> None:
+    async def steps(pilot, sc, tbl):
+        before = tbl.row_count
+        await pilot.press("escape")
+        await pilot.pause()
+        await pilot.press("j", "enter", "j", "l")  # Settings → Weeks shown → 2
+        await pilot.pause(0.4)
+        await pilot.press("escape", "escape")
+        await pilot.pause(0.4)
+        return before, sc._weeks_shown, tbl.row_count
+
+    assert _run(steps) == (4, 2, 8)  # 3 cards + per dag → two titled blocks
