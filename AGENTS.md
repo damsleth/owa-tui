@@ -94,4 +94,7 @@ uv build
 deferred, not planned). Follow the tag-driven flow in `RELEASING.md`. It has a
 runtime dependency on a published `owa-tools` (lower bound in `pyproject.toml`);
 upgrade the venv to the latest `owa-tools` and rerun the gates before tagging.
+owa-tools is not on PyPI past 1.6.0, so CI and release install it from a git tag
+(`owa-tools @ git+…@vX.Y.Z` in `.github/workflows/*.yml`). Raise that tag
+whenever the `pyproject.toml` lower bound goes up.
 `__version__` in `src/owa_tui/__init__.py` must match `pyproject.toml`.
