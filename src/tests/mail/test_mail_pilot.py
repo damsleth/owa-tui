@@ -795,7 +795,7 @@ def test_item_activated_missing_body_triggers_fetch() -> None:
 
             screen: MailScreen = app.screen  # type: ignore[assignment]
             called: list[str] = []
-            with patch.object(screen, "_fetch_body", side_effect=lambda mid: called.append(mid)):
+            with patch.object(screen, "_fetch_body", side_effect=lambda mid, profile=None: called.append(mid)):
                 screen.post_message(MessageList.ItemActivated(msgs[0]))
                 await pilot.pause(0.1)
             return len(called) > 0
@@ -1221,7 +1221,7 @@ def test_action_open_message_no_cache_triggers_fetch() -> None:
 
             screen: MailScreen = app.screen  # type: ignore[assignment]
             called: list[str] = []
-            with patch.object(screen, "_fetch_body", side_effect=lambda mid: called.append(mid)):
+            with patch.object(screen, "_fetch_body", side_effect=lambda mid, profile=None: called.append(mid)):
                 await pilot.press("enter")
                 await pilot.pause(0.1)
             return len(called) > 0
@@ -1417,7 +1417,7 @@ def test_patch_read_called_on_toggle() -> None:
             with patch.object(
                 screen,
                 "_patch_read",
-                side_effect=lambda mid, val: patch_calls.append((mid, val)),
+                side_effect=lambda mid, val, profile=None: patch_calls.append((mid, val)),
             ):
                 await pilot.press("r")
                 await pilot.pause(0.1)

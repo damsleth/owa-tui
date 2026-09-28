@@ -111,6 +111,10 @@ def _render_message_body(msg: dict) -> str:
 # ---------------------------------------------------------------------------
 
 
+class _AuthFailed(Exception):
+    """No token for the current profile (status: "auth failed")."""
+
+
 class ReaderPane(ScrollableContainer):
     """Scrollable reading pane for a single message.
 
@@ -218,15 +222,20 @@ class MessageList(ListView):
         if not self._messages:
             self.append(ListItem(Static("(no messages)", id="no-messages-label")))
             return
+        width = self.size.width or 80
+        pad = max((len(m.get("_profile") or "") for m in self._messages), default=0)  # -A column
         for msg in self._messages:
             row_text = list_row(
                 msg,
-                width=self.size.width or 80,
+                width=max(1, width - pad - 1) if pad else width,
                 date_fmt=self._settings.date_format,
                 custom_fmt=self._settings.date_custom,
             )
             style = "bold" if not msg.get("is_read") else ""
-            label = Label(f"[{style}]{row_text}[/{style}]" if style else row_text)
+            row_text = f"[{style}]{row_text}[/{style}]" if style else row_text
+            if pad:
+                row_text = f"[dim]{(msg.get('_profile') or '').ljust(pad)}[/dim] " + row_text
+            label = Label(row_text)
             self.append(ListItem(label))
 
     # ------------------------------------------------------------------
@@ -456,6 +465,7 @@ class MailScreen(Screen[None]):
         self._folders_loaded = False
         self._has_more = True  # another page may exist
         self._loading_more = False  # guard against overlapping page fetches
+        self._mail_open: set[str] = set()  # -A: profiles whose last page was full
 
         # Load settings from config (or use provided initial_settings for tests)
         if initial_settings is not None:
@@ -546,58 +556,117 @@ class MailScreen(Screen[None]):
         ``skip``/``append`` drive pagination: when the cursor hits the last
         row, the next $skip page is fetched and appended instead of replacing.
         """
+        from owa_tui.adapter import is_multi  # noqa: PLC0415
+
         if not append:
             self.app.call_from_thread(lambda: setattr(self, "status", "Loading messages…"))
+        errors: list[str] = []
         try:
-            from owa_mail.api import api_get  # type: ignore[import]
-            from owa_mail.messages import (  # type: ignore[import]
-                build_list_query,
-                normalize_messages,
-            )
-
-            token = self._get_token_sync()
-            if not token:
-                self.app.call_from_thread(lambda: setattr(self, "status", "auth failed"))
-                if append:
-                    self.app.call_from_thread(self._finish_more)
-                return
-
-            params = build_list_query(
-                search=search,
-                limit=PAGE_SIZE,
-            )
-            if skip:
-                params = {**params, "$skip": skip}
-            path = self._messages_path(params)
-            from owa_tui import fixtures  # noqa: PLC0415
-
-            raw = fixtures.load("mail")
-            if raw is None:
-                raw = retrying(
-                    lambda: api_get(self._api_base, path, token, debug=self._debug),
-                    on_wait=self._wait_status,
-                )
-            if raw is None:
-                if append:
-                    self.app.call_from_thread(self._finish_more)
-                elif search:
-                    self.app.call_from_thread(self._on_search_failed)
-                else:
-                    self.app.call_from_thread(
-                        lambda: setattr(self, "status", "fetch failed: no data returned")
-                    )
-                return
-
-            msgs = normalize_messages(raw, keep_body=False)
-            if append:
-                self.app.call_from_thread(self._append_messages, msgs)
+            if is_multi(self._config):
+                msgs, errors = self._fetch_merged_page(search, append)
             else:
-                self.app.call_from_thread(self._apply_messages, msgs, search)
+                msgs = self._fetch_page(search, skip)
+        except _AuthFailed:
+            self.app.call_from_thread(lambda: setattr(self, "status", "auth failed"))
+            if append:
+                self.app.call_from_thread(self._finish_more)
+            return
         except Exception as exc:
             err = str(exc)
             self.app.call_from_thread(lambda: setattr(self, "status", f"error: {err}"))
             if append:
                 self.app.call_from_thread(self._finish_more)
+            return
+        if msgs is None:
+            if append:
+                self.app.call_from_thread(self._finish_more)
+            elif search:
+                self.app.call_from_thread(self._on_search_failed)
+            else:
+                self.app.call_from_thread(
+                    lambda: setattr(self, "status", "fetch failed: no data returned")
+                )
+            return
+        if append:
+            self.app.call_from_thread(self._append_messages, msgs)
+        else:
+            self.app.call_from_thread(self._apply_messages, msgs, search)
+        if is_multi(self._config):
+            # Paging is per profile: more exists while any profile's last page was full.
+            has_more = bool(self._mail_open)
+            self.app.call_from_thread(setattr, self, "_has_more", has_more)
+        if errors:
+            note = "failed: " + "; ".join(errors)
+            self.app.call_from_thread(lambda: setattr(self, "status", note))
+
+    def _fetch_page(self, search: str, skip: int) -> list[dict] | None:
+        """One page for the current profile (blocking). None = no data returned."""
+        from owa_mail.api import api_get  # type: ignore[import]
+        from owa_mail.messages import (  # type: ignore[import]
+            build_list_query,
+            normalize_messages,
+        )
+
+        token = self._get_token_sync()
+        if not token:
+            raise _AuthFailed
+
+        params = build_list_query(
+            search=search,
+            limit=PAGE_SIZE,
+        )
+        if skip:
+            params = {**params, "$skip": skip}
+        path = self._messages_path(params)
+        from owa_tui import fixtures  # noqa: PLC0415
+
+        raw = fixtures.load("mail")
+        if raw is None:
+            raw = retrying(
+                lambda: api_get(self._api_base, path, token, debug=self._debug),
+                on_wait=self._wait_status,
+            )
+        if raw is None:
+            return None
+        return normalize_messages(raw, keep_body=False)
+
+    def _fetch_merged_page(self, search: str, append: bool) -> tuple[list[dict] | None, list[str]]:
+        """-A: the next page from every profile that still has one, tagged ``_profile``.
+
+        Each profile pages on its own ``$skip`` (how many of its messages are
+        loaded); ``_mail_open`` holds the profiles whose last page was full.
+        Display order comes from the sort setting, so the merge is just concat.
+        """
+        from collections import Counter  # noqa: PLC0415
+
+        from owa_tui.adapter import as_profile, eligible_profiles  # noqa: PLC0415
+
+        aliases = eligible_profiles(self._config)
+        loaded = Counter(m.get("_profile") for m in self.messages) if append else Counter()
+        todo = [a for a in aliases if not append or a in self._mail_open]
+        rows: list[dict] = []
+        errors: list[str] = []
+        still_open: set[str] = set()
+        for alias in todo:
+            with as_profile(alias):
+                try:
+                    page = self._fetch_page(search, loaded[alias])
+                except _AuthFailed:
+                    errors.append(f"{alias}: auth failed")
+                    continue
+                except Exception as exc:  # noqa: BLE001 — reported per profile
+                    errors.append(f"{alias}: {exc}")
+                    continue
+            page = page or []
+            if len(page) >= PAGE_SIZE:
+                still_open.add(alias)
+            for m in page:
+                m["_profile"] = alias
+            rows.extend(page)
+        self._mail_open = still_open
+        if errors and not rows and not append:
+            raise RuntimeError("; ".join(errors))
+        return rows, errors
 
     def _messages_path(self, params: dict) -> str:
         """Endpoint for the current folder (or the default mailbox view)."""
@@ -617,6 +686,15 @@ class MailScreen(Screen[None]):
     @work(thread=True)
     def _fetch_folders(self) -> None:
         """Load the mail-folder list for the side panel (background thread)."""
+        from owa_tui.adapter import is_multi  # noqa: PLC0415
+
+        if is_multi(self._config):
+            # ponytail: folder ids are per mailbox, so -A shows each profile's
+            # default view only. Upgrade: per-profile well-known folder names.
+            self.app.call_from_thread(
+                lambda: setattr(self, "status", "folders: one profile at a time (Esc → Switch profile)")
+            )
+            return
         try:
             from owa_core.query import build_query  # type: ignore[import]
             from owa_mail.api import api_get  # type: ignore[import]
@@ -696,8 +774,10 @@ class MailScreen(Screen[None]):
         self.status = "search failed"
 
     @work(thread=True)
-    def _fetch_body(self, msg_id: str) -> None:
-        """Lazy-fetch a message body in a background thread."""
+    def _fetch_body(self, msg_id: str, profile: str | None = None) -> None:
+        """Lazy-fetch a message body in a background thread (as *profile* under -A)."""
+        from owa_tui.adapter import as_profile  # noqa: PLC0415
+
         if msg_id in self._body_cache:
             self.app.call_from_thread(self._show_cached_body, msg_id)
             return
@@ -705,7 +785,8 @@ class MailScreen(Screen[None]):
             from owa_mail.api import api_get  # type: ignore[import]
             from owa_mail.messages import normalize_message  # type: ignore[import]
 
-            token = self._get_token_sync()
+            with as_profile(profile):
+                token = self._get_token_sync()
             if not token:
                 self.app.call_from_thread(self._on_body_failed)
                 return
@@ -761,16 +842,18 @@ class MailScreen(Screen[None]):
         self.mode = "list"
 
     @work(thread=True)
-    def _patch_read(self, msg_id: str, new_read: bool) -> None:
-        """PATCH IsRead on the Graph API in a background thread."""
+    def _patch_read(self, msg_id: str, new_read: bool, profile: str | None = None) -> None:
+        """PATCH IsRead on the Graph API in a background thread (as *profile* under -A)."""
         from owa_tui import fixtures  # noqa: PLC0415
+        from owa_tui.adapter import as_profile  # noqa: PLC0415
 
         if fixtures.enabled():
             return
         try:
             from owa_mail.api import api_request  # type: ignore[import]
 
-            token = self._get_token_sync()
+            with as_profile(profile):
+                token = self._get_token_sync()
             if not token:
                 return
             retrying(
@@ -854,7 +937,7 @@ class MailScreen(Screen[None]):
         if msg_id in self._body_cache:
             self._show_cached_body(msg_id)
         else:
-            self._fetch_body(msg_id)
+            self._fetch_body(msg_id, msg.get("_profile"))
 
     def action_close_reader(self) -> None:
         if self.settings.reading_pane == "off":
@@ -896,7 +979,7 @@ class MailScreen(Screen[None]):
         self.status = f"Marked as {'read' if new_read else 'unread'}"
         msg_id = msg.get("id") or ""
         if msg_id:
-            self._patch_read(msg_id, new_read)
+            self._patch_read(msg_id, new_read, msg.get("_profile"))
 
     def action_open_browser(self) -> None:
         msg = self._current_msg()
@@ -1072,7 +1155,7 @@ class MailScreen(Screen[None]):
         if msg_id in self._body_cache:
             self._show_cached_body(msg_id)
         else:
-            self._fetch_body(msg_id)
+            self._fetch_body(msg_id, event.msg.get("_profile"))
 
     def on_folder_list_folder_selected(self, event: FolderList.FolderSelected) -> None:
         """Switch the message list to the chosen folder and reload from page 1."""
