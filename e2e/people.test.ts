@@ -3,10 +3,14 @@
 // OWA_TUI_FIXTURES (see src/owa_tui/fixtures.py) — no live auth needed.
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { test, expect } from "@microsoft/tui-test";
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
-const env = { ...process.env, OWA_TUI_FIXTURES: FIXTURES };
+// Empty config dir: the user's saved tool settings must not leak into fixture runs.
+const CONFIG = mkdtempSync(join(tmpdir(), "owa-tui-people-e2e-"));
+const env = { ...process.env, OWA_TUI_FIXTURES: FIXTURES, XDG_CONFIG_HOME: CONFIG };
 // Wide enough that a right-side detail pane does not truncate list labels.
 const size = { columns: 120, rows: 40 };
 
@@ -23,16 +27,16 @@ test.describe("people", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 2. j then l — opens detail pane / detail screen for highlighted person
+  // 2. j then Enter — opens detail pane / detail screen for highlighted person
   //
   // GOTCHA: ListView starts with index=None; Enter/l is a no-op until a row
   // is highlighted. Press "j" first, THEN "l" (not submit() — screen-level
   // binding is more reliably triggered by terminal.write).
   // -------------------------------------------------------------------------
-  test("j then l opens the detail view", async ({ terminal }) => {
+  test("j then Enter opens the detail view", async ({ terminal }) => {
     await expect(terminal.getByText("Alice Andersen")).toBeVisible();
     terminal.write("j"); // highlight first row
-    terminal.write("l"); // open detail
+    terminal.write("\r"); // open detail
     // "Alice Andersen" may now appear in both list and detail; use strict:false.
     await expect(terminal.getByText("Alice Andersen", { strict: false })).toBeVisible();
     // Assert a detail-only field (email or job title) to confirm we're in detail.
@@ -40,14 +44,14 @@ test.describe("people", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 3. h — closes detail, returns to list
+  // 3. tab — leaves the detail, back to the list
   // -------------------------------------------------------------------------
-  test("h closes detail and returns to list", async ({ terminal }) => {
+  test("tab leaves the detail and returns to the list", async ({ terminal }) => {
     await expect(terminal.getByText("Alice Andersen")).toBeVisible();
     terminal.write("j");
-    terminal.write("l");
+    terminal.write("\r");
     await expect(terminal.getByText("alice.andersen@example.com", { strict: false })).toBeVisible();
-    terminal.write("h"); // back to list
+    terminal.write("\t"); // tab back to the list
     await expect(terminal.getByText("Bob Bakken")).toBeVisible();
   });
 
@@ -95,7 +99,7 @@ test.describe("people", () => {
     await expect(terminal.getByText("Alice Andersen")).toBeVisible();
     terminal.write("j"); // highlight row 0 (Alice)
     terminal.write("j"); // move to row 1 (Bob)
-    terminal.write("l"); // open detail for row 1
+    terminal.write("\r"); // open detail for row 1
     await expect(terminal.getByText("bob.bakken@example.com", { strict: false })).toBeVisible();
   });
 
@@ -110,7 +114,7 @@ test.describe("people", () => {
     terminal.write("j"); // row 0 (Alice)
     terminal.write("j"); // row 1 (Bob)
     terminal.write("k"); // back to row 0 (Alice)
-    terminal.write("l"); // open detail for row 0
+    terminal.write("\r"); // open detail for row 0
     await expect(terminal.getByText("alice.andersen@example.com", { strict: false })).toBeVisible();
   });
 
@@ -124,11 +128,11 @@ test.describe("people", () => {
     await expect(terminal.getByText("Alice Andersen")).toBeVisible();
     terminal.write("j"); // highlight a row first
     terminal.write("G"); // jump to last row (Carol)
-    terminal.write("l"); // open detail
+    terminal.write("\r"); // open detail
     await expect(terminal.getByText("carol.christensen@example.com", { strict: false })).toBeVisible();
-    terminal.write("h"); // back to list
+    terminal.write("\t"); // tab back to the list
     terminal.write("g"); // jump to first row (Alice)
-    terminal.write("l"); // open detail
+    terminal.write("\r"); // open detail
     await expect(terminal.getByText("alice.andersen@example.com", { strict: false })).toBeVisible();
   });
 

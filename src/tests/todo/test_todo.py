@@ -215,13 +215,13 @@ def test_j_moves_cursor_down() -> None:
     assert asyncio.run(_run()) == 1
 
 
-def test_j_then_l_opens_detail_mode() -> None:
+def test_j_then_enter_opens_detail_mode() -> None:
     async def _run() -> str:
         app = _make_app(initial_items=_tasks(3), detail_pane_mode="right")
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause(0.1)
             await pilot.press("j")
-            await pilot.press("l")
+            await pilot.press("enter")
             await pilot.pause(0.1)
             return app.screen._mode
 

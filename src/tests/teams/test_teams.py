@@ -330,7 +330,7 @@ def test_j_moves_cursor() -> None:
     assert asyncio.run(_run()) >= 0
 
 
-def test_j_then_l_opens_thread_screen() -> None:
+def test_j_then_enter_opens_thread_screen() -> None:
     """Activating a chat item pushes TeamsThreadScreen onto the screen stack."""
 
     async def _run() -> str:
@@ -341,7 +341,7 @@ def test_j_then_l_opens_thread_screen() -> None:
             await pilot.pause(0.05)
             # Intercept before any live fetch
             with patch.object(TeamsThreadScreen, "fetch_messages", return_value=[]):
-                await pilot.press("l")
+                await pilot.press("enter")
                 await pilot.pause(0.2)
                 return type(app.screen).__name__
 
@@ -358,7 +358,7 @@ def test_thread_screen_shows_chat_name_breadcrumb() -> None:
             await pilot.press("j")
             await pilot.pause(0.05)
             with patch.object(TeamsThreadScreen, "fetch_messages", return_value=[]):
-                await pilot.press("l")
+                await pilot.press("enter")
                 await pilot.pause(0.2)
                 thread = app.screen
                 return thread._breadcrumb
@@ -378,7 +378,7 @@ def test_h_pops_back_to_teams_screen() -> None:
             await pilot.press("j")
             await pilot.pause(0.05)
             with patch.object(TeamsThreadScreen, "fetch_messages", return_value=[]):
-                await pilot.press("l")
+                await pilot.press("enter")
                 await pilot.pause(0.2)
                 screen_name = type(app.screen).__name__
                 await pilot.press("h")

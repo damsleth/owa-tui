@@ -100,7 +100,7 @@ class AgendaItemSelected(Message):
 
 
 class AgendaItemDrilled(Message):
-    """Fired when the user presses Enter / → / l to open detail."""
+    """Fired when the user presses Enter (or Tab) to open detail."""
 
     def __init__(self, event: dict[str, Any] | None) -> None:
         super().__init__()
@@ -118,7 +118,7 @@ class AgendaList(Static):
     """Scrollable event list with vim-style keybindings.
 
     Emits :class:`AgendaItemSelected` on highlight change and
-    :class:`AgendaItemDrilled` on Enter/→/l.
+    :class:`AgendaItemDrilled` on Enter.
     """
 
     BINDINGS = [
@@ -127,7 +127,6 @@ class AgendaList(Static):
         ("g", "move_top", "Top"),
         ("G", "move_bottom", "Bottom"),
         ("u", "page_up_half", "Half-page up"),
-        ("l", "drill", "Open"),
     ]
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -218,7 +217,7 @@ class AgendaList(Static):
         elif key in ("pagedown", "space"):
             lv.action_scroll_down()
             event.stop()
-        elif key in ("enter", "right"):
+        elif key == "enter":
             self.action_drill()
             event.stop()
 

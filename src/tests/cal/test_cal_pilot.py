@@ -339,28 +339,6 @@ class TestAgendaListPilot:
         asyncio.run(_run())
         assert len(drilled) >= 1
 
-    def test_on_key_right_fires_drill(self) -> None:
-        """right arrow fires AgendaItemDrilled (lines 201-202)."""
-        drilled: list = []
-
-        async def _run() -> None:
-            app = self._make_agenda_app()
-            async with app.run_test() as pilot:
-                await pilot.pause()
-                al = app.query_one(AgendaList)
-                orig = al.action_drill
-
-                def _capture():
-                    drilled.append(1)
-                    orig()
-
-                al.action_drill = _capture  # type: ignore[method-assign]
-                await pilot.press("right")
-                await pilot.pause()
-
-        asyncio.run(_run())
-        assert len(drilled) >= 1
-
     def test_action_move_down(self) -> None:
         """action_move_down increments cursor (line 213)."""
 
@@ -1395,8 +1373,8 @@ class TestDetailPaneScroll:
         assert r["respond_mode"] is False
         assert "declin" not in r["status"]
 
-    def test_hl_and_arrows_move_focus_between_panes(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """l/→ focus the reading pane; h/← hand focus back to the list's ListView."""
+    def test_tab_switches_panes_and_hl_arrows_stay_in_the_list(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Tab/shift+Tab toggle list ↔ reading pane; h/l/←/→ no longer switch panes."""
 
         async def _run() -> list[str]:
             app = _push_cal_app(monkeypatch, [_EV1, _EV2], reading_pane="right")
@@ -1404,13 +1382,16 @@ class TestDetailPaneScroll:
             async with app.run_test() as pilot:
                 await pilot.pause()
                 await pilot.pause()
-                for key in ("l", "h", "right", "left"):
+                for key in ("l", "right", "tab", "h", "left", "tab", "shift+tab", "shift+tab"):
                     await pilot.press(key)
                     await pilot.pause()
                     seen.append(app.focused.id if app.focused else "")
             return seen
 
-        assert asyncio.run(_run()) == ["detail-pane", "agenda-lv", "detail-pane", "agenda-lv"]
+        assert asyncio.run(_run()) == [
+            "agenda-lv", "agenda-lv", "detail-pane", "detail-pane", "detail-pane",
+            "agenda-lv", "detail-pane", "agenda-lv",
+        ]
 
 
 

@@ -107,3 +107,85 @@ def test_v_toggles_to_calendar_view_and_keeps_selection(monkeypatch) -> None:
     assert (back, idx) == ("AgendaList", 0)
     assert saved[0]["tui_view"] == "calendar" and saved[-1]["tui_view"] == "list"
     assert isinstance(CalendarGrid(), CalendarGrid)
+
+
+def _grid_app(events, mode):
+    from textual.app import App, ComposeResult
+
+    class _App(App[None]):
+        def compose(self) -> ComposeResult:
+            grid = CalendarGrid(id="g", mode=mode)
+            grid._today = TODAY
+            yield grid
+
+        def on_mount(self) -> None:
+            self.query_one(CalendarGrid).update_rows(events)
+            self.query_one(CalendarGrid).focus()
+
+    return _App()
+
+
+def _walk(events, mode, keys):
+    async def run():
+        app = _grid_app(events, mode)
+        out = []
+        async with app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            g = app.query_one(CalendarGrid)
+            out.append((g._day, (g.current_item() or {}).get("id")))
+            for key in keys:
+                await pilot.press(key)
+                await pilot.pause()
+                out.append((g._day, (g.current_item() or {}).get("id")))
+        return out
+
+    return asyncio.run(run())
+
+
+WEEK = [
+    {"id": "mon9", "subject": "a", "start": "2026-09-28T09:00:00", "end": "2026-09-28T10:00:00"},
+    {"id": "mon14", "subject": "b", "start": "2026-09-28T14:00:00", "end": "2026-09-28T15:00:00"},
+    {"id": "tue10", "subject": "c", "start": "2026-09-29T10:00:00", "end": "2026-09-29T11:00:00"},
+    {"id": "tue15", "subject": "d", "start": "2026-09-29T15:00:00", "end": "2026-09-29T16:00:00"},
+]
+
+
+def test_week_grid_hl_move_days_and_jk_move_within_the_day() -> None:
+    d = date
+    steps = _walk(WEEK, "week", ["j", "l", "k", "l", "right", "h", "left", "left", "h"])
+    assert steps == [
+        (d(2026, 9, 28), "mon9"),
+        (d(2026, 9, 28), "mon14"),  # j: next event that day
+        (d(2026, 9, 29), "tue15"),  # l: next day, nearest start to 14:00
+        (d(2026, 9, 29), "tue10"),  # k
+        (d(2026, 9, 30), None),  # l: an empty day is selectable
+        (d(2026, 10, 1), None),  # →
+        (d(2026, 9, 30), None),  # h
+        (d(2026, 9, 29), "tue10"),  # ←: first event of the day
+        (d(2026, 9, 28), "mon9"),
+        (d(2026, 9, 28), "mon9"),  # h at Monday: stays in the fetched week
+    ]
+
+
+def test_month_grid_jk_move_a_week_and_JK_step_the_days_events() -> None:
+    d = date
+    steps = _walk(WEEK, "month", ["J", "j", "k", "l", "K", "k", "k", "k", "k"])
+    assert steps == [
+        (d(2026, 9, 28), "mon9"),
+        (d(2026, 9, 28), "mon14"),  # J: next event in the day
+        (d(2026, 9, 28), "mon14"),  # j: 5 Oct is outside September → stays
+        (d(2026, 9, 21), None),  # k: a week up
+        (d(2026, 9, 22), None),  # l
+        (d(2026, 9, 22), None),  # K on an empty day
+        (d(2026, 9, 15), None),
+        (d(2026, 9, 8), None),
+        (d(2026, 9, 1), None),
+        (d(2026, 9, 1), None),  # k past the 1st: stays
+    ]
+
+
+def test_cursor_day_is_marked_in_week_and_month_grids() -> None:
+    out = _text(render_grid(WEEK, "week", None, TODAY, cursor=date(2026, 9, 30)))
+    assert "Wed 30.09" in out
+    month = _text(render_grid(WEEK, "month", None, TODAY, cursor=date(2026, 9, 15)))
+    assert " 15 " in month

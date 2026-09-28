@@ -20,6 +20,13 @@ from __future__ import annotations
 
 from textual.binding import Binding
 
+# Trees (drive, sites) browse lf-style: l/→ into a folder, h/← up one. That is
+# navigation inside the list, so they keep these on top of LIST_BINDINGS.
+TREE_NAV_BINDINGS: list[Binding] = [
+    Binding("l,right", "open_item", "Open", show=False),
+    Binding("h,left", "close_detail", "Up", show=False),
+]
+
 LIST_BINDINGS: list[Binding] = [
     # --- navigation -------------------------------------------------------
     Binding("j", "move_down", "Down", show=False),
@@ -30,14 +37,10 @@ LIST_BINDINGS: list[Binding] = [
     Binding("u", "page_up", "Page Up", show=False),
     Binding("g", "go_top", "Top", show=False),
     Binding("G", "go_bottom", "Bottom", show=False),
-    # --- open / close detail pane -----------------------------------------
+    # --- open detail / switch pane ------------------------------------------
+    # Tab switches panes; arrows and hjkl stay inside the focused pane.
     Binding("enter", "open_item", "Open"),
-    Binding("l", "open_item", "Open", show=False),
-    Binding("right", "open_item", "Open", show=False),
-    Binding("h", "close_detail", "Back", show=False),
-    Binding("left", "close_detail", "Back", show=False),
-    # --- tab focus toggle -------------------------------------------------
-    Binding("tab", "focus_pane", "Focus pane", show=False),
+    Binding("tab,shift+tab", "focus_pane", "Switch pane", show=False),
     # --- universal actions ------------------------------------------------
     Binding("r", "refresh", "Refresh"),
     Binding("/", "search", "Search"),

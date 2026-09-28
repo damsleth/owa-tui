@@ -276,5 +276,5 @@ class TodoScreen(OwaListScreen):
 
     def help_text(self) -> str:
         return (
-            "j/k move  Enter open  c complete-toggle  / search  r refresh  q quit"
+            "j/k move  Enter open  Tab pane  c complete-toggle  / search  r refresh  q quit"
         )

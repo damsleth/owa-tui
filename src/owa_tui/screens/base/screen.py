@@ -477,7 +477,7 @@ class OwaListScreen(Screen[None]):
     def help_text(self) -> str:
         """Status-bar text shown when the user selects Help from the menu."""
         return (
-            "j/k move  g/G top/bottom  Enter open  / search  r refresh  o browser  q quit"
+            "j/k move  g/G top/bottom  Enter open  Tab pane  / search  r refresh  o browser  q quit"
         )
 
     def sort_items(self, items: list[dict]) -> list[dict]:
@@ -642,8 +642,10 @@ class OwaListScreen(Screen[None]):
                 lw = self._list_widget()
                 if lw:
                     lw.focus()
+                self._mode = "list"  # so a tree's h goes up a folder, not "close detail"
             else:
                 pane.focus()
+                self._mode = "detail"
         except Exception:
             pass
 
@@ -759,6 +761,9 @@ class OwaListScreen(Screen[None]):
         else:
             self._update_detail_pane(item)
             self._mode = "detail"
+            # Focus the pane (like mail/cal) so Tab goes back to the list.
+            for pane in self.query("#owa-detail-pane"):
+                pane.focus()
 
     def _update_detail_pane(self, item: dict) -> None:
         pane = self._detail_pane()

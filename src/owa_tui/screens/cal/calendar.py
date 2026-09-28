@@ -4,8 +4,9 @@ A drop-in for :class:`AgendaList` (same ``update_rows`` / ``current_item`` /
 ``index`` / ``focus_list`` surface and the same Selected/Drilled messages), so
 the detail pane, respond and open-in-browser work unchanged. The grid follows
 the day range: ``today`` is an hour timeline, ``week`` seven day columns,
-``month`` a month grid. j/k step through events in time order; the selected
-event is highlighted.
+``month`` a month grid. A day cursor moves with h/l/←/→ (and j/k by week in
+the month grid); the selected event within that day is highlighted. Tab, not
+the arrows, switches to the detail pane.
 """
 
 from __future__ import annotations
@@ -83,20 +84,25 @@ def _period(mode: str, day: date) -> tuple[date, date]:
     return day, day
 
 
-def week_grid(events: list[dict[str, Any]], day: date, selected: int | None, today: date) -> Table:
+def week_grid(
+    events: list[dict[str, Any]], day: date, selected: int | None, today: date, cursor: date | None = None
+) -> Table:
     monday = _period("week", day)[0]
     by_day = _by_day(events)
     table = Table(expand=True, show_lines=False, pad_edge=False, box=None, padding=(0, 1))
     cells = []
     for n in range(7):
         d = monday + timedelta(days=n)
-        table.add_column(f"{d:%a %d.%m}", style="bold" if d == today else None, ratio=1, overflow="ellipsis")
+        head = "reverse" if d == cursor else ("bold" if d == today else "")
+        table.add_column(f"{d:%a %d.%m}", header_style=head, ratio=1, overflow="ellipsis")
         cells.append(Group(*[_line(events[i], i == selected) for i in by_day.get(d, [])]) or "")
     table.add_row(*cells)
     return table
 
 
-def month_grid(events: list[dict[str, Any]], day: date, selected: int | None, today: date) -> Table:
+def month_grid(
+    events: list[dict[str, Any]], day: date, selected: int | None, today: date, cursor: date | None = None
+) -> Table:
     first, last = _period("month", day)
     by_day = _by_day(events)
     table = Table(expand=True, show_lines=True, pad_edge=False, padding=(0, 1))
@@ -107,7 +113,12 @@ def month_grid(events: list[dict[str, Any]], day: date, selected: int | None, to
         row = []
         for n in range(7):
             d = start + timedelta(days=n)
-            head = Text(str(d.day), style="bold" if d == today else ("dim" if d.month != first.month else ""))
+            style = "dim" if d.month != first.month else ""
+            if d == today:
+                style = "bold"
+            if d == cursor:
+                style = "reverse"
+            head = Text(f" {d.day} " if d == cursor else str(d.day), style=style)
             idx = by_day.get(d, [])
             shown = idx[:MONTH_CELL_LINES]
             if selected in idx and selected not in shown:
@@ -161,33 +172,49 @@ def day_timeline(events: list[dict[str, Any]], day: date, selected: int | None) 
 
 
 def render_grid(
-    events: list[dict[str, Any]], mode: str, selected: int | None, today: date | None = None
+    events: list[dict[str, Any]],
+    mode: str,
+    selected: int | None,
+    today: date | None = None,
+    cursor: date | None = None,
 ) -> RenderableType:
     today = today or date.today()
     day = anchor_day(events, mode, today)
     if mode == "week":
-        return week_grid(events, day, selected, today)
+        return week_grid(events, day, selected, today, cursor)
     if mode == "month":
-        return month_grid(events, day, selected, today)
+        return month_grid(events, day, selected, today, cursor)
     return day_timeline(events, day, selected)
 
 
 class CalendarGrid(VerticalScroll, can_focus=True):
-    """Calendar view with AgendaList's selection surface. See module docstring."""
+    """Calendar view with AgendaList's selection surface. See module docstring.
+
+    Keys: h/l/←/→ previous/next day. In week and today view j/k/↓/↑ step
+    through the day's events; in the month grid they move a week and J/K step
+    through the day's events. g/G first/last event, Enter opens the detail.
+    """
 
     BINDINGS = [
-        Binding("j,down", "move(1)", "Next", show=False),
-        Binding("k,up", "move(-1)", "Prev", show=False),
+        Binding("h,left", "day(-1)", "Prev day", show=False),
+        Binding("l,right", "day(1)", "Next day", show=False),
+        Binding("j,down", "down", "Down", show=False),
+        Binding("k,up", "up", "Up", show=False),
+        Binding("J", "event(1)", "Next event in day", show=False),
+        Binding("K", "event(-1)", "Prev event in day", show=False),
         Binding("g", "jump(0)", "First", show=False),
         Binding("G", "jump(-1)", "Last", show=False),
-        Binding("l,right,enter", "drill", "Open", show=False),
+        Binding("enter", "drill", "Open", show=False),
     ]
 
     def __init__(self, *args: Any, mode: str = "today", **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.mode = mode
         self._data: list[dict[str, Any]] = []
+        self._by_day: dict[date, list[int]] = {}
         self._index: int | None = None
+        self._day: date = date.today()
+        self._today: date = date.today()
 
     def compose(self):  # type: ignore[override]
         yield Static(id="cal-grid-body")
@@ -195,8 +222,12 @@ class CalendarGrid(VerticalScroll, can_focus=True):
     # --- AgendaList surface -------------------------------------------------
 
     def update_rows(self, events: list[dict[str, Any]], *, show_date: bool = False) -> None:
+        """Show *events*; the cursor starts on the first day from today that has any."""
         self._data = list(events)
-        self._index = 0 if self._data else None
+        self._by_day = _by_day(self._data)
+        lo, hi = self._bounds()
+        start = self._today if lo <= self._today <= hi else lo
+        self._set_day(next((d for d in sorted(self._by_day) if start <= d <= hi), start))
         self._redraw()
 
     def current_item(self) -> dict[str, Any] | None:
@@ -213,30 +244,83 @@ class CalendarGrid(VerticalScroll, can_focus=True):
     @index.setter
     def index(self, value: int | None) -> None:
         if value is not None and 0 <= value < len(self._data):
+            lo, hi = self._bounds()
+            days = [d for d in _days(self._data[value]) if lo <= d <= hi]
+            self._day = days[0] if days else self._day
             self._index = value
             self._redraw()
 
     def focus_list(self) -> None:
         self.focus()
 
-    # --- actions --------------------------------------------------------------
+    # --- cursor ------------------------------------------------------------------
 
-    def _redraw(self) -> None:
-        body = self.query_one("#cal-grid-body", Static)
-        body.update(render_grid(self._data, self.mode, self._index))
+    def _bounds(self) -> tuple[date, date]:
+        """First and last day the grid shows (the fetched period)."""
+        return _period(self.mode, anchor_day(self._data, self.mode, self._today))
 
-    def action_move(self, delta: int) -> None:
-        if self._index is None:
-            return
-        self._index = max(0, min(len(self._data) - 1, self._index + delta))
+    def _day_events(self) -> list[int]:
+        return self._by_day.get(self._day, [])
+
+    def _set_day(self, day: date, near: int | None = None) -> None:
+        """Move the cursor to *day*; select the event starting nearest *near*
+        (minutes since midnight), or the day's first event, or none."""
+        self._day = day
+        events = self._day_events()
+        if not events:
+            self._index = None
+        elif near is None:
+            self._index = events[0]
+        else:
+            self._index = min(
+                events, key=lambda i: abs(_minutes(self._data[i].get("start") or "", 0) - near)
+            )
+
+    def _moved(self) -> None:
         self._redraw()
         self.post_message(AgendaItemSelected(self.current_item()))
 
+    def _redraw(self) -> None:
+        body = self.query_one("#cal-grid-body", Static)
+        cursor = self._day if self.mode != "today" else None
+        body.update(render_grid(self._data, self.mode, self._index, self._today, cursor))
+
+    # --- actions --------------------------------------------------------------
+
+    def action_day(self, delta: int) -> None:
+        lo, hi = self._bounds()
+        day = self._day + timedelta(days=delta)
+        if not lo <= day <= hi:  # the grid only holds the fetched period
+            return
+        cur = self.current_item()
+        near = _minutes(cur.get("start") or "", 0) if cur and self.mode == "week" else None
+        self._set_day(day, near)
+        self._moved()
+
+    def action_event(self, delta: int) -> None:
+        events = self._day_events()
+        if not events:
+            return
+        pos = events.index(self._index) if self._index in events else -1
+        self._index = events[max(0, min(len(events) - 1, pos + delta))]
+        self._moved()
+
+    def action_down(self) -> None:
+        if self.mode == "month":
+            self.action_day(7)
+        else:
+            self.action_event(1)
+
+    def action_up(self) -> None:
+        if self.mode == "month":
+            self.action_day(-7)
+        else:
+            self.action_event(-1)
+
     def action_jump(self, where: int) -> None:
         if self._data:
-            self._index = where % len(self._data)
-            self._redraw()
-            self.post_message(AgendaItemSelected(self.current_item()))
+            self.index = where % len(self._data)
+            self._moved()
 
     def action_drill(self) -> None:
         self.post_message(AgendaItemDrilled(self.current_item()))
