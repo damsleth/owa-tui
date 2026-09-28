@@ -227,7 +227,7 @@ def test_screen_open_detail_no_cache_triggers_fetch() -> None:
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause(0.1)
             screen: PeopleScreen = app.screen  # type: ignore[assignment]
-            with patch.object(screen, "_fetch_detail", side_effect=lambda pid: called.append(pid)):
+            with patch.object(screen, "_fetch_detail", side_effect=lambda pid, profile=None: called.append(pid)):
                 await pilot.press("enter")
                 await pilot.pause(0.1)
         return called
