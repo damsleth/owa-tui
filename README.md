@@ -25,7 +25,16 @@ owa-tui --help
 owa-tui --version
 owa-tui
 owa-tui cal          # or: owa-tui --tool cal
+owa-tui mail --profile une            # one owa-piggy profile
+owa-tui cal -A                        # merge every eligible profile
+owa-tui mail --profile une --profile nc
 ```
+
+`-A` (or `--profile all`, or `--profile` given more than once) merges the list
+screens (cal, mail, people, tasks, planner, ado, teams) across profiles, using
+the same eligibility rule as owa-tools' `-A`. Rows get a profile column, and
+anything you do to a row (respond, reply, mark read, open) runs as that row's
+profile. Esc → Switch profile goes back to a single profile.
 
 Running `owa-tui` starts the Textual shell. No Microsoft Graph or broker calls
 are made during startup.
