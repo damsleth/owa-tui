@@ -23,6 +23,7 @@ from textual.widget import Widget
 from textual.widgets import Input, Label, Static
 
 from owa_tui.screens.cal.agenda import AgendaItemDrilled, AgendaItemSelected, AgendaList
+from owa_tui.screens.cal.calendar import CalendarGrid
 from owa_tui.screens.cal.detail import CalDetailPane
 from owa_tui.screens.cal.fetch import fetch_events, range_title
 from owa_tui.screens.cal.settings import CalSettings
@@ -34,7 +35,7 @@ from owa_tui.widgets.status_bar import StatusBar
 # ---------------------------------------------------------------------------
 
 HELP_LINE = (
-    "j/k move · enter detail · / search · r refresh"
+    "j/k move · enter detail · v list/calendar · / search · r refresh"
     " · y respond (a/t/d) · o browser · esc menu · q quit"
 )
 
@@ -53,6 +54,7 @@ _SETTINGS_FIELDS = [
     ("day_range", "Day range"),
     ("show_declined", "Show declined"),
     ("event_detail", "Event detail"),
+    ("view", "View"),
     ("_reset", "Reset to defaults"),
 ]
 
@@ -147,6 +149,7 @@ class CalScreen(Screen):
         Binding("o", "open_browser", "Open", show=False),
         Binding("escape", "open_menu", "Menu", show=False),
         Binding("/", "search", "Search", show=False),
+        Binding("v", "toggle_view", "List/calendar", show=False),
         Binding("left", "back_to_list", "Back", show=False),
         Binding("h", "back_to_list", "Back", show=False),
     ]
@@ -187,7 +190,11 @@ class CalScreen(Screen):
         rp = self._settings.reading_pane
         ratio = self._settings.split_ratio
 
-        agenda = AgendaList(id="agenda-list")
+        agenda: Widget = (
+            CalendarGrid(id="agenda-list", mode=self._settings.day_range)
+            if self._settings.view == "calendar"
+            else AgendaList(id="agenda-list")
+        )
         detail = CalDetailPane(id="detail-pane")
 
         if rp == "right":
@@ -229,8 +236,15 @@ class CalScreen(Screen):
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _agenda(self) -> AgendaList:
-        return self.query_one("#agenda-list", AgendaList)
+    def _agenda(self) -> AgendaList | CalendarGrid:
+        """The event selector: the list, or the calendar grid in calendar view."""
+        return self.query_one("#agenda-list")  # type: ignore[return-value]
+
+    def _show_events(self, events: list[dict[str, Any]]) -> None:
+        agenda = self._agenda()
+        if isinstance(agenda, CalendarGrid):
+            agenda.mode = self._settings.day_range
+        agenda.update_rows(events, show_date=self._settings.day_range != "today")
 
     def _detail(self) -> CalDetailPane | None:
         try:
@@ -290,7 +304,7 @@ class CalScreen(Screen):
         # Keep any prior confirmation (e.g. "accepted: …") on success; a reload
         # triggered right after a respond would otherwise wipe it instantly.
         self._status = err or self._status
-        agenda.update_rows(events, show_date=self._settings.day_range != "today")
+        self._show_events(events)
         if self._current_event() is not None:
             self._refresh_detail()
 
@@ -482,7 +496,7 @@ class CalScreen(Screen):
         self._persist_settings()
         self._update_header()
         # Apply layout-affecting settings live, without re-entering the screen.
-        if new_settings.reading_pane != old.reading_pane:
+        if new_settings.reading_pane != old.reading_pane or new_settings.view != old.view:
             self._rebuild_layout()
         elif new_settings.split_ratio != old.split_ratio:
             self._resize_panes()
@@ -508,7 +522,7 @@ class CalScreen(Screen):
 
     def _rebuild_layout(self) -> None:
         """Swap #main-container when the reading-pane mode changes."""
-        idx = self._agenda()._lv().index
+        idx = self._agenda().index
 
         async def _swap() -> None:
             try:
@@ -525,14 +539,20 @@ class CalScreen(Screen):
 
     def _restore_after_relayout(self, idx: int | None) -> None:
         agenda = self._agenda()
-        agenda.update_rows(self._events, show_date=self._settings.day_range != "today")
+        self._show_events(self._events)
         if idx is not None and 0 <= idx < len(self._events):
-            agenda._lv().index = idx
+            agenda.index = idx
+        agenda.focus_list()
         self._refresh_detail()
+
+    def action_toggle_view(self) -> None:
+        """v — switch between the list and the calendar grid (persisted)."""
+        self._on_setting_changed("view", self._settings.cycle("view"))
+        self._status = f"view: {self._settings.view}"
 
     def action_back_to_list(self) -> None:
         """h / ← — return focus to the agenda list from the detail pane."""
-        self._agenda()._lv().focus()  # the AgendaList wrapper itself can't take focus
+        self._agenda().focus_list()  # the AgendaList wrapper itself can't take focus
         self._status = ""
 
     def action_quit(self) -> None:
