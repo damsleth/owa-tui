@@ -23,7 +23,10 @@ dev = [
     "build>=1",
     "pytest>=7",
     "pytest-cov>=4",
-    "pytest-textual-snapshot>=1",
+    # The committed .raw snapshots are syrupy>=5's format. pytest-textual-snapshot
+    # 1.1.0 caps syrupy below 5, so a fresh resolve (CI) failed every snapshot.
+    "pytest-textual-snapshot>=1,<1.1",
+    "syrupy>=5",
     "ruff>=0.4",
 ]
 
