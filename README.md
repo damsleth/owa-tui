@@ -10,13 +10,14 @@ the stable `owa-tools` library API and never imports broker internals directly.
 
 ## Install
 
-Not on PyPI yet — install from a GitHub Release wheel or straight from git:
-
 ```bash
-pip install https://github.com/damsleth/owa-tui/releases/latest/download/owa_tui-<version>-py3-none-any.whl
+uv tool install owa-tui          # or: pipx install owa-tui
 # or
-pip install git+https://github.com/damsleth/owa-tui
+brew install damsleth/tap/owa-tui
 ```
+
+Installing from PyPI pulls in `owa-tools` and `owa-piggy`. Set up an
+`owa-piggy` profile before first use.
 
 ## Usage
 
@@ -72,5 +73,5 @@ e2e/live.test.ts` (and `OWA_TUI_LIVE_TESTS=1` for the unit-level token smoke).
 
 Pushing a `v*` tag triggers `.github/workflows/release.yml`: it re-runs the
 full gates (lint, compile, coverage, e2e) on Python 3.10–3.12, then `uv build`s
-the wheel/sdist and publishes a GitHub Release. That is the release channel;
-PyPI publishing and standalone binaries are deferred, not planned.
+the wheel/sdist and publishes a GitHub Release. PyPI upload is local
+(`uv publish`); see `RELEASING.md`. Standalone binaries are deferred, not planned.
