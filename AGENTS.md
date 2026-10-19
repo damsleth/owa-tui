@@ -90,11 +90,13 @@ uv build
 
 ## Cutting a release (only when the user asks)
 
-`owa-tui` ships as a separate distribution via GitHub Releases (not PyPI —
-deferred, not planned). Follow the tag-driven flow in `RELEASING.md`. It has a
-runtime dependency on a published `owa-tools` (lower bound in `pyproject.toml`);
-upgrade the venv to the latest `owa-tools` and rerun the gates before tagging.
-owa-tools is not on PyPI past 1.6.0, so CI and release install it from a git tag
-(`owa-tools @ git+…@vX.Y.Z` in `.github/workflows/*.yml`). Raise that tag
-whenever the `pyproject.toml` lower bound goes up.
+`owa-tui` ships as a separate distribution on PyPI (uploaded locally with
+`uv publish`), as a GitHub Release (built by the tag-triggered workflow) and as
+the `damsleth/tap/owa-tui` Homebrew formula. Follow the tag-driven flow in
+`RELEASING.md`. It has a runtime dependency on a published `owa-tools` (lower
+bound in `pyproject.toml`); upgrade the venv to the latest `owa-tools` and rerun
+the gates before tagging. CI and release still install owa-tools from a git tag
+(`owa-tools @ git+…@vX.Y.Z` in `.github/workflows/*.yml`), a leftover from when
+PyPI stopped at 1.6.0; raise that tag whenever the `pyproject.toml` lower bound
+goes up.
 `__version__` in `src/owa_tui/__init__.py` must match `pyproject.toml`.

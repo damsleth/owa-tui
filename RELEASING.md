@@ -1,8 +1,8 @@
 # Releasing
 
 Semver. Tags drive releases. `owa-tui` ships as a standalone distribution
-separate from `owa-tools`, via **GitHub Releases only** — it is not on PyPI
-(deferred, not planned).
+separate from `owa-tools`: on PyPI (uploaded locally with `uv publish`), as a
+GitHub Release, and as the `damsleth/tap/owa-tui` Homebrew formula.
 
 ## Tag format
 
@@ -32,7 +32,9 @@ separate from `owa-tools`, via **GitHub Releases only** — it is not on PyPI
 The GitHub Actions workflow at `.github/workflows/release.yml` re-runs the
 gates (lint, compile, coverage, e2e) on Python 3.10–3.12, rebuilds the
 artifacts in CI, and creates the GitHub Release at the tag with the wheel and
-sdist attached. Nothing is uploaded to PyPI.
+sdist attached. It does **not** touch PyPI: the upload happens locally with
+`uv publish`, which reads `UV_PUBLISH_TOKEN` from the environment (source a
+gitignored `.env`; never commit or print it).
 
 ### Cutting a release
 
@@ -51,7 +53,27 @@ git tag -a vX.Y.Z -m "vX.Y.Z - <headline>
 - bullet: ...
 "
 git push origin vX.Y.Z
+
+# Build and publish to PyPI.
+rm -rf dist build
+uv build
+set -a && . ../.env && set +a && uv publish dist/owa_tui-X.Y.Z*
 ```
+
+PyPI's JSON index (`/pypi/owa-tui/json`) lags by minutes after upload. If
+`uv publish` reports "File already exists" on a retry but
+`pypi.org/pypi/owa-tui/X.Y.Z/json` returns 200, the upload succeeded.
+
+### Homebrew
+
+`damsleth/homebrew-tap` `Formula/owa-tui.rb` installs from the GitHub tag
+tarball. After the tag is pushed, set `url` to the new tag and `sha256` to
+`curl -sL <url> | shasum -a 256`. owa-tui imports owa-tools in-process, so
+owa-tools is vendored as a `resource` in the same virtualenv (not a
+`depends_on` formula, whose separate venv owa-tui could not import from);
+bump that resource to the current owa-tools tag too. Run `brew audit --strict`,
+`brew install --build-from-source` and `brew test`, then commit the tap as
+`owa-tui X.Y.Z` and push.
 
 ## Backout / rollback
 
@@ -69,7 +91,7 @@ Never force-push tags. A bad release is fixed by publishing a higher version.
 
 - **Snapshot tests:** `pytest-textual-snapshot` fixtures for key screens.
 - **Generated shell completions:** once the CLI surface stabilises.
-- **PyInstaller binaries / PyPI publish:** deferred, not planned.
+- **PyInstaller binaries:** deferred, not planned.
 
 Done: live integration smoke tests now exist, opt-in against real M365 — unit
 token smoke (`OWA_TUI_LIVE_TESTS=1`) and full-render e2e (`OWA_TUI_LIVE_E2E=1`,

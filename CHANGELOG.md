@@ -6,19 +6,12 @@ versioning.
 
 ## [Unreleased]
 
-### Changed
-- Tab / Shift+Tab switch panes in every list+detail screen (mail cycles
-  folders → list → reader when folders are shown). h/l and ←/→ no longer switch
-  panes, so they stay free for moving inside a pane. Enter opens and focuses the
-  detail pane, and Tab goes back. Trees (OneDrive, SharePoint) keep lf-style h/l
-  for up/into folder.
-- cal calendar view: h/l/←/→ move a day cursor (empty days included); j/k/↑/↓
-  step through that day's events, and in the month grid carry on to the week
-  below/above past the first/last one. Every event of a day is shown (no "+N").
-  Columns size to their content, busy days get the width, and a right-hand
-  reading pane moves underneath the calendar so the grid gets the full width.
+## [0.3.0] - 2026-10-19
 
 ### Added
+- Published on PyPI: `uv tool install owa-tui` (or `pipx install owa-tui`)
+  resolves owa-tools and owa-piggy with it. Also in the Homebrew tap as
+  `damsleth/tap/owa-tui`.
 - `owa-tui -A` / `--all-profiles`, repeated `--profile`, and `--profile all`
   merge cal, mail, people, tasks, planner, ado and teams across owa-piggy
   profiles, using the owa-tools `-A` eligibility rule. Rows carry a profile
@@ -32,33 +25,6 @@ versioning.
 - swodp: `weeks_shown` (1–4) stacks weeks; edits, `a`, `c` and `w` act on the
   week under the cursor. `default_week` (previous/current/next) picks the
   opening week. Both are in Esc → Settings. `H`/`L` switch week alongside `[` `]`.
-
-### Fixed
-- OneDrive and SharePoint ignored the chosen profile (`--profile`, Esc → Switch
-  profile) and always ran as owa-piggy's default: the screen's config was
-  dropped on construction. SharePoint listed the default tenant's root site.
-- teams: chats and messages load via `owa_graph.api` again (the screen imported
-  `httpx`, which was never a dependency, and never awaited its requests).
-- cal: saved settings (day range, reading pane, …) are restored on the next run;
-  they were written to the owa-cal config but read from the wrong dict.
-- cal: `h`/`←` return focus from the reading pane to the list.
-- cal: event locations (`[Teams]`) no longer disappear as markup.
-- doctor: an audience the tenant doesn't offer (AADSTS65002, e.g. devops outside
-  the ADO tenant) shows a dim `n/a` instead of `fail`.
-- The status line sits right of the logo on header row 2, so it covers neither
-  the logo nor the version/identity row.
-
-## [0.3.0] - 2026-09-23
-
-### Changed
-- Requires `owa-tools>=1.7.0`, which pulls in `owa-piggy`, so installing
-  `owa-tui` resolves the whole stack. Fixes the sched grid showing every
-  attendee as an error against owa-tools 1.6.0.
-- Imports `build_query`, `OwaError` and `save_config` from their `owa_core`
-  homes after owa-tools 1.7.0 dropped the per-tool re-exports. Settings and
-  bookmarks persist again instead of silently failing.
-
-### Added
 - **Timesheet (SWODP)**: `owa-tui swodp` shows one week of SWODP time cards
   as a grid (row per task/category, column per weekday, sums). `i`/Enter edit
   a cell, `x` zero, `a` add row, `e` description, `D` remove row, `c` fill from
@@ -76,6 +42,22 @@ versioning.
   live without re-entering the screen.
 
 ### Changed
+- Tab / Shift+Tab switch panes in every list+detail screen (mail cycles
+  folders → list → reader when folders are shown). h/l and ←/→ no longer switch
+  panes, so they stay free for moving inside a pane. Enter opens and focuses the
+  detail pane, and Tab goes back. Trees (OneDrive, SharePoint) keep lf-style h/l
+  for up/into folder.
+- cal calendar view: h/l/←/→ move a day cursor (empty days included); j/k/↑/↓
+  step through that day's events, and in the month grid carry on to the week
+  below/above past the first/last one. Every event of a day is shown (no "+N").
+  Columns size to their content, busy days get the width, and a right-hand
+  reading pane moves underneath the calendar so the grid gets the full width.
+- Requires `owa-tools>=1.7.0`, which pulls in `owa-piggy`, so installing
+  `owa-tui` resolves the whole stack. Fixes the sched grid showing every
+  attendee as an error against owa-tools 1.6.0.
+- Imports `build_query`, `OwaError` and `save_config` from their `owa_core`
+  homes after owa-tools 1.7.0 dropped the per-tool re-exports. Settings and
+  bookmarks persist again instead of silently failing.
 - **Status**: status messages now show on the header's third row, over the
   `v<version> · profile · upn` line, and clear after 5 seconds. Toasts sit
   top-right under the header.
@@ -85,6 +67,19 @@ versioning.
   palette's Maximize/Minimize commands are gone.
 
 ### Fixed
+- OneDrive and SharePoint ignored the chosen profile (`--profile`, Esc → Switch
+  profile) and always ran as owa-piggy's default: the screen's config was
+  dropped on construction. SharePoint listed the default tenant's root site.
+- teams: chats and messages load via `owa_graph.api` again (the screen imported
+  `httpx`, which was never a dependency, and never awaited its requests).
+- cal: saved settings (day range, reading pane, …) are restored on the next run;
+  they were written to the owa-cal config but read from the wrong dict.
+- cal: `h`/`←` return focus from the reading pane to the list.
+- cal: event locations (`[Teams]`) no longer disappear as markup.
+- doctor: an audience the tenant doesn't offer (AADSTS65002, e.g. devops outside
+  the ADO tenant) shows a dim `n/a` instead of `fail`.
+- The status line sits right of the logo on header row 2, so it covers neither
+  the logo nor the version/identity row.
 - **Grids** (sched, doctor): `j`/`k`/`h`/`l` now move the cell cursor. They
   used to scroll the viewport and leave the cursor behind.
 - **Mail**: Enter/`l` now move focus into the reading pane (highlighted
