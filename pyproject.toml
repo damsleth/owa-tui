@@ -12,9 +12,9 @@ requires-python = ">=3.10"
 authors = [{ name = "Carl Joakim Damsleth" }]
 dependencies = [
     "textual>=0.60",
-    # >=1.7.0: sched grid rows with empty workingHours are no longer errors;
-    # also brings owa-piggy in as a dependency.
-    "owa-tools>=1.7.0",
+    # >=1.9.0: tested against this release (>=1.7.0 had the sched grid
+    # empty-workingHours fix); also brings owa-piggy in as a dependency.
+    "owa-tools>=1.9.0",
 ]
 
 [project.optional-dependencies]
