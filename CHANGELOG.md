@@ -6,6 +6,15 @@ versioning.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-28
+
+### Changed
+- Requires owa-tools >= 1.9.0; CI and release install the v1.9.0 tag.
+- GitHub Actions pins bumped to the latest releases (checkout v7,
+  setup-python v7, setup-uv v10, setup-node v7, action-gh-release v3); e2e
+  runs on Node 24 (Node 20 is EOL). npm lockfile refreshed within existing
+  ranges; @microsoft/tui-test 0.1.x is a breaking rewrite and is deferred.
+
 ## [0.3.0] - 2026-10-19
 
 ### Added
